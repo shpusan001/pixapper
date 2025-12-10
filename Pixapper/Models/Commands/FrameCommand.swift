@@ -6,12 +6,14 @@
 //
 
 import Foundation
+import SwiftUI
 
 /// 프레임 추가 Command
+/// - Note: Deprecated - 더 이상 사용되지 않음. addKeyframeWithContent 또는 addBlankKeyframeAtNext 사용 권장
+@available(*, deprecated, message: "No longer used - use layer-specific keyframe operations instead")
 class AddFrameCommand: Command {
     private weak var timelineViewModel: TimelineViewModel?
     private var addedFrameIndex: Int?
-    private var addedFrame: Frame?
 
     var description: String {
         "Add frame"
@@ -23,17 +25,15 @@ class AddFrameCommand: Command {
 
     func execute() {
         guard let timelineViewModel = timelineViewModel else { return }
+        // Note: addFrame() is deprecated but kept for backward compatibility
         timelineViewModel.addFrame()
         addedFrameIndex = timelineViewModel.currentFrameIndex
-        if addedFrameIndex! < timelineViewModel.frames.count {
-            addedFrame = timelineViewModel.frames[addedFrameIndex!]
-        }
     }
 
     func undo() {
         guard let timelineViewModel = timelineViewModel,
               let index = addedFrameIndex,
-              index < timelineViewModel.frames.count else {
+              index < timelineViewModel.totalFrames else {
             return
         }
         timelineViewModel.deleteFrame(at: index)
@@ -44,8 +44,10 @@ class AddFrameCommand: Command {
 class DeleteFrameCommand: Command {
     private weak var timelineViewModel: TimelineViewModel?
     private let deletedIndex: Int
-    private var deletedFrame: Frame?
     private var previousFrameIndex: Int
+    private var previousTotalFrames: Int
+    // 삭제된 프레임의 키프레임 데이터 백업 (레이어별)
+    private var deletedKeyframeData: [UUID: [[Color?]]] = [:]
 
     var description: String {
         "Delete frame at index \(deletedIndex)"
@@ -55,8 +57,15 @@ class DeleteFrameCommand: Command {
         self.timelineViewModel = timelineViewModel
         self.deletedIndex = index
         self.previousFrameIndex = timelineViewModel.currentFrameIndex
-        if index < timelineViewModel.frames.count {
-            self.deletedFrame = timelineViewModel.frames[index]
+        self.previousTotalFrames = timelineViewModel.totalFrames
+
+        // 삭제 전에 키프레임 데이터 백업
+        for layer in timelineViewModel.layerViewModel.layers {
+            if layer.timeline.isKeyframe(at: index) {
+                if let pixels = layer.timeline.getEffectivePixels(at: index) {
+                    deletedKeyframeData[layer.id] = pixels
+                }
+            }
         }
     }
 
@@ -66,12 +75,19 @@ class DeleteFrameCommand: Command {
     }
 
     func undo() {
-        guard let timelineViewModel = timelineViewModel,
-              let frame = deletedFrame else {
-            return
+        guard let timelineViewModel = timelineViewModel else { return }
+
+        // totalFrames 복원
+        timelineViewModel.totalFrames = previousTotalFrames
+
+        // 백업된 키프레임 데이터 복원
+        for (layerId, pixels) in deletedKeyframeData {
+            if let layerIndex = timelineViewModel.layerViewModel.layers.firstIndex(where: { $0.id == layerId }) {
+                timelineViewModel.layerViewModel.layers[layerIndex].timeline.setKeyframe(at: deletedIndex, pixels: pixels)
+            }
         }
-        timelineViewModel.frames.insert(frame, at: deletedIndex)
-        timelineViewModel.currentFrameIndex = previousFrameIndex
+
+        // 이전 프레임 위치로 복원
         timelineViewModel.selectFrame(at: previousFrameIndex)
     }
 }
@@ -100,7 +116,7 @@ class DuplicateFrameCommand: Command {
     func undo() {
         guard let timelineViewModel = timelineViewModel,
               let index = duplicatedFrameIndex,
-              index < timelineViewModel.frames.count else {
+              index < timelineViewModel.totalFrames else {
             return
         }
         timelineViewModel.deleteFrame(at: index)

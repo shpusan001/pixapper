@@ -17,6 +17,8 @@ struct ExportView: View {
     @State private var spriteSheetLayout: SpriteSheetLayout = .horizontal
     @State private var spriteSheetPadding: Int = 0
     @State private var sequenceBaseName: String = "frame"
+    @State private var showingErrorAlert = false
+    @State private var errorMessage: String = ""
 
     enum ExportType: String, CaseIterable, Identifiable {
         case singleImage = "Single Image"
@@ -73,6 +75,11 @@ struct ExportView: View {
         }
         .padding(24)
         .frame(width: 400)
+        .alert("Export 실패", isPresented: $showingErrorAlert) {
+            Button("확인", role: .cancel) {}
+        } message: {
+            Text(errorMessage)
+        }
     }
 
     private var singleImageOptions: some View {
@@ -81,7 +88,7 @@ struct ExportView: View {
                 .font(.callout)
                 .foregroundColor(.secondary)
 
-            Text("Frame: \(timelineViewModel.currentFrameIndex + 1)/\(timelineViewModel.frames.count)")
+            Text("Frame: \(timelineViewModel.currentFrameIndex + 1)/\(timelineViewModel.totalFrames)")
                 .font(.callout)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -119,7 +126,7 @@ struct ExportView: View {
                 ), in: 0...16, step: 1)
             }
 
-            Text("\(timelineViewModel.frames.count) frames")
+            Text("\(timelineViewModel.totalFrames) frames")
                 .font(.callout)
                 .foregroundColor(.secondary)
         }
@@ -143,7 +150,7 @@ struct ExportView: View {
                     .foregroundColor(.secondary)
             }
 
-            Text("\(timelineViewModel.frames.count) frames will be exported")
+            Text("\(timelineViewModel.totalFrames) frames will be exported")
                 .font(.callout)
                 .foregroundColor(.secondary)
         }
@@ -164,16 +171,22 @@ struct ExportView: View {
     }
 
     private func exportSingleImage(width: Int, height: Int) {
-        let currentFrame = timelineViewModel.frames[timelineViewModel.currentFrameIndex]
+        let resolvedFrames = timelineViewModel.getResolvedFrames()
+        let currentFrame = resolvedFrames[timelineViewModel.currentFrameIndex]
+        let layers = timelineViewModel.layerViewModel.layers
 
-        if let image = ExportManager.exportSingleImage(frame: currentFrame, width: width, height: height) {
+        if let image = ExportManager.exportSingleImage(frame: currentFrame, layers: layers, width: width, height: height) {
             ExportManager.savePNG(image: image)
         }
     }
 
     private func exportSpriteSheet(width: Int, height: Int) {
+        let resolvedFrames = timelineViewModel.getResolvedFrames()
+        let layers = timelineViewModel.layerViewModel.layers
+
         if let image = ExportManager.exportSpriteSheet(
-            frames: timelineViewModel.frames,
+            frames: resolvedFrames,
+            layers: layers,
             width: width,
             height: height,
             layout: spriteSheetLayout,
@@ -184,21 +197,28 @@ struct ExportView: View {
     }
 
     private func exportPNGSequence(width: Int, height: Int) {
+        let resolvedFrames = timelineViewModel.getResolvedFrames()
+        let layers = timelineViewModel.layerViewModel.layers
+
         ExportManager.chooseDirectory { url in
             guard let directoryURL = url else { return }
 
-            let success = ExportManager.exportPNGSequence(
-                frames: timelineViewModel.frames,
+            let result = ExportManager.exportPNGSequence(
+                frames: resolvedFrames,
+                layers: layers,
                 width: width,
                 height: height,
                 directoryURL: directoryURL,
                 baseName: sequenceBaseName
             )
 
-            if success {
-                print("PNG sequence exported successfully")
-            } else {
-                print("Failed to export PNG sequence")
+            switch result {
+            case .success:
+                // 성공 - 아무것도 하지 않음 (필요시 성공 알림 추가 가능)
+                break
+            case .failure(let error):
+                errorMessage = error.localizedDescription
+                showingErrorAlert = true
             }
         }
     }

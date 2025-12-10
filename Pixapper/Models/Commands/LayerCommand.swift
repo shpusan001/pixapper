@@ -133,31 +133,35 @@ class SetLayerOpacityCommand: Command {
     }
 }
 
-/// 레이어 블렌드 모드 변경 Command
-class SetLayerBlendModeCommand: Command {
+/// 레이어 이동(순서 변경) Command
+class MoveLayerCommand: Command {
     private weak var layerViewModel: LayerViewModel?
-    private let layerIndex: Int
-    private let oldMode: BlendMode
-    private let newMode: BlendMode
+    private let sourceIndices: IndexSet
+    private let destination: Int
+    private var originalOrder: [Layer]
 
     var description: String {
-        "Set layer \(layerIndex) blend mode to \(newMode.rawValue)"
+        "Move layer from \(sourceIndices) to \(destination)"
     }
 
-    init(layerViewModel: LayerViewModel, index: Int, oldMode: BlendMode, newMode: BlendMode) {
+    init(layerViewModel: LayerViewModel, from source: IndexSet, to destination: Int) {
         self.layerViewModel = layerViewModel
-        self.layerIndex = index
-        self.oldMode = oldMode
-        self.newMode = newMode
+        self.sourceIndices = source
+        self.destination = destination
+        self.originalOrder = layerViewModel.layers
     }
 
     func execute() {
         guard let layerViewModel = layerViewModel else { return }
-        layerViewModel.setBlendMode(at: layerIndex, mode: newMode)
+        layerViewModel.moveLayer(from: sourceIndices, to: destination)
     }
 
     func undo() {
         guard let layerViewModel = layerViewModel else { return }
-        layerViewModel.setBlendMode(at: layerIndex, mode: oldMode)
+        layerViewModel.layers = originalOrder
+        // 선택 인덱스 복원
+        if let sourceIndex = sourceIndices.first, sourceIndex < originalOrder.count {
+            layerViewModel.selectedLayerIndex = sourceIndex
+        }
     }
 }

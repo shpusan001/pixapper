@@ -8,6 +8,7 @@
 import SwiftUI
 import Combine
 
+@MainActor
 class LayerViewModel: ObservableObject {
     @Published var layers: [Layer]
     @Published var selectedLayerIndex: Int = 0
@@ -37,8 +38,7 @@ class LayerViewModel: ObservableObject {
 
     func duplicateLayer(at index: Int) {
         guard index < layers.count else { return }
-        var duplicatedLayer = layers[index]
-        duplicatedLayer.name = "\(duplicatedLayer.name) Copy"
+        let duplicatedLayer = layers[index].duplicate(newName: "\(layers[index].name) Copy")
         layers.insert(duplicatedLayer, at: index + 1)
         selectedLayerIndex = index + 1
     }
@@ -68,10 +68,5 @@ class LayerViewModel: ObservableObject {
     func setOpacity(at index: Int, opacity: Double) {
         guard index < layers.count else { return }
         layers[index].opacity = opacity
-    }
-
-    func setBlendMode(at index: Int, mode: BlendMode) {
-        guard index < layers.count else { return }
-        layers[index].blendMode = mode
     }
 }

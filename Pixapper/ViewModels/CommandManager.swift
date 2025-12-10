@@ -18,7 +18,7 @@ class CommandManager: ObservableObject {
     @Published private(set) var redoStack: [Command] = []
 
     /// 메모리 최적화를 위한 최대 히스토리 개수
-    private let maxHistorySize: Int = 100
+    private let maxHistorySize: Int = Constants.CommandManager.maxHistorySize
 
     /// Undo 가능 여부
     var canUndo: Bool {

@@ -9,6 +9,7 @@ import SwiftUI
 
 struct LayerPanel: View {
     @ObservedObject var viewModel: LayerViewModel
+    @ObservedObject var commandManager: CommandManager
     @State private var editingLayerIndex: Int?
     @State private var editingName: String = ""
 
@@ -46,12 +47,15 @@ struct LayerPanel: View {
                             },
                             onEndEditing: {
                                 if !editingName.isEmpty {
-                                    viewModel.renameLayer(at: actualIndex, to: editingName)
+                                    let oldName = layer.name
+                                    let command = RenameLayerCommand(layerViewModel: viewModel, index: actualIndex, oldName: oldName, newName: editingName)
+                                    commandManager.performCommand(command)
                                 }
                                 editingLayerIndex = nil
                             },
                             onDelete: {
-                                viewModel.deleteLayer(at: actualIndex)
+                                let command = DeleteLayerCommand(layerViewModel: viewModel, index: actualIndex)
+                                commandManager.performCommand(command)
                             },
                             onDuplicate: {
                                 viewModel.duplicateLayer(at: actualIndex)
@@ -65,7 +69,7 @@ struct LayerPanel: View {
             Divider()
 
             // Selected layer controls
-            if viewModel.selectedLayerIndex < viewModel.layers.count {
+            if viewModel.selectedLayerIndex < viewModel.layers.count, !viewModel.layers.isEmpty {
                 VStack(alignment: .leading, spacing: 12) {
                     // Opacity control
                     VStack(alignment: .leading, spacing: 4) {
@@ -79,26 +83,17 @@ struct LayerPanel: View {
                         }
                         Slider(
                             value: Binding(
-                                get: { viewModel.layers[viewModel.selectedLayerIndex].opacity },
-                                set: { viewModel.setOpacity(at: viewModel.selectedLayerIndex, opacity: $0) }
+                                get: {
+                                    guard viewModel.selectedLayerIndex < viewModel.layers.count else { return 1.0 }
+                                    return viewModel.layers[viewModel.selectedLayerIndex].opacity
+                                },
+                                set: { newValue in
+                                    guard viewModel.selectedLayerIndex < viewModel.layers.count else { return }
+                                    viewModel.setOpacity(at: viewModel.selectedLayerIndex, opacity: newValue)
+                                }
                             ),
                             in: 0...1
                         )
-                    }
-
-                    // Blend mode picker
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Blend Mode")
-                            .font(.callout)
-                        Picker("Blend Mode", selection: Binding(
-                            get: { viewModel.layers[viewModel.selectedLayerIndex].blendMode },
-                            set: { viewModel.setBlendMode(at: viewModel.selectedLayerIndex, mode: $0) }
-                        )) {
-                            ForEach(BlendMode.allCases) { mode in
-                                Text(mode.rawValue).tag(mode)
-                            }
-                        }
-                        .labelsHidden()
                     }
                 }
                 .padding(12)
@@ -108,7 +103,10 @@ struct LayerPanel: View {
 
             // Layer operations
             HStack(spacing: 12) {
-                Button(action: { viewModel.addLayer() }) {
+                Button(action: {
+                    let command = AddLayerCommand(layerViewModel: viewModel)
+                    commandManager.performCommand(command)
+                }) {
                     Image(systemName: "plus")
                         .frame(maxWidth: .infinity)
                 }
@@ -117,7 +115,8 @@ struct LayerPanel: View {
 
                 Button(action: {
                     if viewModel.layers.count > 1 {
-                        viewModel.deleteLayer(at: viewModel.selectedLayerIndex)
+                        let command = DeleteLayerCommand(layerViewModel: viewModel, index: viewModel.selectedLayerIndex)
+                        commandManager.performCommand(command)
                     }
                 }) {
                     Image(systemName: "trash")
@@ -128,6 +127,7 @@ struct LayerPanel: View {
                 .help("Delete Layer")
 
                 Button(action: {
+                    // Duplicate는 나중에 Command로 추가
                     viewModel.duplicateLayer(at: viewModel.selectedLayerIndex)
                 }) {
                     Image(systemName: "doc.on.doc")

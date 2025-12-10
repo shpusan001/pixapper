@@ -9,6 +9,24 @@ import SwiftUI
 import AppKit
 import UniformTypeIdentifiers
 
+/// Export 작업 중 발생할 수 있는 에러
+enum ExportError: LocalizedError {
+    case invalidImageData
+    case saveFailed(Error)
+    case noFramesToExport
+
+    var errorDescription: String? {
+        switch self {
+        case .invalidImageData:
+            return "이미지 데이터를 생성할 수 없습니다."
+        case .saveFailed(let error):
+            return "저장 실패: \(error.localizedDescription)"
+        case .noFramesToExport:
+            return "내보낼 프레임이 없습니다."
+        }
+    }
+}
+
 enum ExportFormat {
     case singleImage
     case spriteSheet(layout: SpriteSheetLayout, padding: Int)
@@ -27,13 +45,13 @@ class ExportManager {
 
     // MARK: - Single Image Export
 
-    static func exportSingleImage(frame: Frame, width: Int, height: Int) -> NSImage? {
-        return renderFrameToImage(frame: frame, width: width, height: height)
+    static func exportSingleImage(frame: Frame, layers: [Layer], width: Int, height: Int) -> NSImage? {
+        return renderFrameToImage(frame: frame, layers: layers, width: width, height: height)
     }
 
     // MARK: - Sprite Sheet Export
 
-    static func exportSpriteSheet(frames: [Frame], width: Int, height: Int, layout: SpriteSheetLayout, padding: Int) -> NSImage? {
+    static func exportSpriteSheet(frames: [Frame], layers: [Layer], width: Int, height: Int, layout: SpriteSheetLayout, padding: Int) -> NSImage? {
         guard !frames.isEmpty else { return nil }
 
         let frameCount = frames.count
@@ -51,7 +69,7 @@ class ExportManager {
             let x = col * (width + padding)
             let y = row * (height + padding)
 
-            if let frameImage = renderFrameToImage(frame: frame, width: width, height: height) {
+            if let frameImage = renderFrameToImage(frame: frame, layers: layers, width: width, height: height) {
                 frameImage.draw(at: NSPoint(x: x, y: totalHeight - y - height), from: .zero, operation: .sourceOver, fraction: 1.0)
             }
         }
@@ -87,37 +105,43 @@ class ExportManager {
 
     // MARK: - PNG Sequence Export
 
-    static func exportPNGSequence(frames: [Frame], width: Int, height: Int, directoryURL: URL, baseName: String) -> Bool {
-        guard !frames.isEmpty else { return false }
+    static func exportPNGSequence(frames: [Frame], layers: [Layer], width: Int, height: Int, directoryURL: URL, baseName: String) -> Result<Void, ExportError> {
+        guard !frames.isEmpty else {
+            return .failure(.noFramesToExport)
+        }
 
         for (index, frame) in frames.enumerated() {
-            guard let image = renderFrameToImage(frame: frame, width: width, height: height) else {
-                return false
+            guard let image = renderFrameToImage(frame: frame, layers: layers, width: width, height: height) else {
+                return .failure(.invalidImageData)
             }
 
             let fileName = String(format: "%@_%03d.png", baseName, index + 1)
             let fileURL = directoryURL.appendingPathComponent(fileName)
 
-            guard savePNG(image: image, to: fileURL) else {
-                return false
+            let result = savePNG(image: image, to: fileURL)
+            if case .failure(let error) = result {
+                return .failure(error)
             }
         }
 
-        return true
+        return .success(())
     }
 
     // MARK: - Helper Methods
 
-    private static func renderFrameToImage(frame: Frame, width: Int, height: Int) -> NSImage? {
+    private static func renderFrameToImage(frame: Frame, layers: [Layer], width: Int, height: Int) -> NSImage? {
         let image = NSImage(size: NSSize(width: width, height: height))
 
         image.lockFocus()
 
         // Render each visible layer
-        for layer in frame.layers where layer.isVisible {
-            for y in 0..<layer.pixels.count {
-                for x in 0..<layer.pixels[y].count {
-                    if let color = layer.pixels[y][x] {
+        for layer in layers where layer.isVisible {
+            // Find the corresponding cell for this layer
+            guard let cell = frame.cell(for: layer.id) else { continue }
+
+            for y in 0..<cell.pixels.count {
+                for x in 0..<cell.pixels[y].count {
+                    if let color = cell.pixels[y][x] {
                         let nsColor = NSColor(color.opacity(layer.opacity))
                         nsColor.setFill()
                         let rect = NSRect(x: x, y: height - y - 1, width: 1, height: 1)
@@ -132,19 +156,18 @@ class ExportManager {
         return image
     }
 
-    private static func savePNG(image: NSImage, to url: URL) -> Bool {
+    private static func savePNG(image: NSImage, to url: URL) -> Result<Void, ExportError> {
         guard let tiffData = image.tiffRepresentation,
               let bitmapImage = NSBitmapImageRep(data: tiffData),
               let pngData = bitmapImage.representation(using: .png, properties: [:]) else {
-            return false
+            return .failure(.invalidImageData)
         }
 
         do {
             try pngData.write(to: url)
-            return true
+            return .success(())
         } catch {
-            print("Failed to save PNG: \(error)")
-            return false
+            return .failure(.saveFailed(error))
         }
     }
 

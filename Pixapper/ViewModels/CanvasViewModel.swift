@@ -8,6 +8,7 @@
 import SwiftUI
 import Combine
 
+@MainActor
 class CanvasViewModel: ObservableObject {
     @Published var canvas: PixelCanvas
     @Published var zoomLevel: Double = 400.0
@@ -16,6 +17,7 @@ class CanvasViewModel: ObservableObject {
     var layerViewModel: LayerViewModel
     var commandManager: CommandManager
     var toolSettingsManager: ToolSettingsManager
+    weak var timelineViewModel: TimelineViewModel?  // Timeline 동기화용
 
     private var shapeStartPoint: (x: Int, y: Int)?
     private var lastDrawPoint: (x: Int, y: Int)?
@@ -91,10 +93,18 @@ class CanvasViewModel: ObservableObject {
             oldStrokePixels = []
             drawnPixelsInStroke = []
             lastDrawPoint = nil
+
+            // Timeline에 동기화 (키프레임에 저장)
+            timelineViewModel?.syncCurrentLayerToKeyframe()
+
         case .rectangle, .circle, .line:
             commitShape()
             shapeStartPoint = nil
             shapePreview = []
+
+            // Timeline에 동기화 (키프레임에 저장)
+            timelineViewModel?.syncCurrentLayerToKeyframe()
+
         default:
             break
         }
@@ -190,6 +200,9 @@ class CanvasViewModel: ObservableObject {
         if !changedPixels.isEmpty {
             let command = DrawCommand(layerViewModel: layerViewModel, layerIndex: currentLayerIndex, oldPixels: oldPixels, newPixels: changedPixels)
             commandManager.addExecutedCommand(command)
+
+            // Timeline에 동기화 (키프레임에 저장)
+            timelineViewModel?.syncCurrentLayerToKeyframe()
         }
     }
 
@@ -332,6 +345,11 @@ class CanvasViewModel: ObservableObject {
         return pixels
     }
 
+    /// 두 색상의 RGB 정밀 비교
+    /// - Parameters:
+    ///   - c1: 첫 번째 색상 (nil 허용)
+    ///   - c2: 두 번째 색상 (nil 허용)
+    /// - Returns: 두 색상이 동일하면 true
     private func colorsEqual(_ c1: Color?, _ c2: Color?) -> Bool {
         if c1 == nil && c2 == nil {
             return true
@@ -339,7 +357,7 @@ class CanvasViewModel: ObservableObject {
         guard let c1 = c1, let c2 = c2 else {
             return false
         }
-        // Simple comparison - in production you'd want to compare RGB values
-        return c1 == c2
+        // RGB 정밀 비교 (허용 오차 0.001)
+        return c1.isEqual(to: c2, tolerance: 0.001)
     }
 }

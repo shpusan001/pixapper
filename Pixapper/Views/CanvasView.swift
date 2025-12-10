@@ -13,82 +13,102 @@ struct CanvasView: View {
     @State private var isDragging = false
 
     var body: some View {
-        GeometryReader { geometry in
-            let pixelSize = viewModel.zoomLevel / 100.0
-            let canvasWidth = CGFloat(viewModel.canvas.width) * pixelSize
-            let canvasHeight = CGFloat(viewModel.canvas.height) * pixelSize
+        canvasContent
+            .background(Color(nsColor: .controlBackgroundColor))
+    }
 
-            ScrollView([.horizontal, .vertical]) {
-                ZStack {
-                    // Checkerboard background
-                    CheckerboardView(
-                        width: viewModel.canvas.width,
-                        height: viewModel.canvas.height,
-                        pixelSize: pixelSize
-                    )
+    private var canvasContent: some View {
+        let pixelSize = viewModel.zoomLevel / 100.0
+        let canvasWidth = CGFloat(viewModel.canvas.width) * pixelSize
+        let canvasHeight = CGFloat(viewModel.canvas.height) * pixelSize
 
-                    // Render onion skin frames
-                    if let timeline = timelineViewModel {
-                        ForEach(Array(timeline.getOnionSkinFrames().enumerated()), id: \.offset) { _, onionFrame in
-                            ForEach(onionFrame.frame.layers.indices.reversed(), id: \.self) { layerIndex in
-                                let layer = onionFrame.frame.layers[layerIndex]
-                                if layer.isVisible {
-                                    OnionSkinLayerView(
-                                        layer: layer,
-                                        pixelSize: pixelSize,
-                                        tint: onionFrame.tint,
-                                        opacity: onionFrame.opacity
-                                    )
-                                }
-                            }
-                        }
-                    }
-
-                    // Render all visible layers (current frame)
-                    ForEach(viewModel.canvas.layers.indices.reversed(), id: \.self) { layerIndex in
-                        let layer = viewModel.canvas.layers[layerIndex]
-                        if layer.isVisible {
-                            PixelGridView(
-                                layer: layer,
-                                pixelSize: pixelSize
-                            )
-                            .opacity(layer.opacity)
-                        }
-                    }
-
-                    // Grid lines
-                    GridLinesView(
-                        width: viewModel.canvas.width,
-                        height: viewModel.canvas.height,
-                        pixelSize: pixelSize
-                    )
-
-                    // Shape preview overlay
-                    if !viewModel.shapePreview.isEmpty {
-                        ShapePreviewView(
-                            preview: viewModel.shapePreview,
-                            pixelSize: pixelSize
-                        )
-                    }
-                }
+        return ScrollView([.horizontal, .vertical]) {
+            canvasLayers(pixelSize: pixelSize)
                 .frame(width: canvasWidth, height: canvasHeight)
-                .gesture(
-                    DragGesture(minimumDistance: 0)
-                        .onChanged { value in
-                            if !isDragging {
-                                handleDown(at: value.startLocation, pixelSize: pixelSize)
-                                isDragging = true
-                            }
-                            handleDrag(at: value.location, pixelSize: pixelSize)
-                        }
-                        .onEnded { value in
-                            handleUp(at: value.location, pixelSize: pixelSize)
-                            isDragging = false
-                        }
+                .gesture(canvasDragGesture(pixelSize: pixelSize))
+        }
+    }
+
+    @ViewBuilder
+    private func canvasLayers(pixelSize: CGFloat) -> some View {
+        ZStack {
+            // Checkerboard background
+            CheckerboardView(
+                width: viewModel.canvas.width,
+                height: viewModel.canvas.height,
+                pixelSize: pixelSize
+            )
+
+            // Render onion skin frames
+            onionSkinLayers(pixelSize: pixelSize)
+
+            // Render all visible layers (current frame)
+            currentFrameLayers(pixelSize: pixelSize)
+
+            // Grid lines
+            GridLinesView(
+                width: viewModel.canvas.width,
+                height: viewModel.canvas.height,
+                pixelSize: pixelSize
+            )
+
+            // Shape preview overlay
+            if !viewModel.shapePreview.isEmpty {
+                ShapePreviewView(
+                    preview: viewModel.shapePreview,
+                    pixelSize: pixelSize
                 )
             }
         }
-        .background(Color(nsColor: .controlBackgroundColor))
+    }
+
+    @ViewBuilder
+    private func onionSkinLayers(pixelSize: CGFloat) -> some View {
+        if let timeline = timelineViewModel {
+            ForEach(timeline.getOnionSkinFrames(), id: \.frameIndex) { onionFrame in
+                ForEach(timeline.layerViewModel.layers.indices.reversed(), id: \.self) { layerIndex in
+                    let layer = timeline.layerViewModel.layers[layerIndex]
+                    if layer.isVisible,
+                       let pixels = timeline.getEffectivePixels(frameIndex: onionFrame.frameIndex, layerId: layer.id) {
+                        OnionSkinLayerView(
+                            layer: Layer(name: layer.name, pixels: pixels),
+                            pixelSize: pixelSize,
+                            tint: onionFrame.tint,
+                            opacity: onionFrame.opacity
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func currentFrameLayers(pixelSize: CGFloat) -> some View {
+        ForEach(viewModel.canvas.layers.indices.reversed(), id: \.self) { layerIndex in
+            let layer = viewModel.canvas.layers[layerIndex]
+            if layer.isVisible {
+                PixelGridView(
+                    layer: layer,
+                    pixelSize: pixelSize
+                )
+                .opacity(layer.opacity)
+            }
+        }
+    }
+
+    private func canvasDragGesture(pixelSize: CGFloat) -> some Gesture {
+        DragGesture(minimumDistance: 0)
+            .onChanged { value in
+                if !isDragging {
+                    handleDown(at: value.startLocation, pixelSize: pixelSize)
+                    isDragging = true
+                }
+                handleDrag(at: value.location, pixelSize: pixelSize)
+            }
+            .onEnded { value in
+                handleUp(at: value.location, pixelSize: pixelSize)
+                isDragging = false
+            }
     }
 
     private func handleDown(at location: CGPoint, pixelSize: CGFloat) {
