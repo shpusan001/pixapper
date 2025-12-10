@@ -9,6 +9,8 @@ import SwiftUI
 
 struct ContentView: View {
     @StateObject private var layerViewModel = LayerViewModel(width: 32, height: 32)
+    @StateObject private var commandManager = CommandManager()
+    @StateObject private var toolSettingsManager = ToolSettingsManager()
     @StateObject private var canvasViewModel: CanvasViewModel
     @StateObject private var timelineViewModel: TimelineViewModel
     @FocusState private var isFocused: Bool
@@ -16,8 +18,13 @@ struct ContentView: View {
 
     init() {
         let layerVM = LayerViewModel(width: 32, height: 32)
+        let cmdManager = CommandManager()
+        let toolManager = ToolSettingsManager()
+
         _layerViewModel = StateObject(wrappedValue: layerVM)
-        _canvasViewModel = StateObject(wrappedValue: CanvasViewModel(width: 32, height: 32, layerViewModel: layerVM))
+        _commandManager = StateObject(wrappedValue: cmdManager)
+        _toolSettingsManager = StateObject(wrappedValue: toolManager)
+        _canvasViewModel = StateObject(wrappedValue: CanvasViewModel(width: 32, height: 32, layerViewModel: layerVM, commandManager: cmdManager, toolSettingsManager: toolManager))
         _timelineViewModel = StateObject(wrappedValue: TimelineViewModel(width: 32, height: 32, layerViewModel: layerVM))
     }
 
@@ -29,6 +36,24 @@ struct ContentView: View {
                     .font(.headline)
 
                 Spacer()
+
+                // Undo/Redo buttons
+                HStack(spacing: 8) {
+                    Button(action: { commandManager.undo() }) {
+                        Image(systemName: "arrow.uturn.backward")
+                    }
+                    .disabled(!commandManager.canUndo)
+                    .help("Undo (⌘Z)")
+
+                    Button(action: { commandManager.redo() }) {
+                        Image(systemName: "arrow.uturn.forward")
+                    }
+                    .disabled(!commandManager.canRedo)
+                    .help("Redo (⌘⇧Z)")
+                }
+                .buttonStyle(.bordered)
+
+                Spacer().frame(width: 12)
 
                 Button(action: { showingExportSheet = true }) {
                     HStack(spacing: 4) {
@@ -47,7 +72,7 @@ struct ContentView: View {
             VStack(spacing: 0) {
             HStack(spacing: 0) {
                 // Tool panel on the left
-                ToolPanel(viewModel: canvasViewModel)
+                ToolPanel(viewModel: canvasViewModel, toolSettingsManager: toolSettingsManager)
 
                 Divider()
 
@@ -78,7 +103,22 @@ struct ContentView: View {
             isFocused = true
         }
         .onKeyPress { keyPress in
-            if keyPress.characters == " " {
+            // Undo (Cmd+Z)
+            if keyPress.characters == "z" && keyPress.modifiers.contains(.command) && !keyPress.modifiers.contains(.shift) {
+                if commandManager.canUndo {
+                    commandManager.undo()
+                }
+                return .handled
+            }
+            // Redo (Cmd+Shift+Z)
+            else if keyPress.characters == "Z" && keyPress.modifiers.contains(.command) {
+                if commandManager.canRedo {
+                    commandManager.redo()
+                }
+                return .handled
+            }
+            // Timeline controls
+            else if keyPress.characters == " " {
                 timelineViewModel.togglePlayback()
                 return .handled
             } else if keyPress.characters == "," {

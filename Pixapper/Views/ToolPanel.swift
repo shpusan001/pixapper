@@ -9,6 +9,7 @@ import SwiftUI
 
 struct ToolPanel: View {
     @ObservedObject var viewModel: CanvasViewModel
+    @ObservedObject var toolSettingsManager: ToolSettingsManager
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -21,26 +22,26 @@ struct ToolPanel: View {
                 HStack(spacing: 8) {
                     ToolButton(
                         icon: "pencil",
-                        isSelected: viewModel.selectedTool == .pencil,
-                        action: { viewModel.selectedTool = .pencil }
+                        isSelected: toolSettingsManager.selectedTool == .pencil,
+                        action: { toolSettingsManager.selectTool(.pencil) }
                     )
 
                     ToolButton(
                         icon: "eraser",
-                        isSelected: viewModel.selectedTool == .eraser,
-                        action: { viewModel.selectedTool = .eraser }
+                        isSelected: toolSettingsManager.selectedTool == .eraser,
+                        action: { toolSettingsManager.selectTool(.eraser) }
                     )
 
                     ToolButton(
                         icon: "paintbrush.fill",
-                        isSelected: viewModel.selectedTool == .fill,
-                        action: { viewModel.selectedTool = .fill }
+                        isSelected: toolSettingsManager.selectedTool == .fill,
+                        action: { toolSettingsManager.selectTool(.fill) }
                     )
 
                     ToolButton(
                         icon: "eyedropper",
-                        isSelected: viewModel.selectedTool == .eyedropper,
-                        action: { viewModel.selectedTool = .eyedropper }
+                        isSelected: toolSettingsManager.selectedTool == .eyedropper,
+                        action: { toolSettingsManager.selectTool(.eyedropper) }
                     )
                 }
 
@@ -48,20 +49,20 @@ struct ToolPanel: View {
                 HStack(spacing: 8) {
                     ToolButton(
                         icon: "rectangle",
-                        isSelected: viewModel.selectedTool == .rectangle,
-                        action: { viewModel.selectedTool = .rectangle }
+                        isSelected: toolSettingsManager.selectedTool == .rectangle,
+                        action: { toolSettingsManager.selectTool(.rectangle) }
                     )
 
                     ToolButton(
                         icon: "circle",
-                        isSelected: viewModel.selectedTool == .circle,
-                        action: { viewModel.selectedTool = .circle }
+                        isSelected: toolSettingsManager.selectedTool == .circle,
+                        action: { toolSettingsManager.selectTool(.circle) }
                     )
 
                     ToolButton(
                         icon: "line.diagonal",
-                        isSelected: viewModel.selectedTool == .line,
-                        action: { viewModel.selectedTool = .line }
+                        isSelected: toolSettingsManager.selectedTool == .line,
+                        action: { toolSettingsManager.selectTool(.line) }
                     )
 
                     Spacer()
@@ -73,32 +74,15 @@ struct ToolPanel: View {
 
             // Color picker section
             VStack(alignment: .leading, spacing: 8) {
-                Text("Colors")
+                Text("Color")
                     .font(.headline)
 
                 HStack(spacing: 12) {
-                    // Primary color
+                    // Current color
                     VStack(spacing: 4) {
-                        ColorWell(color: $viewModel.primaryColor)
+                        ColorWell(color: $toolSettingsManager.currentColor)
                             .frame(width: 50, height: 50)
-                        Text("Primary")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-
-                    // Swap button
-                    Button(action: viewModel.swapColors) {
-                        Image(systemName: "arrow.left.arrow.right")
-                            .font(.body)
-                    }
-                    .buttonStyle(.plain)
-                    .help("Swap colors")
-
-                    // Secondary color
-                    VStack(spacing: 4) {
-                        ColorWell(color: $viewModel.secondaryColor)
-                            .frame(width: 50, height: 50)
-                        Text("Secondary")
+                        Text(toolSettingsManager.selectedTool.displayName)
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }

@@ -8,32 +8,27 @@
 import SwiftUI
 import Combine
 
-enum DrawingTool {
-    case pencil
-    case eraser
-    case fill
-    case eyedropper
-    case rectangle
-    case circle
-    case line
-}
-
 class CanvasViewModel: ObservableObject {
     @Published var canvas: PixelCanvas
-    @Published var selectedTool: DrawingTool = .pencil
-    @Published var primaryColor: Color = .black
-    @Published var secondaryColor: Color = .white
     @Published var zoomLevel: Double = 400.0
     @Published var shapePreview: [(x: Int, y: Int, color: Color)] = []
 
     var layerViewModel: LayerViewModel
+    var commandManager: CommandManager
+    var toolSettingsManager: ToolSettingsManager
 
     private var shapeStartPoint: (x: Int, y: Int)?
+    private var lastDrawPoint: (x: Int, y: Int)?
+    private var currentStrokePixels: [PixelChange] = []
+    private var oldStrokePixels: [PixelChange] = []
+    private var drawnPixelsInStroke: Set<String> = []  // "x,y" 형식으로 저장
     private var cancellables = Set<AnyCancellable>()
 
-    init(width: Int = 32, height: Int = 32, layerViewModel: LayerViewModel) {
+    init(width: Int = 32, height: Int = 32, layerViewModel: LayerViewModel, commandManager: CommandManager, toolSettingsManager: ToolSettingsManager) {
         self.canvas = PixelCanvas(width: width, height: height)
         self.layerViewModel = layerViewModel
+        self.commandManager = commandManager
+        self.toolSettingsManager = toolSettingsManager
 
         // Sync canvas layers with LayerViewModel
         layerViewModel.$layers
@@ -48,11 +43,15 @@ class CanvasViewModel: ObservableObject {
     }
 
     func handleToolDown(x: Int, y: Int) {
-        switch selectedTool {
+        switch toolSettingsManager.selectedTool {
         case .pencil, .eraser:
+            lastDrawPoint = (x, y)
+            currentStrokePixels = []
+            oldStrokePixels = []
+            drawnPixelsInStroke = []
             drawPixel(x: x, y: y)
         case .fill:
-            floodFill(x: x, y: y, fillColor: primaryColor)
+            floodFill(x: x, y: y, fillColor: toolSettingsManager.currentColor)
         case .eyedropper:
             pickColor(x: x, y: y)
         case .rectangle, .circle, .line:
@@ -62,9 +61,15 @@ class CanvasViewModel: ObservableObject {
     }
 
     func handleToolDrag(x: Int, y: Int) {
-        switch selectedTool {
+        switch toolSettingsManager.selectedTool {
         case .pencil, .eraser:
-            drawPixel(x: x, y: y)
+            // 보간을 통해 끊김 방지
+            if let last = lastDrawPoint {
+                drawInterpolatedLine(from: last, to: (x, y))
+            } else {
+                drawPixel(x: x, y: y)
+            }
+            lastDrawPoint = (x, y)
         case .rectangle, .circle, .line:
             updateShapePreview(endX: x, endY: y)
         default:
@@ -73,7 +78,19 @@ class CanvasViewModel: ObservableObject {
     }
 
     func handleToolUp(x: Int, y: Int) {
-        switch selectedTool {
+        switch toolSettingsManager.selectedTool {
+        case .pencil, .eraser:
+            // 스트로크 완료 - Command 생성
+            if !currentStrokePixels.isEmpty {
+                // 이미 저장해둔 oldStrokePixels 사용
+                let command = DrawCommand(layerViewModel: layerViewModel, layerIndex: currentLayerIndex, oldPixels: oldStrokePixels, newPixels: currentStrokePixels)
+                // 이미 실행된 상태이므로 히스토리에만 추가
+                commandManager.addExecutedCommand(command)
+            }
+            currentStrokePixels = []
+            oldStrokePixels = []
+            drawnPixelsInStroke = []
+            lastDrawPoint = nil
         case .rectangle, .circle, .line:
             commitShape()
             shapeStartPoint = nil
@@ -87,16 +104,45 @@ class CanvasViewModel: ObservableObject {
         guard currentLayerIndex < layerViewModel.layers.count else { return }
 
         let color: Color?
-        switch selectedTool {
+        switch toolSettingsManager.selectedTool {
         case .pencil:
-            color = primaryColor
+            color = toolSettingsManager.currentColor
         case .eraser:
             color = nil
         default:
             return
         }
 
+        // 이미 그린 픽셀인지 체크 (보간 중 중복 방지)
+        let pixelKey = "\(x),\(y)"
+        if drawnPixelsInStroke.contains(pixelKey) {
+            return
+        }
+        drawnPixelsInStroke.insert(pixelKey)
+
+        // 픽셀을 변경하기 **전에** 이전 값 저장
+        let oldColor = layerViewModel.layers[currentLayerIndex].getPixel(x: x, y: y)
+        oldStrokePixels.append(PixelChange(x: x, y: y, color: oldColor))
+
+        // 새로운 값 저장
+        currentStrokePixels.append(PixelChange(x: x, y: y, color: color))
+
+        // 픽셀 변경
         layerViewModel.layers[currentLayerIndex].setPixel(x: x, y: y, color: color)
+    }
+
+    /// 두 점 사이를 보간하여 끊김 없이 그립니다
+    private func drawInterpolatedLine(from start: (x: Int, y: Int), to end: (x: Int, y: Int)) {
+        let pixels = getLinePixels(x1: start.x, y1: start.y, x2: end.x, y2: end.y)
+        for pixel in pixels {
+            drawPixel(x: pixel.x, y: pixel.y)
+        }
+    }
+
+    /// 이전 픽셀 값을 가져옵니다 (Undo용)
+    private func getOldPixel(x: Int, y: Int) -> Color? {
+        guard currentLayerIndex < layerViewModel.layers.count else { return nil }
+        return layerViewModel.layers[currentLayerIndex].getPixel(x: x, y: y)
     }
 
     private func floodFill(x: Int, y: Int, fillColor: Color) {
@@ -109,6 +155,8 @@ class CanvasViewModel: ObservableObject {
             return
         }
 
+        var changedPixels: [PixelChange] = []
+        var oldPixels: [PixelChange] = []
         var stack = [(x: Int, y: Int)]()
         stack.append((x, y))
 
@@ -126,6 +174,10 @@ class CanvasViewModel: ObservableObject {
                 continue
             }
 
+            // 이전 상태 저장
+            oldPixels.append(PixelChange(x: px, y: py, color: currentColor))
+            changedPixels.append(PixelChange(x: px, y: py, color: fillColor))
+
             layerViewModel.layers[currentLayerIndex].setPixel(x: px, y: py, color: fillColor)
 
             stack.append((px + 1, py))
@@ -133,12 +185,18 @@ class CanvasViewModel: ObservableObject {
             stack.append((px, py + 1))
             stack.append((px, py - 1))
         }
+
+        // Command 생성 (이미 실행된 상태)
+        if !changedPixels.isEmpty {
+            let command = DrawCommand(layerViewModel: layerViewModel, layerIndex: currentLayerIndex, oldPixels: oldPixels, newPixels: changedPixels)
+            commandManager.addExecutedCommand(command)
+        }
     }
 
     private func pickColor(x: Int, y: Int) {
         guard currentLayerIndex < layerViewModel.layers.count else { return }
         if let color = layerViewModel.layers[currentLayerIndex].getPixel(x: x, y: y) {
-            primaryColor = color
+            toolSettingsManager.currentColor = color
         }
     }
 
@@ -147,7 +205,7 @@ class CanvasViewModel: ObservableObject {
 
         var pixels: [(x: Int, y: Int)] = []
 
-        switch selectedTool {
+        switch toolSettingsManager.selectedTool {
         case .rectangle:
             pixels = getRectanglePixels(x1: start.x, y1: start.y, x2: endX, y2: endY)
         case .circle:
@@ -158,14 +216,27 @@ class CanvasViewModel: ObservableObject {
             break
         }
 
-        shapePreview = pixels.map { ($0.x, $0.y, primaryColor) }
+        shapePreview = pixels.map { ($0.x, $0.y, toolSettingsManager.currentColor) }
     }
 
     private func commitShape() {
         guard currentLayerIndex < layerViewModel.layers.count else { return }
 
+        var oldPixels: [PixelChange] = []
+        var newPixels: [PixelChange] = []
+
         for pixel in shapePreview {
+            let oldColor = layerViewModel.layers[currentLayerIndex].getPixel(x: pixel.x, y: pixel.y)
+            oldPixels.append(PixelChange(x: pixel.x, y: pixel.y, color: oldColor))
+            newPixels.append(PixelChange(x: pixel.x, y: pixel.y, color: pixel.color))
+
             layerViewModel.layers[currentLayerIndex].setPixel(x: pixel.x, y: pixel.y, color: pixel.color)
+        }
+
+        // Command 생성 (이미 실행된 상태)
+        if !newPixels.isEmpty {
+            let command = DrawCommand(layerViewModel: layerViewModel, layerIndex: currentLayerIndex, oldPixels: oldPixels, newPixels: newPixels)
+            commandManager.addExecutedCommand(command)
         }
     }
 
@@ -270,11 +341,5 @@ class CanvasViewModel: ObservableObject {
         }
         // Simple comparison - in production you'd want to compare RGB values
         return c1 == c2
-    }
-
-    func swapColors() {
-        let temp = primaryColor
-        primaryColor = secondaryColor
-        secondaryColor = temp
     }
 }
