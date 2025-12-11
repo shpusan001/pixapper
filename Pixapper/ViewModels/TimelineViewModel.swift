@@ -20,8 +20,8 @@ class TimelineViewModel: ObservableObject {
     @Published var selectionAnchor: Int?  // 드래그/범위 선택 시작점
 
     private var playbackTimer: Timer?
-    private let canvasWidth: Int
-    private let canvasHeight: Int
+    let canvasWidth: Int
+    let canvasHeight: Int
 
     var layerViewModel: LayerViewModel
 

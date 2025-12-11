@@ -69,6 +69,8 @@ class ExtendFrameCommand: Command {
     private let layerId: UUID
     private var spanEnd: Int?
     private var shiftedKeyframes: [Int: [[Color?]]] = [:]  // 이동된 키프레임 백업
+    private var previousTotalFrames: Int = 0
+    private var previousCurrentFrameIndex: Int = 0
 
     var description: String {
         "Extend frame at \(frameIndex)"
@@ -85,6 +87,10 @@ class ExtendFrameCommand: Command {
               let layerIndex = timelineViewModel.layerViewModel.layers.firstIndex(where: { $0.id == layerId }) else {
             return
         }
+
+        // 이전 상태 저장
+        previousTotalFrames = timelineViewModel.totalFrames
+        previousCurrentFrameIndex = timelineViewModel.currentFrameIndex
 
         let layer = timelineViewModel.layerViewModel.layers[layerIndex]
 
@@ -118,6 +124,7 @@ class ExtendFrameCommand: Command {
         }
 
         timelineViewModel.updateTotalFrames()
+        timelineViewModel.loadFrame(at: timelineViewModel.currentFrameIndex)
     }
 
     func undo() {
@@ -135,7 +142,16 @@ class ExtendFrameCommand: Command {
             timelineViewModel.layerViewModel.layers[layerIndex].timeline.setKeyframe(at: originalIndex, pixels: pixels)
         }
 
+        // totalFrames 복원
+        timelineViewModel.totalFrames = previousTotalFrames
+
+        // currentFrameIndex 복원
+        if previousCurrentFrameIndex < timelineViewModel.totalFrames {
+            timelineViewModel.currentFrameIndex = previousCurrentFrameIndex
+        }
+
         timelineViewModel.updateTotalFrames()
+        timelineViewModel.loadFrame(at: timelineViewModel.currentFrameIndex)
     }
 }
 
@@ -279,4 +295,194 @@ enum KeyframeOperation: String {
     case extend = "Extend Frame"
     case insertBlank = "Insert Blank Keyframe"
     case clear = "Clear Content"
+}
+
+/// 키프레임 추가 Command (현재 내용 포함)
+class AddKeyframeWithContentCommand: Command {
+    private weak var timelineViewModel: TimelineViewModel?
+    private let layerId: UUID
+    private var insertedIndex: Int?
+    private var previousTotalFrames: Int = 0
+    private var previousCurrentFrameIndex: Int = 0
+    private var shiftedKeyframes: [Int: [[Color?]]] = [:]
+    private var insertedPixels: [[Color?]]?
+
+    var description: String {
+        "Add keyframe with content"
+    }
+
+    init(timelineViewModel: TimelineViewModel, layerId: UUID) {
+        self.timelineViewModel = timelineViewModel
+        self.layerId = layerId
+    }
+
+    func execute() {
+        guard let timelineViewModel = timelineViewModel,
+              let layerIndex = timelineViewModel.layerViewModel.layers.firstIndex(where: { $0.id == layerId }) else {
+            return
+        }
+
+        // 이전 상태 저장
+        previousTotalFrames = timelineViewModel.totalFrames
+        previousCurrentFrameIndex = timelineViewModel.currentFrameIndex
+
+        // 현재 레이어의 픽셀을 미리 저장
+        let currentPixels = timelineViewModel.layerViewModel.layers[layerIndex].pixels
+        insertedPixels = currentPixels
+
+        // 현재 프레임 다음에 삽입할 위치
+        insertedIndex = timelineViewModel.currentFrameIndex + 1
+
+        // shift 전에 이동될 키프레임들 백업
+        let allKeyframeIndices = timelineViewModel.layerViewModel.layers[layerIndex].timeline.getAllKeyframeIndices()
+        for keyframeIndex in allKeyframeIndices {
+            if keyframeIndex > timelineViewModel.currentFrameIndex {
+                if let pixels = timelineViewModel.layerViewModel.layers[layerIndex].timeline.getEffectivePixels(at: keyframeIndex) {
+                    shiftedKeyframes[keyframeIndex] = pixels
+                }
+            }
+        }
+
+        // 현재 레이어의 insertIndex 이후 키프레임만 shift
+        timelineViewModel.layerViewModel.layers[layerIndex].timeline.shiftKeyframes(after: timelineViewModel.currentFrameIndex, by: 1)
+
+        // 현재 레이어의 픽셀을 새 키프레임으로 저장
+        timelineViewModel.layerViewModel.layers[layerIndex].timeline.setKeyframe(at: insertedIndex!, pixels: currentPixels)
+
+        // totalFrames 업데이트
+        if insertedIndex! < timelineViewModel.totalFrames {
+            timelineViewModel.totalFrames += 1
+        } else {
+            timelineViewModel.totalFrames = insertedIndex! + 1
+        }
+
+        // 새 프레임으로 이동
+        timelineViewModel.currentFrameIndex = insertedIndex!
+        timelineViewModel.updateTotalFrames()
+        timelineViewModel.loadFrame(at: insertedIndex!)
+    }
+
+    func undo() {
+        guard let timelineViewModel = timelineViewModel,
+              let layerIndex = timelineViewModel.layerViewModel.layers.firstIndex(where: { $0.id == layerId }),
+              let inserted = insertedIndex else {
+            return
+        }
+
+        // 삽입된 키프레임 제거
+        timelineViewModel.layerViewModel.layers[layerIndex].timeline.removeKeyframe(at: inserted)
+
+        // shift된 키프레임들을 다시 -1로 이동
+        timelineViewModel.layerViewModel.layers[layerIndex].timeline.shiftKeyframes(after: previousCurrentFrameIndex, by: -1)
+
+        // 백업된 키프레임 복원
+        for (originalIndex, pixels) in shiftedKeyframes {
+            timelineViewModel.layerViewModel.layers[layerIndex].timeline.setKeyframe(at: originalIndex, pixels: pixels)
+        }
+
+        // totalFrames 복원
+        timelineViewModel.totalFrames = previousTotalFrames
+
+        // currentFrameIndex 복원
+        timelineViewModel.currentFrameIndex = previousCurrentFrameIndex
+
+        timelineViewModel.updateTotalFrames()
+        timelineViewModel.loadFrame(at: previousCurrentFrameIndex)
+    }
+}
+
+/// 빈 키프레임 추가 Command
+class AddBlankKeyframeCommand: Command {
+    private weak var timelineViewModel: TimelineViewModel?
+    private let layerId: UUID
+    private var insertedIndex: Int?
+    private var previousTotalFrames: Int = 0
+    private var previousCurrentFrameIndex: Int = 0
+    private var shiftedKeyframes: [Int: [[Color?]]] = [:]
+    private let canvasWidth: Int
+    private let canvasHeight: Int
+
+    var description: String {
+        "Add blank keyframe"
+    }
+
+    init(timelineViewModel: TimelineViewModel, layerId: UUID, canvasWidth: Int, canvasHeight: Int) {
+        self.timelineViewModel = timelineViewModel
+        self.layerId = layerId
+        self.canvasWidth = canvasWidth
+        self.canvasHeight = canvasHeight
+    }
+
+    func execute() {
+        guard let timelineViewModel = timelineViewModel,
+              let layerIndex = timelineViewModel.layerViewModel.layers.firstIndex(where: { $0.id == layerId }) else {
+            return
+        }
+
+        // 이전 상태 저장
+        previousTotalFrames = timelineViewModel.totalFrames
+        previousCurrentFrameIndex = timelineViewModel.currentFrameIndex
+
+        // 빈 픽셀 미리 생성
+        let emptyPixels = Array(repeating: Array(repeating: nil as Color?, count: canvasWidth), count: canvasHeight)
+
+        // 현재 프레임 다음에 삽입할 위치
+        insertedIndex = timelineViewModel.currentFrameIndex + 1
+
+        // shift 전에 이동될 키프레임들 백업
+        let allKeyframeIndices = timelineViewModel.layerViewModel.layers[layerIndex].timeline.getAllKeyframeIndices()
+        for keyframeIndex in allKeyframeIndices {
+            if keyframeIndex > timelineViewModel.currentFrameIndex {
+                if let pixels = timelineViewModel.layerViewModel.layers[layerIndex].timeline.getEffectivePixels(at: keyframeIndex) {
+                    shiftedKeyframes[keyframeIndex] = pixels
+                }
+            }
+        }
+
+        // 현재 레이어의 insertIndex 이후 키프레임만 shift
+        timelineViewModel.layerViewModel.layers[layerIndex].timeline.shiftKeyframes(after: timelineViewModel.currentFrameIndex, by: 1)
+
+        // 빈 픽셀로 새 키프레임 생성
+        timelineViewModel.layerViewModel.layers[layerIndex].timeline.setKeyframe(at: insertedIndex!, pixels: emptyPixels)
+
+        // totalFrames 업데이트
+        if insertedIndex! < timelineViewModel.totalFrames {
+            timelineViewModel.totalFrames += 1
+        } else {
+            timelineViewModel.totalFrames = insertedIndex! + 1
+        }
+
+        // 새 프레임으로 이동
+        timelineViewModel.currentFrameIndex = insertedIndex!
+        timelineViewModel.updateTotalFrames()
+        timelineViewModel.loadFrame(at: insertedIndex!)
+    }
+
+    func undo() {
+        guard let timelineViewModel = timelineViewModel,
+              let layerIndex = timelineViewModel.layerViewModel.layers.firstIndex(where: { $0.id == layerId }),
+              let inserted = insertedIndex else {
+            return
+        }
+
+        // 삽입된 키프레임 제거
+        timelineViewModel.layerViewModel.layers[layerIndex].timeline.removeKeyframe(at: inserted)
+
+        // shift된 키프레임들을 다시 -1로 이동
+        timelineViewModel.layerViewModel.layers[layerIndex].timeline.shiftKeyframes(after: previousCurrentFrameIndex, by: -1)
+
+        // 백업된 키프레임 복원
+        for (originalIndex, pixels) in shiftedKeyframes {
+            timelineViewModel.layerViewModel.layers[layerIndex].timeline.setKeyframe(at: originalIndex, pixels: pixels)
+        }
+
+        // totalFrames 복원
+        timelineViewModel.totalFrames = previousTotalFrames
+
+        // currentFrameIndex 복원
+        timelineViewModel.currentFrameIndex = previousCurrentFrameIndex
+
+        timelineViewModel.updateTotalFrames()
+        timelineViewModel.loadFrame(at: previousCurrentFrameIndex)
+    }
 }

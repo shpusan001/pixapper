@@ -640,7 +640,12 @@ struct TimelinePanel: View {
                 .help("Convert to Keyframe (F6)")
 
                 Button(action: {
-                    viewModel.addKeyframeWithContent()
+                    let layerId = viewModel.layerViewModel.layers[viewModel.layerViewModel.selectedLayerIndex].id
+                    let command = AddKeyframeWithContentCommand(
+                        timelineViewModel: viewModel,
+                        layerId: layerId
+                    )
+                    commandManager.performCommand(command)
                 }) {
                     HStack(spacing: 4) {
                         Image(systemName: "plus.circle.fill")
@@ -650,7 +655,14 @@ struct TimelinePanel: View {
                 .help("Add Keyframe with Current Drawing")
 
                 Button(action: {
-                    viewModel.addBlankKeyframeAtNext()
+                    let layerId = viewModel.layerViewModel.layers[viewModel.layerViewModel.selectedLayerIndex].id
+                    let command = AddBlankKeyframeCommand(
+                        timelineViewModel: viewModel,
+                        layerId: layerId,
+                        canvasWidth: viewModel.canvasWidth,
+                        canvasHeight: viewModel.canvasHeight
+                    )
+                    commandManager.performCommand(command)
                 }) {
                     HStack(spacing: 4) {
                         Image(systemName: "circle")
