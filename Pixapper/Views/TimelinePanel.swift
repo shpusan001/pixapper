@@ -341,10 +341,11 @@ struct TimelinePanel: View {
         let effectivePixels = viewModel.getEffectivePixels(frameIndex: frameIndex, layerId: layer.id)
         let spanPosition = viewModel.getFrameSpanPosition(frameIndex: frameIndex, layerId: layer.id)
         let hasContent = effectivePixels?.contains(where: { row in row.contains(where: { $0 != nil }) }) ?? false
+        let isOutOfRange = effectivePixels == nil
 
         return ZStack {
             // Background
-            cellBackground(spanPosition: spanPosition, isSelected: isSelected, isMultiSelected: isMultiSelected, isCurrentFrame: isCurrentFrame, isCurrentLayer: isCurrentLayer)
+            cellBackground(spanPosition: spanPosition, isSelected: isSelected, isMultiSelected: isMultiSelected, isCurrentFrame: isCurrentFrame, isCurrentLayer: isCurrentLayer, isOutOfRange: isOutOfRange)
 
             // Thumbnail - 키프레임에만 표시
             if spanPosition == .keyframeStart, hasContent, let pixels = effectivePixels {
@@ -352,14 +353,16 @@ struct TimelinePanel: View {
             }
 
             // Keyframe marker
-            cellMarker(spanPosition: spanPosition)
+            if !isOutOfRange {
+                cellMarker(spanPosition: spanPosition, hasContent: hasContent)
+            }
         }
         .frame(width: cellSize, height: cellSize)
         .clipShape(spanClipShape(spanPosition: spanPosition))
         .overlay(
             // 셀 구분선 (미묘하게)
             Rectangle()
-                .stroke(Color(nsColor: .separatorColor).opacity(0.3), lineWidth: 0.5)
+                .stroke(Color(nsColor: .separatorColor).opacity(isOutOfRange ? 0.15 : 0.3), lineWidth: 0.5)
         )
         .overlay(cellBorder(isSelected: isSelected, isMultiSelected: isMultiSelected))
         .overlay(
@@ -381,14 +384,17 @@ struct TimelinePanel: View {
                 }
             }
         )
-        .help(makeTooltipText(layer: layer, frameIndex: frameIndex, spanPosition: spanPosition))
+        .help(makeTooltipText(layer: layer, frameIndex: frameIndex, spanPosition: spanPosition, isOutOfRange: isOutOfRange))
         .contentShape(Rectangle())
+        .opacity(isOutOfRange ? 0.4 : 1.0)
         .onTapGesture {
             viewModel.selectFrame(at: frameIndex)
             viewModel.layerViewModel.selectedLayerIndex = layerIndex
         }
         .contextMenu {
-            contextMenuContent(layer: layer, frameIndex: frameIndex, spanPosition: spanPosition)
+            if !isOutOfRange {
+                contextMenuContent(layer: layer, frameIndex: frameIndex, spanPosition: spanPosition)
+            }
         }
     }
 
@@ -464,8 +470,13 @@ struct TimelinePanel: View {
     // MARK: - Cell Components
 
     @ViewBuilder
-    private func cellBackground(spanPosition: TimelineViewModel.FrameSpanPosition, isSelected: Bool, isMultiSelected: Bool, isCurrentFrame: Bool, isCurrentLayer: Bool) -> some View {
+    private func cellBackground(spanPosition: TimelineViewModel.FrameSpanPosition, isSelected: Bool, isMultiSelected: Bool, isCurrentFrame: Bool, isCurrentLayer: Bool, isOutOfRange: Bool) -> some View {
         let backgroundColor: Color = {
+            // Out of range: 매우 연한 회색
+            if isOutOfRange {
+                return Color(nsColor: .controlBackgroundColor).opacity(0.5)
+            }
+
             // Selected: 미묘한 accentColor (macOS 스타일)
             if isSelected {
                 return Color.accentColor.opacity(0.15)
@@ -495,24 +506,29 @@ struct TimelinePanel: View {
     }
 
     @ViewBuilder
-    private func cellMarker(spanPosition: TimelineViewModel.FrameSpanPosition) -> some View {
+    private func cellMarker(spanPosition: TimelineViewModel.FrameSpanPosition, hasContent: Bool) -> some View {
         VStack {
             HStack {
                 Group {
                     switch spanPosition {
                     case .keyframeStart:
-                        // 키프레임 마커 (FCP 스타일 다이아몬드)
-                        Diamond()
-                            .fill(Color(nsColor: .labelColor))
-                            .frame(width: 7, height: 7)
+                        if hasContent {
+                            // 키프레임 마커 (FCP 스타일 다이아몬드)
+                            Diamond()
+                                .fill(Color(nsColor: .labelColor))
+                                .frame(width: 7, height: 7)
+                        } else {
+                            // 빈 키프레임 마커 (빈 원)
+                            Circle()
+                                .stroke(Color(nsColor: .labelColor), lineWidth: 1.5)
+                                .frame(width: 7, height: 7)
+                        }
                     case .extended:
                         // Extended: 마커 없음
                         EmptyView()
                     case .end:
-                        // Span 끝: 구분선
-                        Rectangle()
-                            .fill(Color(nsColor: .separatorColor))
-                            .frame(width: 1, height: cellSize)
+                        // Span 끝: 구분선 제거
+                        EmptyView()
                     case .empty:
                         // Empty: 마커 없음
                         EmptyView()
@@ -545,7 +561,11 @@ struct TimelinePanel: View {
 
     // MARK: - Helper Functions
 
-    private func makeTooltipText(layer: Layer, frameIndex: Int, spanPosition: TimelineViewModel.FrameSpanPosition) -> String {
+    private func makeTooltipText(layer: Layer, frameIndex: Int, spanPosition: TimelineViewModel.FrameSpanPosition, isOutOfRange: Bool) -> String {
+        if isOutOfRange {
+            return "Out of range (layer has no data here)"
+        }
+
         switch spanPosition {
         case .keyframeStart:
             if let span = viewModel.getKeyframeSpan(frameIndex: frameIndex, layerId: layer.id) {
@@ -609,15 +629,35 @@ struct TimelinePanel: View {
             // Keyframe operations (current layer only)
             Group {
                 Button(action: {
-                    // Note: 직접 ViewModel 메서드 호출 대신 Command 사용하여 Undo/Redo 지원
+                    let layerId = viewModel.layerViewModel.layers[viewModel.layerViewModel.selectedLayerIndex].id
+                    viewModel.toggleKeyframe(frameIndex: viewModel.currentFrameIndex, layerId: layerId)
+                }) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "diamond")
+                        Text("Convert to Keyframe")
+                    }
+                }
+                .help("Convert to Keyframe (F6)")
+
+                Button(action: {
                     viewModel.addKeyframeWithContent()
                 }) {
                     HStack(spacing: 4) {
                         Image(systemName: "plus.circle.fill")
-                        Text("Keyframe (Content)")
+                        Text("Add Keyframe")
                     }
                 }
-                .help("Add Keyframe with Current Drawing (No Undo)")
+                .help("Add Keyframe with Current Drawing")
+
+                Button(action: {
+                    viewModel.addBlankKeyframeAtNext()
+                }) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "circle")
+                        Text("Add Blank Keyframe")
+                    }
+                }
+                .help("Add Blank Keyframe at Next Position (F7)")
 
                 Button(action: {
                     let layerId = viewModel.layerViewModel.layers[viewModel.layerViewModel.selectedLayerIndex].id
@@ -630,21 +670,10 @@ struct TimelinePanel: View {
                 }) {
                     HStack(spacing: 4) {
                         Image(systemName: "arrow.right.circle")
-                        Text("Extend")
+                        Text("Add Frame")
                     }
                 }
-                .help("Extend Current Keyframe Span (F5)")
-
-                Button(action: {
-                    // Note: 직접 ViewModel 메서드 호출 대신 Command 사용하여 Undo/Redo 지원
-                    viewModel.addBlankKeyframeAtNext()
-                }) {
-                    HStack(spacing: 4) {
-                        Image(systemName: "circle")
-                        Text("Add Blank Next")
-                    }
-                }
-                .help("Add Blank Keyframe at Next Position (No Undo)")
+                .help("Add Frame (Extend Current Keyframe Span) (F5)")
 
                 Button(action: {
                     if viewModel.totalFrames > 1 {
@@ -654,7 +683,7 @@ struct TimelinePanel: View {
                 }) {
                     HStack(spacing: 4) {
                         Image(systemName: "trash")
-                        Text("Frame")
+                        Text("Delete Frame")
                     }
                 }
                 .disabled(viewModel.totalFrames <= 1)
