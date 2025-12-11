@@ -8,38 +8,6 @@
 import Foundation
 import SwiftUI
 
-/// 프레임 추가 Command
-/// - Note: Deprecated - 더 이상 사용되지 않음. addKeyframeWithContent 또는 addBlankKeyframeAtNext 사용 권장
-@available(*, deprecated, message: "No longer used - use layer-specific keyframe operations instead")
-class AddFrameCommand: Command {
-    private weak var timelineViewModel: TimelineViewModel?
-    private var addedFrameIndex: Int?
-
-    var description: String {
-        "Add frame"
-    }
-
-    init(timelineViewModel: TimelineViewModel) {
-        self.timelineViewModel = timelineViewModel
-    }
-
-    func execute() {
-        guard let timelineViewModel = timelineViewModel else { return }
-        // Note: addFrame() is deprecated but kept for backward compatibility
-        timelineViewModel.addFrame()
-        addedFrameIndex = timelineViewModel.currentFrameIndex
-    }
-
-    func undo() {
-        guard let timelineViewModel = timelineViewModel,
-              let index = addedFrameIndex,
-              index < timelineViewModel.totalFrames else {
-            return
-        }
-        timelineViewModel.deleteFrame(at: index)
-    }
-}
-
 /// 프레임 삭제 Command
 class DeleteFrameCommand: Command {
     private weak var timelineViewModel: TimelineViewModel?
@@ -120,5 +88,83 @@ class DuplicateFrameCommand: Command {
             return
         }
         timelineViewModel.deleteFrame(at: index)
+    }
+}
+
+/// 레이어별 프레임 삭제 Command (독립 동작)
+class DeleteFrameInLayerCommand: Command {
+    private weak var timelineViewModel: TimelineViewModel?
+    private let deletedIndex: Int
+    private let layerId: UUID
+    private var previousFrameIndex: Int
+    private var previousTotalFrames: Int
+    // 삭제된 키프레임 데이터 및 shift된 키프레임 백업
+    private var deletedKeyframe: [[Color?]]?
+    private var wasKeyframe: Bool = false
+    private var shiftedKeyframes: [Int: [[Color?]]] = [:]
+
+    var description: String {
+        "Delete frame at index \(deletedIndex) in layer"
+    }
+
+    init(timelineViewModel: TimelineViewModel, index: Int, layerId: UUID) {
+        self.timelineViewModel = timelineViewModel
+        self.deletedIndex = index
+        self.layerId = layerId
+        self.previousFrameIndex = timelineViewModel.currentFrameIndex
+        self.previousTotalFrames = timelineViewModel.totalFrames
+
+        // 삭제 전에 키프레임 데이터 백업
+        if let layerIndex = timelineViewModel.layerViewModel.layers.firstIndex(where: { $0.id == layerId }) {
+            let layer = timelineViewModel.layerViewModel.layers[layerIndex]
+            wasKeyframe = layer.timeline.isKeyframe(at: index)
+
+            if wasKeyframe {
+                deletedKeyframe = layer.timeline.getEffectivePixels(at: index)
+            }
+
+            // index 이후의 모든 키프레임 백업 (Undo용)
+            let allKeyframeIndices = layer.timeline.getAllKeyframeIndices()
+            for keyframeIndex in allKeyframeIndices {
+                if keyframeIndex > index {
+                    if let pixels = layer.timeline.getEffectivePixels(at: keyframeIndex) {
+                        shiftedKeyframes[keyframeIndex] = pixels
+                    }
+                }
+            }
+        }
+    }
+
+    func execute() {
+        guard let timelineViewModel = timelineViewModel else { return }
+        timelineViewModel.deleteFrameInCurrentLayer(at: deletedIndex)
+    }
+
+    func undo() {
+        guard let timelineViewModel = timelineViewModel,
+              let layerIndex = timelineViewModel.layerViewModel.layers.firstIndex(where: { $0.id == layerId }) else {
+            return
+        }
+
+        // totalFrames 복원
+        timelineViewModel.totalFrames = previousTotalFrames
+
+        // 삭제된 키프레임이 있었으면 복원
+        if wasKeyframe, let pixels = deletedKeyframe {
+            timelineViewModel.layerViewModel.layers[layerIndex].timeline.setKeyframe(at: deletedIndex, pixels: pixels)
+        }
+
+        // shift된 키프레임들을 +1로 다시 이동
+        timelineViewModel.layerViewModel.layers[layerIndex].timeline.shiftKeyframes(after: deletedIndex - 1, by: 1)
+
+        // 백업된 키프레임 복원
+        for (originalIndex, pixels) in shiftedKeyframes {
+            timelineViewModel.layerViewModel.layers[layerIndex].timeline.setKeyframe(at: originalIndex, pixels: pixels)
+        }
+
+        // 이전 프레임 위치로 복원
+        timelineViewModel.currentFrameIndex = previousFrameIndex
+        timelineViewModel.updateTotalFrames()
+        timelineViewModel.loadFrame(at: previousFrameIndex)
     }
 }

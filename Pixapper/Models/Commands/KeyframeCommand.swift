@@ -128,7 +128,7 @@ class ExtendFrameCommand: Command {
     func undo() {
         guard let timelineViewModel = timelineViewModel,
               let layerIndex = timelineViewModel.layerViewModel.layers.firstIndex(where: { $0.id == layerId }),
-              let end = spanEnd else {
+              let originalSpanEnd = spanEnd else {
             return
         }
 
@@ -137,7 +137,7 @@ class ExtendFrameCommand: Command {
             timelineViewModel.layerViewModel.layers[layerIndex].timeline.shrinkSpanEnd(by: 1)
         } else {
             // 이동된 키프레임들을 -1로 다시 이동
-            timelineViewModel.layerViewModel.layers[layerIndex].timeline.shiftKeyframes(after: end, by: -1)
+            timelineViewModel.layerViewModel.layers[layerIndex].timeline.shiftKeyframes(after: originalSpanEnd, by: -1)
 
             // 백업된 키프레임 복원
             for (originalIndex, pixels) in shiftedKeyframes {
@@ -337,14 +337,7 @@ class AddKeyframeWithContentCommand: Command {
         insertedIndex = timelineViewModel.currentFrameIndex + 1
 
         // shift 전에 이동될 키프레임들 백업
-        let allKeyframeIndices = timelineViewModel.layerViewModel.layers[layerIndex].timeline.getAllKeyframeIndices()
-        for keyframeIndex in allKeyframeIndices {
-            if keyframeIndex > timelineViewModel.currentFrameIndex {
-                if let pixels = timelineViewModel.layerViewModel.layers[layerIndex].timeline.getEffectivePixels(at: keyframeIndex) {
-                    shiftedKeyframes[keyframeIndex] = pixels
-                }
-            }
-        }
+        shiftedKeyframes = timelineViewModel.layerViewModel.layers[layerIndex].timeline.backupKeyframesAfter(timelineViewModel.currentFrameIndex)
 
         // 현재 레이어의 insertIndex 이후 키프레임만 shift
         timelineViewModel.layerViewModel.layers[layerIndex].timeline.shiftKeyframes(after: timelineViewModel.currentFrameIndex, by: 1)
@@ -428,14 +421,7 @@ class AddBlankKeyframeCommand: Command {
         insertedIndex = timelineViewModel.currentFrameIndex + 1
 
         // shift 전에 이동될 키프레임들 백업
-        let allKeyframeIndices = timelineViewModel.layerViewModel.layers[layerIndex].timeline.getAllKeyframeIndices()
-        for keyframeIndex in allKeyframeIndices {
-            if keyframeIndex > timelineViewModel.currentFrameIndex {
-                if let pixels = timelineViewModel.layerViewModel.layers[layerIndex].timeline.getEffectivePixels(at: keyframeIndex) {
-                    shiftedKeyframes[keyframeIndex] = pixels
-                }
-            }
-        }
+        shiftedKeyframes = timelineViewModel.layerViewModel.layers[layerIndex].timeline.backupKeyframesAfter(timelineViewModel.currentFrameIndex)
 
         // 현재 레이어의 insertIndex 이후 키프레임만 shift
         timelineViewModel.layerViewModel.layers[layerIndex].timeline.shiftKeyframes(after: timelineViewModel.currentFrameIndex, by: 1)

@@ -11,12 +11,19 @@ import SwiftUI
 struct LayerTimeline {
     private var keyframes: [Int: [[Color?]]] = [:]  // frameIndex -> pixels
     private var spanEndIndex: Int = 0  // 마지막 키프레임의 span 끝 인덱스
+    private var sortedKeyframeIndices: [Int] = []  // 정렬된 키프레임 인덱스 (성능 최적화용)
 
     /// 특정 프레임에 키프레임 설정
     mutating func setKeyframe(at frameIndex: Int, pixels: [[Color?]]) {
+        let isNewKeyframe = keyframes[frameIndex] == nil
         keyframes[frameIndex] = pixels
         // spanEndIndex는 최소한 이 키프레임까지는 포함
         spanEndIndex = max(spanEndIndex, frameIndex)
+
+        // 정렬된 인덱스 업데이트
+        if isNewKeyframe {
+            updateSortedIndices()
+        }
     }
 
     /// 특정 프레임의 키프레임 제거
@@ -28,6 +35,9 @@ struct LayerTimeline {
         } else {
             spanEndIndex = 0
         }
+
+        // 정렬된 인덱스 업데이트
+        updateSortedIndices()
     }
 
     /// 특정 프레임이 키프레임인지 확인
@@ -42,13 +52,12 @@ struct LayerTimeline {
             return pixels
         }
 
-        // 이전 키프레임 찾기
-        let previousKeyframes = keyframes.keys.filter { $0 < frameIndex }.sorted()
-        if let lastKeyframe = previousKeyframes.last {
-            return keyframes[lastKeyframe]
-        }
+        // 이진 탐색으로 이전 키프레임 찾기 (O(log n))
+        let insertionPoint = sortedKeyframeIndices.firstIndex(where: { $0 > frameIndex }) ?? sortedKeyframeIndices.count
+        guard insertionPoint > 0 else { return nil }
 
-        return nil
+        let owningKeyframeIndex = sortedKeyframeIndices[insertionPoint - 1]
+        return keyframes[owningKeyframeIndex]
     }
 
     /// 특정 프레임이 속한 키프레임 인덱스 찾기
@@ -57,8 +66,11 @@ struct LayerTimeline {
             return frameIndex
         }
 
-        let previousKeyframes = keyframes.keys.filter { $0 < frameIndex }.sorted()
-        return previousKeyframes.last
+        // 이진 탐색으로 이전 키프레임 찾기 (O(log n))
+        let insertionPoint = sortedKeyframeIndices.firstIndex(where: { $0 > frameIndex }) ?? sortedKeyframeIndices.count
+        guard insertionPoint > 0 else { return nil }
+
+        return sortedKeyframeIndices[insertionPoint - 1]
     }
 
     /// 키프레임 span 계산 (시작, 길이)
@@ -77,7 +89,23 @@ struct LayerTimeline {
 
     /// 모든 키프레임 인덱스 반환
     func getAllKeyframeIndices() -> [Int] {
-        return keyframes.keys.sorted()
+        return sortedKeyframeIndices
+    }
+
+    /// 정렬된 키프레임 인덱스 업데이트 (private 헬퍼)
+    private mutating func updateSortedIndices() {
+        sortedKeyframeIndices = keyframes.keys.sorted()
+    }
+
+    /// 특정 인덱스 이후의 키프레임 백업 (Undo용)
+    func backupKeyframesAfter(_ index: Int) -> [Int: [[Color?]]] {
+        var backup: [Int: [[Color?]]] = [:]
+        for keyframeIndex in sortedKeyframeIndices where keyframeIndex > index {
+            if let pixels = keyframes[keyframeIndex] {
+                backup[keyframeIndex] = pixels
+            }
+        }
+        return backup
     }
 
     /// 키프레임 개수
@@ -128,6 +156,14 @@ struct LayerTimeline {
         }
 
         keyframes = newKeyframes
+
+        // spanEndIndex도 함께 이동 (index보다 큰 경우에만)
+        if spanEndIndex > index {
+            spanEndIndex = max(0, spanEndIndex + offset)
+        }
+
+        // 정렬된 인덱스 업데이트
+        updateSortedIndices()
     }
 }
 

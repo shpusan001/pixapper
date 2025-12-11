@@ -236,9 +236,7 @@ struct TimelinePanel: View {
 
     // 마우스 위치로부터 프레임 인덱스 계산
     private func calculateFrameIndex(from location: CGPoint) -> Int {
-        let frameX = location.x
-        let index = Int(frameX / cellSize)
-        return min(max(index, 0), viewModel.totalFrames - 1)
+        return max(0, min(Int(location.x / cellSize), viewModel.totalFrames - 1))
     }
 
     // MARK: - Layer Row
@@ -249,8 +247,8 @@ struct TimelinePanel: View {
             layerInfoColumn(layer: layer, layerIndex: layerIndex)
 
             // Frame cells for this layer - 해당 레이어의 프레임 개수만큼만 표시
-            let layerFrameCount = layer.timeline.maxFrameIndex + 1
-            ForEach(0..<max(layerFrameCount, 1), id: \.self) { frameIndex in
+            let displayFrameCount = max(layer.timeline.maxFrameIndex + 1, 1)
+            ForEach(0..<displayFrameCount, id: \.self) { frameIndex in
                 cellView(
                     layer: layer,
                     layerIndex: layerIndex,
@@ -368,7 +366,7 @@ struct TimelinePanel: View {
         let isMultiSelected = viewModel.selectedFrameIndices.contains(frameIndex)
         let effectivePixels = viewModel.getEffectivePixels(frameIndex: frameIndex, layerId: layer.id)
         let spanPosition = viewModel.getFrameSpanPosition(frameIndex: frameIndex, layerId: layer.id)
-        let hasContent = effectivePixels?.contains(where: { row in row.contains(where: { $0 != nil }) }) ?? false
+        let hasContent = viewModel.hasFrameContent(frameIndex: frameIndex, layerId: layer.id)
         let isOutOfRange = effectivePixels == nil
 
         return ZStack {
@@ -668,7 +666,7 @@ struct TimelinePanel: View {
                     let layerId = viewModel.layerViewModel.layers[viewModel.layerViewModel.selectedLayerIndex].id
                     viewModel.toggleKeyframe(frameIndex: viewModel.currentFrameIndex, layerId: layerId)
                 }) {
-                    Image(systemName: "diamond")
+                    Image(systemName: "scope")
                         .font(.system(size: 14))
                 }
                 .buttonStyle(.borderless)
@@ -682,7 +680,7 @@ struct TimelinePanel: View {
                     )
                     commandManager.performCommand(command)
                 }) {
-                    Image(systemName: "plus.diamond.fill")
+                    Image(systemName: "plus.circle.fill")
                         .font(.system(size: 14))
                 }
                 .buttonStyle(.borderless)
@@ -698,7 +696,7 @@ struct TimelinePanel: View {
                     )
                     commandManager.performCommand(command)
                 }) {
-                    Image(systemName: "circle")
+                    Image(systemName: "plus.circle.dashed")
                         .font(.system(size: 14))
                 }
                 .buttonStyle(.borderless)
@@ -724,24 +722,26 @@ struct TimelinePanel: View {
                     )
                     commandManager.performCommand(command)
                 }) {
-                    Image(systemName: "plus.rectangle.on.rectangle")
+                    Image(systemName: "plus.square")
                         .font(.system(size: 14))
                 }
                 .buttonStyle(.borderless)
                 .help("Add Frame (Extend) (F5)")
 
                 Button(action: {
-                    if viewModel.totalFrames > 1 {
-                        let command = DeleteFrameCommand(timelineViewModel: viewModel, index: viewModel.currentFrameIndex)
-                        commandManager.performCommand(command)
-                    }
+                    let layerId = viewModel.layerViewModel.layers[viewModel.layerViewModel.selectedLayerIndex].id
+                    let command = DeleteFrameInLayerCommand(
+                        timelineViewModel: viewModel,
+                        index: viewModel.currentFrameIndex,
+                        layerId: layerId
+                    )
+                    commandManager.performCommand(command)
                 }) {
-                    Image(systemName: "minus.rectangle")
+                    Image(systemName: "minus.square")
                         .font(.system(size: 14))
                 }
                 .buttonStyle(.borderless)
-                .disabled(viewModel.totalFrames <= 1)
-                .help("Delete Frame")
+                .help("Delete Frame (Current Layer)")
             }
 
             Spacer()

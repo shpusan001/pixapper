@@ -19,7 +19,7 @@ class TimelineViewModel: ObservableObject {
     @Published var selectedFrameIndices: Set<Int> = []  // 선택된 프레임들
     @Published var selectionAnchor: Int?  // 드래그/범위 선택 시작점
 
-    private var playbackTimer: Timer?
+    var playbackTimer: Timer?  // fileprivate for extension access
     let canvasWidth: Int
     let canvasHeight: Int
 
@@ -29,6 +29,15 @@ class TimelineViewModel: ObservableObject {
         self.canvasWidth = width
         self.canvasHeight = height
         self.layerViewModel = layerViewModel
+    }
+
+    // MARK: - Helper Methods
+
+    /// 선택된 레이어 인덱스 검증
+    private func validateSelectedLayer() -> Int? {
+        let index = layerViewModel.selectedLayerIndex
+        guard index >= 0 && index < layerViewModel.layers.count else { return nil }
+        return index
     }
 
     /// 모든 레이어의 최대 프레임 인덱스를 기준으로 totalFrames를 자동 업데이트
@@ -42,16 +51,13 @@ class TimelineViewModel: ObservableObject {
         guard currentFrameIndex < totalFrames else { return }
 
         for layerIndex in layerViewModel.layers.indices {
-            let layer = layerViewModel.layers[layerIndex]
+            var layer = layerViewModel.layers[layerIndex]
 
             // 현재 프레임이 속한 키프레임 찾기
-            if let owningKeyframe = layer.timeline.getOwningKeyframe(at: currentFrameIndex) {
-                // 소속 키프레임에 현재 픽셀 저장
-                layerViewModel.layers[layerIndex].timeline.setKeyframe(at: owningKeyframe, pixels: layer.pixels)
-            } else {
-                // 키프레임이 없으면 현재 프레임을 새 키프레임으로 생성
-                layerViewModel.layers[layerIndex].timeline.setKeyframe(at: currentFrameIndex, pixels: layer.pixels)
-            }
+            let keyframeIndex = layer.timeline.getOwningKeyframe(at: currentFrameIndex) ?? currentFrameIndex
+            layer.timeline.setKeyframe(at: keyframeIndex, pixels: layer.pixels)
+
+            layerViewModel.layers[layerIndex] = layer
         }
 
         // 레이어별 키프레임 변경 후 totalFrames 자동 업데이트
@@ -60,36 +66,12 @@ class TimelineViewModel: ObservableObject {
 
     // MARK: - Frame Management
 
-    /// 프레임 슬롯 삽입 (전역 동작) - Deprecated
-    /// - Note: 더 이상 사용되지 않음. 레이어별 독립적인 키프레임 관리를 위해
-    ///         각 레이어의 timeline.shiftKeyframes()를 직접 호출하세요.
-    @available(*, deprecated, message: "Use layer-specific shiftKeyframes instead")
-    private func insertFrameSlot(at insertIndex: Int) {
-        if insertIndex >= totalFrames {
-            // 끝에 추가
-            totalFrames = insertIndex + 1
-        } else {
-            // 중간 삽입: 모든 레이어의 키프레임 인덱스를 +1 이동
-            for i in layerViewModel.layers.indices {
-                layerViewModel.layers[i].timeline.shiftKeyframes(after: insertIndex - 1, by: 1)
-            }
-            totalFrames += 1
-        }
-    }
-
-    @available(*, deprecated, message: "Use addKeyframeWithContent or addBlankKeyframeAtNext instead")
-    func addFrame() {
-        // Deprecated: 대신 addKeyframeWithContent 또는 addBlankKeyframeAtNext 사용
-        totalFrames += 1
-        currentFrameIndex = currentFrameIndex + 1
-        loadFrame(at: currentFrameIndex)
-    }
 
     /// 프레임 슬롯 전체 삭제 (전역 동작)
     /// - Note: 모든 레이어의 해당 프레임 위치를 삭제하고, 뒤의 키프레임들을 앞으로 당깁니다.
     ///         Flash/Animate의 "Remove Frame" 기능과 동일합니다.
     func deleteFrame(at index: Int) {
-        guard totalFrames > 1 && index < totalFrames else { return }
+        guard index < totalFrames && totalFrames > 1 else { return }
 
         // 각 레이어에서 해당 프레임의 키프레임 제거 및 이후 키프레임 인덱스 재조정
         for layerIndex in layerViewModel.layers.indices {
@@ -101,11 +83,14 @@ class TimelineViewModel: ObservableObject {
             layerViewModel.layers[layerIndex].timeline.shiftKeyframes(after: index, by: -1)
         }
 
-        totalFrames -= 1
-        if currentFrameIndex >= totalFrames {
+        // totalFrames는 updateTotalFrames()에서 자동 계산
+        updateTotalFrames()
+
+        // 현재 프레임 인덱스 조정
+        if currentFrameIndex >= totalFrames && totalFrames > 0 {
             currentFrameIndex = totalFrames - 1
         }
-        updateTotalFrames()
+
         loadFrame(at: currentFrameIndex)
     }
 
@@ -138,24 +123,12 @@ class TimelineViewModel: ObservableObject {
         loadFrame(at: insertIndex)
     }
 
-    func selectFrame(at index: Int, clearSelection: Bool = true) {
-        guard index < totalFrames else { return }
-        currentFrameIndex = index
-
-        if clearSelection {
-            selectedFrameIndices = [index]
-        }
-
-        loadFrame(at: index)
-    }
-
     // MARK: - Layer-Specific Frame Operations
 
     /// 현재 레이어에 키프레임 추가 (현재 그림 포함)
     /// - Note: 현재 레이어에만 영향을 주며, 다른 레이어는 변경되지 않음
     func addKeyframeWithContent() {
-        let layerIndex = layerViewModel.selectedLayerIndex
-        guard layerIndex < layerViewModel.layers.count else { return }
+        guard let layerIndex = validateSelectedLayer() else { return }
 
         // 현재 레이어의 픽셀을 미리 저장
         let currentPixels = layerViewModel.layers[layerIndex].pixels
@@ -179,8 +152,7 @@ class TimelineViewModel: ObservableObject {
 
     /// 현재 레이어의 키프레임 span을 1프레임 연장 (현재 레이어의 뒤 키프레임들을 밀어냄)
     func extendCurrentKeyframeSpan() {
-        let layerIndex = layerViewModel.selectedLayerIndex
-        guard layerIndex < layerViewModel.layers.count else { return }
+        guard let layerIndex = validateSelectedLayer() else { return }
 
         let layer = layerViewModel.layers[layerIndex]
 
@@ -210,8 +182,7 @@ class TimelineViewModel: ObservableObject {
     /// 현재 레이어에 빈 키프레임 추가
     /// - Note: 현재 레이어에만 영향을 주며, 다른 레이어는 변경되지 않음
     func addBlankKeyframeAtNext() {
-        let layerIndex = layerViewModel.selectedLayerIndex
-        guard layerIndex < layerViewModel.layers.count else { return }
+        guard let layerIndex = validateSelectedLayer() else { return }
 
         // 빈 픽셀 미리 생성
         let emptyPixels = Array(repeating: Array(repeating: nil as Color?, count: canvasWidth), count: canvasHeight)
@@ -233,80 +204,48 @@ class TimelineViewModel: ObservableObject {
         loadFrame(at: insertIndex)
     }
 
-    // MARK: - Frame Selection
+    /// 현재 레이어의 프레임 삭제 (레이어별 독립 동작)
+    /// - Note: 현재 레이어의 해당 프레임만 제거하고 뒤의 키프레임들을 당깁니다.
+    ///         다른 레이어는 영향을 받지 않습니다.
+    func deleteFrameInCurrentLayer(at index: Int) {
+        guard let layerIndex = validateSelectedLayer() else { return }
 
-    /// 단일 프레임 선택 (기존 선택 해제)
-    func selectSingleFrame(at index: Int) {
-        guard index < totalFrames else { return }
-        selectedFrameIndices = [index]
-        currentFrameIndex = index
-        selectionAnchor = index
-        loadFrame(at: index)
-    }
+        let layer = layerViewModel.layers[layerIndex]
 
-    /// 프레임 범위 선택
-    func selectFrameRange(from start: Int, to end: Int) {
-        let range = min(start, end)...max(start, end)
-        selectedFrameIndices = Set(range.filter { $0 < totalFrames })
+        // 해당 레이어에 키프레임이 하나라도 있는지 확인
+        guard layer.timeline.keyframeCount > 0 else { return }
 
-        // 현재 프레임은 마지막 선택된 프레임으로
-        if let last = selectedFrameIndices.max() {
-            currentFrameIndex = last
-            loadFrame(at: last)
+        // 해당 위치에 키프레임이 있으면 제거
+        if layer.timeline.isKeyframe(at: index) {
+            layerViewModel.layers[layerIndex].timeline.removeKeyframe(at: index)
         }
-    }
 
-    /// 프레임 선택 토글 (Cmd+클릭)
-    func toggleFrameSelection(at index: Int) {
-        guard index < totalFrames else { return }
+        // 현재 레이어의 index 이후 키프레임들을 -1로 이동
+        layerViewModel.layers[layerIndex].timeline.shiftKeyframes(after: index, by: -1)
 
-        if selectedFrameIndices.contains(index) {
-            selectedFrameIndices.remove(index)
-            // 선택 해제 시 다른 프레임으로 이동
-            if !selectedFrameIndices.isEmpty {
-                currentFrameIndex = selectedFrameIndices.max() ?? 0
-            } else {
-                // 모든 선택 해제 시 selectionAnchor도 초기화
-                selectionAnchor = nil
-            }
-        } else {
-            selectedFrameIndices.insert(index)
-            currentFrameIndex = index
+        // totalFrames 자동 업데이트 (다른 레이어가 더 길면 유지됨)
+        updateTotalFrames()
+
+        // 현재 프레임 인덱스 조정
+        if currentFrameIndex >= totalFrames && totalFrames > 0 {
+            currentFrameIndex = totalFrames - 1
         }
 
         loadFrame(at: currentFrameIndex)
     }
 
-    /// 선택 해제
-    func clearFrameSelection() {
-        selectedFrameIndices.removeAll()
-        selectionAnchor = nil
-    }
-
-    /// 모든 프레임 선택
-    func selectAllFrames() {
-        selectedFrameIndices = Set(0..<totalFrames)
-        selectionAnchor = 0
-    }
-
-    /// 드래그로 범위 선택
-    func updateDragSelection(from startIndex: Int, to currentIndex: Int) {
-        let range = min(startIndex, currentIndex)...max(startIndex, currentIndex)
-        selectedFrameIndices = Set(range.filter { $0 < totalFrames })
-    }
+    // MARK: - Frame Selection
+    // Selection methods moved to TimelineViewModel+Selection.swift
 
     func loadFrame(at index: Int) {
         guard index < totalFrames else { return }
 
+        let emptyPixels = Array(repeating: Array(repeating: nil as Color?, count: canvasWidth), count: canvasHeight)
+
         // 각 레이어의 timeline에서 effective 픽셀 로드
         for layerIndex in layerViewModel.layers.indices {
-            if let effectivePixels = layerViewModel.layers[layerIndex].timeline.getEffectivePixels(at: index) {
-                layerViewModel.layers[layerIndex].pixels = effectivePixels
-            } else {
-                // 키프레임이 없으면 빈 픽셀로 초기화
-                let emptyPixels = Array(repeating: Array(repeating: nil as Color?, count: canvasWidth), count: canvasHeight)
-                layerViewModel.layers[layerIndex].pixels = emptyPixels
-            }
+            let effectivePixels = layerViewModel.layers[layerIndex].timeline.getEffectivePixels(at: index) ?? emptyPixels
+            layerViewModel.layers[layerIndex].pixels = effectivePixels
         }
     }
 
@@ -317,20 +256,19 @@ class TimelineViewModel: ObservableObject {
         guard frameIndex < totalFrames,
               let layerIndex = layerViewModel.layers.firstIndex(where: { $0.id == layerId }) else { return }
 
-        if layerViewModel.layers[layerIndex].timeline.isKeyframe(at: frameIndex) {
+        var layer = layerViewModel.layers[layerIndex]
+
+        if layer.timeline.isKeyframe(at: frameIndex) {
             // 키프레임 제거
-            layerViewModel.layers[layerIndex].timeline.removeKeyframe(at: frameIndex)
+            layer.timeline.removeKeyframe(at: frameIndex)
         } else {
             // 키프레임으로 변환 (현재 보이는 픽셀 데이터를 복사)
-            if let effectivePixels = layerViewModel.layers[layerIndex].timeline.getEffectivePixels(at: frameIndex) {
-                layerViewModel.layers[layerIndex].timeline.setKeyframe(at: frameIndex, pixels: effectivePixels)
-            } else {
-                // 이전 키프레임이 없으면 빈 키프레임 생성
-                let emptyPixels = Array(repeating: Array(repeating: nil as Color?, count: canvasWidth), count: canvasHeight)
-                layerViewModel.layers[layerIndex].timeline.setKeyframe(at: frameIndex, pixels: emptyPixels)
-            }
+            let emptyPixels = Array(repeating: Array(repeating: nil as Color?, count: canvasWidth), count: canvasHeight)
+            let effectivePixels = layer.timeline.getEffectivePixels(at: frameIndex) ?? emptyPixels
+            layer.timeline.setKeyframe(at: frameIndex, pixels: effectivePixels)
         }
 
+        layerViewModel.layers[layerIndex] = layer
         updateTotalFrames()
 
         // UI 갱신을 위해 프레임 재로드
@@ -342,16 +280,21 @@ class TimelineViewModel: ObservableObject {
     /// 프레임 연장 (F5): 현재 span 끝에 프레임 추가
     func extendFrame(frameIndex: Int, layerId: UUID) {
         guard frameIndex < totalFrames,
-              let layerIndex = layerViewModel.layers.firstIndex(where: { $0.id == layerId }) else { return }
+              let layerIndex = layerViewModel.layers.firstIndex(where: { $0.id == layerId }),
+              let span = layerViewModel.layers[layerIndex].timeline.getKeyframeSpan(at: frameIndex, totalFrames: totalFrames) else {
+            return
+        }
 
-        // span 정보 가져오기
-        if let span = layerViewModel.layers[layerIndex].timeline.getKeyframeSpan(at: frameIndex, totalFrames: totalFrames) {
-            let spanEnd = span.start + span.length - 1
+        let spanEnd = span.start + span.length - 1
+        let nextFrameIndex = spanEnd + 1
 
-            // span 끝 다음에 프레임이 있고 키프레임이면, 제거하여 연장
-            if spanEnd + 1 < totalFrames && layerViewModel.layers[layerIndex].timeline.isKeyframe(at: spanEnd + 1) {
-                layerViewModel.layers[layerIndex].timeline.removeKeyframe(at: spanEnd + 1)
-            }
+        // 범위 검증
+        guard nextFrameIndex < totalFrames else { return }
+
+        // span 끝 다음에 키프레임이 있으면 제거하여 연장
+        if layerViewModel.layers[layerIndex].timeline.isKeyframe(at: nextFrameIndex) {
+            layerViewModel.layers[layerIndex].timeline.removeKeyframe(at: nextFrameIndex)
+            updateTotalFrames()
         }
     }
 
@@ -400,6 +343,14 @@ class TimelineViewModel: ObservableObject {
         return layer.timeline.getKeyframeSpan(at: frameIndex, totalFrames: totalFrames)
     }
 
+    /// 프레임에 내용이 있는지 확인
+    func hasFrameContent(frameIndex: Int, layerId: UUID) -> Bool {
+        guard let pixels = getEffectivePixels(frameIndex: frameIndex, layerId: layerId) else {
+            return false
+        }
+        return pixels.contains(where: { row in row.contains(where: { $0 != nil }) })
+    }
+
     /// 셀이 키프레임 span의 어느 위치인지 반환
     enum FrameSpanPosition {
         case keyframeStart
@@ -431,125 +382,10 @@ class TimelineViewModel: ObservableObject {
     }
 
     // MARK: - Playback
-
-    func togglePlayback() {
-        isPlaying.toggle()
-        if isPlaying {
-            startPlayback()
-        } else {
-            stopPlayback()
-        }
-    }
-
-    func play() {
-        isPlaying = true
-        startPlayback()
-    }
-
-    func pause() {
-        isPlaying = false
-        stopPlayback()
-    }
-
-    private func startPlayback() {
-        stopPlayback()
-
-        let interval = settings.frameDuration
-        playbackTimer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { [weak self] _ in
-            Task { @MainActor in
-                guard let self = self else { return }
-                self.advanceFrame()
-            }
-        }
-        if let timer = playbackTimer {
-            RunLoop.main.add(timer, forMode: .common)
-        }
-    }
-
-    private func stopPlayback() {
-        playbackTimer?.invalidate()
-        playbackTimer = nil
-    }
-
-    private func advanceFrame() {
-        if currentFrameIndex < totalFrames - 1 {
-            currentFrameIndex += 1
-        } else if settings.isLooping {
-            currentFrameIndex = 0
-        } else {
-            pause()
-            return
-        }
-        loadFrame(at: currentFrameIndex)
-    }
-
-    func nextFrame() {
-        if currentFrameIndex < totalFrames - 1 {
-            currentFrameIndex += 1
-            loadFrame(at: currentFrameIndex)
-        }
-    }
-
-    func previousFrame() {
-        if currentFrameIndex > 0 {
-            currentFrameIndex -= 1
-            loadFrame(at: currentFrameIndex)
-        }
-    }
-
-    // MARK: - Settings
-
-    func setFPS(_ fps: Int) {
-        settings.fps = fps
-        if isPlaying {
-            startPlayback()
-        }
-    }
-
-    func setPlaybackSpeed(_ speed: Double) {
-        settings.playbackSpeed = speed
-        if isPlaying {
-            startPlayback()
-        }
-    }
-
-    func toggleLoop() {
-        settings.isLooping.toggle()
-    }
-
-    func toggleOnionSkin() {
-        settings.onionSkinEnabled.toggle()
-    }
+    // Playback methods moved to TimelineViewModel+Playback.swift
 
     // MARK: - Onion Skin Helpers
-
-    func getOnionSkinFrames() -> [(frameIndex: Int, tint: Color, opacity: Double)] {
-        var result: [(frameIndex: Int, tint: Color, opacity: Double)] = []
-
-        if !settings.onionSkinEnabled {
-            return result
-        }
-
-        // Previous frames (red tint)
-        for i in 1...settings.onionSkinPrevFrames {
-            let frameIndex = currentFrameIndex - i
-            if frameIndex >= 0 && frameIndex < totalFrames {
-                let opacity = settings.onionSkinOpacity / Double(i)
-                result.append((frameIndex, .red, opacity))
-            }
-        }
-
-        // Next frames (blue tint)
-        for i in 1...settings.onionSkinNextFrames {
-            let frameIndex = currentFrameIndex + i
-            if frameIndex >= 0 && frameIndex < totalFrames {
-                let opacity = settings.onionSkinOpacity / Double(i)
-                result.append((frameIndex, .blue, opacity))
-            }
-        }
-
-        return result
-    }
+    // Onion Skin methods moved to TimelineViewModel+OnionSkin.swift
 
     /// Export용: 모든 키프레임 로직이 적용된 프레임 배열 반환
     func getResolvedFrames() -> [Frame] {
