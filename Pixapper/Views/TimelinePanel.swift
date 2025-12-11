@@ -30,16 +30,19 @@ struct TimelinePanel: View {
             Divider()
 
             // 2D Grid: Layers × Frames
-            ScrollView([.horizontal, .vertical], showsIndicators: true) {
-                VStack(spacing: 0) {
-                    // Header row: Frame numbers
-                    frameHeaderRow
+            GeometryReader { geometry in
+                ScrollView([.horizontal, .vertical], showsIndicators: true) {
+                    VStack(alignment: .leading, spacing: 0) {
+                        // Header row: Frame numbers
+                        frameHeaderRow
 
-                    // Layer rows (reversed for display: top = highest index)
-                    ForEach(viewModel.layerViewModel.layers.indices.reversed(), id: \.self) { layerIndex in
-                        let layer = viewModel.layerViewModel.layers[layerIndex]
-                        layerRow(layer: layer, layerIndex: layerIndex)
+                        // Layer rows (reversed for display: top = highest index)
+                        ForEach(viewModel.layerViewModel.layers.indices.reversed(), id: \.self) { layerIndex in
+                            let layer = viewModel.layerViewModel.layers[layerIndex]
+                            layerRow(layer: layer, layerIndex: layerIndex)
+                        }
                     }
+                    .frame(minWidth: geometry.size.width, minHeight: geometry.size.height, alignment: .topLeading)
                 }
             }
             .frame(maxHeight: 300)
