@@ -114,15 +114,13 @@ class ExtendFrameCommand: Command {
         // spanEnd 이후 키프레임들을 +1 이동
         timelineViewModel.layerViewModel.layers[layerIndex].timeline.shiftKeyframes(after: spanEnd!, by: 1)
 
-        // shift를 했으므로 타임라인 전체 길이 증가 (중간이든 끝이든)
-        if spanEnd! + 1 < timelineViewModel.totalFrames {
-            // 중간: 기존 프레임들을 밀었으므로 공간 1칸 추가
-            timelineViewModel.totalFrames += 1
-        } else {
-            // 끝: spanEnd + 2까지 확장 (span 끝 + 연장된 1칸)
-            timelineViewModel.totalFrames = spanEnd! + 2
+        // 마지막 키프레임인 경우 (shift할 키프레임이 없는 경우)
+        // 키프레임 없이 span만 1 프레임 확장
+        if shiftedKeyframes.isEmpty {
+            timelineViewModel.layerViewModel.layers[layerIndex].timeline.setSpanEnd(at: spanEnd! + 1)
         }
 
+        // totalFrames 자동 업데이트 (max 비교로 유지 또는 증가)
         timelineViewModel.updateTotalFrames()
         timelineViewModel.loadFrame(at: timelineViewModel.currentFrameIndex)
     }
@@ -134,12 +132,17 @@ class ExtendFrameCommand: Command {
             return
         }
 
-        // 이동된 키프레임들을 -1로 다시 이동
-        timelineViewModel.layerViewModel.layers[layerIndex].timeline.shiftKeyframes(after: end, by: -1)
+        // 마지막 키프레임이었을 경우 span 축소
+        if shiftedKeyframes.isEmpty {
+            timelineViewModel.layerViewModel.layers[layerIndex].timeline.shrinkSpanEnd(by: 1)
+        } else {
+            // 이동된 키프레임들을 -1로 다시 이동
+            timelineViewModel.layerViewModel.layers[layerIndex].timeline.shiftKeyframes(after: end, by: -1)
 
-        // 백업된 키프레임 복원 (혹시 데이터 손실 방지)
-        for (originalIndex, pixels) in shiftedKeyframes {
-            timelineViewModel.layerViewModel.layers[layerIndex].timeline.setKeyframe(at: originalIndex, pixels: pixels)
+            // 백업된 키프레임 복원
+            for (originalIndex, pixels) in shiftedKeyframes {
+                timelineViewModel.layerViewModel.layers[layerIndex].timeline.setKeyframe(at: originalIndex, pixels: pixels)
+            }
         }
 
         // totalFrames 복원
@@ -349,15 +352,10 @@ class AddKeyframeWithContentCommand: Command {
         // 현재 레이어의 픽셀을 새 키프레임으로 저장
         timelineViewModel.layerViewModel.layers[layerIndex].timeline.setKeyframe(at: insertedIndex!, pixels: currentPixels)
 
-        // totalFrames 업데이트
-        if insertedIndex! < timelineViewModel.totalFrames {
-            timelineViewModel.totalFrames += 1
-        } else {
-            timelineViewModel.totalFrames = insertedIndex! + 1
-        }
-
         // 새 프레임으로 이동
         timelineViewModel.currentFrameIndex = insertedIndex!
+
+        // totalFrames 자동 업데이트
         timelineViewModel.updateTotalFrames()
         timelineViewModel.loadFrame(at: insertedIndex!)
     }
@@ -445,15 +443,10 @@ class AddBlankKeyframeCommand: Command {
         // 빈 픽셀로 새 키프레임 생성
         timelineViewModel.layerViewModel.layers[layerIndex].timeline.setKeyframe(at: insertedIndex!, pixels: emptyPixels)
 
-        // totalFrames 업데이트
-        if insertedIndex! < timelineViewModel.totalFrames {
-            timelineViewModel.totalFrames += 1
-        } else {
-            timelineViewModel.totalFrames = insertedIndex! + 1
-        }
-
         // 새 프레임으로 이동
         timelineViewModel.currentFrameIndex = insertedIndex!
+
+        // totalFrames 자동 업데이트
         timelineViewModel.updateTotalFrames()
         timelineViewModel.loadFrame(at: insertedIndex!)
     }

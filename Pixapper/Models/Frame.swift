@@ -10,15 +10,24 @@ import SwiftUI
 /// 레이어의 타임라인 - 키프레임만 저장하는 효율적인 구조
 struct LayerTimeline {
     private var keyframes: [Int: [[Color?]]] = [:]  // frameIndex -> pixels
+    private var spanEndIndex: Int = 0  // 마지막 키프레임의 span 끝 인덱스
 
     /// 특정 프레임에 키프레임 설정
     mutating func setKeyframe(at frameIndex: Int, pixels: [[Color?]]) {
         keyframes[frameIndex] = pixels
+        // spanEndIndex는 최소한 이 키프레임까지는 포함
+        spanEndIndex = max(spanEndIndex, frameIndex)
     }
 
     /// 특정 프레임의 키프레임 제거
     mutating func removeKeyframe(at frameIndex: Int) {
         keyframes.removeValue(forKey: frameIndex)
+        // spanEndIndex 재계산 (마지막 키프레임 또는 기존 spanEndIndex 중 큰 값)
+        if let maxKeyframe = keyframes.keys.max() {
+            spanEndIndex = max(maxKeyframe, spanEndIndex)
+        } else {
+            spanEndIndex = 0
+        }
     }
 
     /// 특정 프레임이 키프레임인지 확인
@@ -76,9 +85,24 @@ struct LayerTimeline {
         return keyframes.count
     }
 
-    /// 이 레이어의 최대 프레임 인덱스 (마지막 키프레임 인덱스, 없으면 0)
+    /// 이 레이어의 최대 프레임 인덱스 (마지막 키프레임 또는 span 끝, 없으면 0)
     var maxFrameIndex: Int {
-        return keyframes.keys.max() ?? 0
+        let lastKeyframe = keyframes.keys.max() ?? 0
+        return max(lastKeyframe, spanEndIndex)
+    }
+
+    /// Span 끝 인덱스 설정 (키프레임 없이 프레임만 확장할 때 사용)
+    mutating func setSpanEnd(at frameIndex: Int) {
+        spanEndIndex = max(spanEndIndex, frameIndex)
+    }
+
+    /// Span 끝 인덱스 축소
+    mutating func shrinkSpanEnd(by amount: Int) {
+        spanEndIndex = max(0, spanEndIndex - amount)
+        // 마지막 키프레임보다 작아지지 않도록
+        if let maxKeyframe = keyframes.keys.max() {
+            spanEndIndex = max(spanEndIndex, maxKeyframe)
+        }
     }
 
     /// 특정 인덱스 이후의 모든 키프레임을 offset만큼 이동

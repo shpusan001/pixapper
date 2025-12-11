@@ -34,7 +34,7 @@ class TimelineViewModel: ObservableObject {
     /// 모든 레이어의 최대 프레임 인덱스를 기준으로 totalFrames를 자동 업데이트
     func updateTotalFrames() {
         let maxIndex = layerViewModel.layers.map { $0.timeline.maxFrameIndex }.max() ?? 0
-        totalFrames = max(totalFrames, maxIndex + 1)
+        totalFrames = max(totalFrames, maxIndex + 1)  // 현재 totalFrames와 maxIndex + 1 중 큰 값 사용
     }
 
     /// 현재 작업 중인 레이어의 픽셀을 소속 키프레임에 저장 (CanvasViewModel에서 호출)
@@ -169,17 +169,10 @@ class TimelineViewModel: ObservableObject {
         // 현재 레이어의 픽셀을 새 키프레임으로 저장
         layerViewModel.layers[layerIndex].timeline.setKeyframe(at: insertIndex, pixels: currentPixels)
 
-        // shift를 했으므로 타임라인 전체 길이 증가 (중간 삽입이든 끝 삽입이든)
-        if insertIndex < totalFrames {
-            // 중간 삽입: 기존 프레임들을 밀었으므로 공간 1칸 추가
-            totalFrames += 1
-        } else {
-            // 끝 삽입: insertIndex까지 확장
-            totalFrames = insertIndex + 1
-        }
-
         // 새 프레임으로 이동
         currentFrameIndex = insertIndex
+
+        // totalFrames 자동 업데이트
         updateTotalFrames()
         loadFrame(at: insertIndex)
     }
@@ -197,20 +190,19 @@ class TimelineViewModel: ObservableObject {
         }
 
         let spanEnd = span.start + span.length - 1
-        let nextFrame = spanEnd + 1
 
         // 현재 레이어의 spanEnd 이후 키프레임들만 +1 이동 (다른 레이어는 건드리지 않음!)
+        let allKeyframeIndices = layer.timeline.getAllKeyframeIndices()
+        let hasNextKeyframes = allKeyframeIndices.contains(where: { $0 > spanEnd })
+
         layerViewModel.layers[layerIndex].timeline.shiftKeyframes(after: spanEnd, by: 1)
 
-        // shift를 했으므로 타임라인 전체 길이 증가 (중간이든 끝이든)
-        if nextFrame < totalFrames {
-            // 중간: 기존 프레임들을 밀었으므로 공간 1칸 추가
-            totalFrames += 1
-        } else {
-            // 끝: nextFrame까지 확장
-            totalFrames = nextFrame + 1
+        // 마지막 키프레임인 경우 키프레임 없이 span만 확장
+        if !hasNextKeyframes {
+            layerViewModel.layers[layerIndex].timeline.setSpanEnd(at: spanEnd + 1)
         }
 
+        // totalFrames 자동 업데이트
         updateTotalFrames()
         loadFrame(at: currentFrameIndex)
     }
@@ -233,17 +225,10 @@ class TimelineViewModel: ObservableObject {
         // 빈 픽셀로 새 키프레임 생성
         layerViewModel.layers[layerIndex].timeline.setKeyframe(at: insertIndex, pixels: emptyPixels)
 
-        // shift를 했으므로 타임라인 전체 길이 증가 (중간 삽입이든 끝 삽입이든)
-        if insertIndex < totalFrames {
-            // 중간 삽입: 기존 프레임들을 밀었으므로 공간 1칸 추가
-            totalFrames += 1
-        } else {
-            // 끝 삽입: insertIndex까지 확장
-            totalFrames = insertIndex + 1
-        }
-
         // 새 프레임으로 이동
         currentFrameIndex = insertIndex
+
+        // totalFrames 자동 업데이트
         updateTotalFrames()
         loadFrame(at: insertIndex)
     }
