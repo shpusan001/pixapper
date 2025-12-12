@@ -13,6 +13,7 @@ class CanvasViewModel: ObservableObject {
     @Published var canvas: PixelCanvas
     @Published var zoomLevel: Double = 400.0
     @Published var shapePreview: [(x: Int, y: Int, color: Color)] = []
+    @Published var selectionRect: CGRect?  // 선택 영역
 
     var layerViewModel: LayerViewModel
     var commandManager: CommandManager
@@ -59,6 +60,9 @@ class CanvasViewModel: ObservableObject {
         case .rectangle, .circle, .line:
             shapeStartPoint = (x, y)
             updateShapePreview(endX: x, endY: y)
+        case .selection:
+            shapeStartPoint = (x, y)
+            updateSelectionRect(endX: x, endY: y)
         }
     }
 
@@ -74,6 +78,8 @@ class CanvasViewModel: ObservableObject {
             lastDrawPoint = (x, y)
         case .rectangle, .circle, .line:
             updateShapePreview(endX: x, endY: y)
+        case .selection:
+            updateSelectionRect(endX: x, endY: y)
         default:
             break
         }
@@ -104,6 +110,10 @@ class CanvasViewModel: ObservableObject {
 
             // Timeline에 동기화 (키프레임에 저장)
             timelineViewModel?.syncCurrentLayerToKeyframe()
+
+        case .selection:
+            // 선택 완료 - shapeStartPoint만 리셋 (selectionRect는 유지)
+            shapeStartPoint = nil
 
         default:
             break
@@ -357,7 +367,31 @@ class CanvasViewModel: ObservableObject {
         guard let c1 = c1, let c2 = c2 else {
             return false
         }
-        // RGB 정밀 비교 (허용 오차 0.001)
-        return c1.isEqual(to: c2, tolerance: 0.001)
+        // RGB 정밀 비교
+        return c1.isEqual(to: c2, tolerance: Constants.Color.defaultTolerance)
+    }
+
+    // MARK: - Selection Tool
+
+    /// 선택 영역을 업데이트합니다
+    private func updateSelectionRect(endX: Int, endY: Int) {
+        guard let start = shapeStartPoint else { return }
+
+        let minX = min(start.x, endX)
+        let maxX = max(start.x, endX)
+        let minY = min(start.y, endY)
+        let maxY = max(start.y, endY)
+
+        selectionRect = CGRect(
+            x: minX,
+            y: minY,
+            width: maxX - minX + 1,
+            height: maxY - minY + 1
+        )
+    }
+
+    /// 선택 영역을 해제합니다
+    func clearSelection() {
+        selectionRect = nil
     }
 }

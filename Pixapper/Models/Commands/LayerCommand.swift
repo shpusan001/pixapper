@@ -24,9 +24,10 @@ class AddLayerCommand: Command {
     func execute() {
         guard let layerViewModel = layerViewModel else { return }
         layerViewModel.addLayer()
-        addedLayerIndex = layerViewModel.selectedLayerIndex
-        if addedLayerIndex! < layerViewModel.layers.count {
-            addedLayer = layerViewModel.layers[addedLayerIndex!]
+        let index = layerViewModel.selectedLayerIndex
+        addedLayerIndex = index
+        if index < layerViewModel.layers.count {
+            addedLayer = layerViewModel.layers[index]
         }
     }
 

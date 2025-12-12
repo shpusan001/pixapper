@@ -146,8 +146,8 @@ struct CheckerboardView: View {
 
     var body: some View {
         Canvas { context, size in
-            let lightGray = Color(white: 0.9)
-            let darkGray = Color(white: 0.8)
+            let lightGray = Color(white: Constants.Canvas.checkerboardLightGray)
+            let darkGray = Color(white: Constants.Canvas.checkerboardDarkGray)
 
             for y in 0..<height {
                 for x in 0..<width {
@@ -233,7 +233,7 @@ struct ShapePreviewView: View {
                     width: pixelSize,
                     height: pixelSize
                 )
-                context.fill(Path(rect), with: .color(pixel.color.opacity(0.5)))
+                context.fill(Path(rect), with: .color(pixel.color.opacity(Constants.Opacity.Canvas.shapePreview)))
             }
         }
     }

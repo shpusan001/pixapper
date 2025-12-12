@@ -34,6 +34,9 @@ class ToolSettingsManager: ObservableObject {
     /// 스포이트 설정
     @Published var eyedropperSettings = EyedropperSettings()
 
+    /// 선택 도구 설정
+    @Published var selectionSettings = SelectionSettings()
+
     /// 현재 선택된 도구의 기본 색상 (UI 표시용)
     var currentColor: Color {
         get {
@@ -52,6 +55,8 @@ class ToolSettingsManager: ObservableObject {
                 return circleSettings.strokeColor
             case .line:
                 return lineSettings.strokeColor
+            case .selection:
+                return .blue
             }
         }
         set {
@@ -133,6 +138,8 @@ class ToolSettingsManager: ObservableObject {
             return circleSettings
         case .line:
             return lineSettings
+        case .selection:
+            return selectionSettings
         }
     }
 
@@ -145,5 +152,6 @@ class ToolSettingsManager: ObservableObject {
         lineSettings = ShapeSettings(toolType: .line)
         fillSettings = FillSettings()
         eyedropperSettings = EyedropperSettings()
+        selectionSettings = SelectionSettings()
     }
 }

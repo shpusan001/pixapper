@@ -43,6 +43,16 @@ struct TimelinePanel: View {
                         }
                     }
                     .frame(minWidth: geometry.size.width, minHeight: geometry.size.height, alignment: .topLeading)
+                    .overlay(
+                        // 현재 프레임 세로선 (전체 타임라인 관통)
+                        GeometryReader { contentGeometry in
+                            let lineX = layerColumnWidth + CGFloat(viewModel.currentFrameIndex) * cellSize
+                            Rectangle()
+                                .fill(Color.red)
+                                .frame(width: 2)
+                                .offset(x: lineX, y: Constants.Layout.Timeline.frameHeaderHeight)
+                        }
+                    )
                 }
             }
             .frame(maxHeight: 300)
@@ -188,30 +198,17 @@ struct TimelinePanel: View {
         return Text("\(frameIndex + 1)")
             .font(.system(size: 10, design: .monospaced))
             .fontWeight(isCurrent ? .semibold : .regular)
-            .foregroundColor(isCurrent ? .accentColor : .secondary)
+            .foregroundColor(.secondary)
             .frame(width: cellSize, height: 26)
-            .background(
-                Group {
-                    if isSelected {
-                        Color.accentColor.opacity(0.3)  // 다중 선택 강조
-                    } else if isCurrent {
-                        Color.accentColor.opacity(0.1)  // 현재 프레임
-                    } else {
-                        Color.clear
-                    }
-                }
-            )
             .contentShape(Rectangle())
             .gesture(
-                DragGesture(minimumDistance: 5)  // 5pt 이상 드래그 시 범위 선택
+                DragGesture(minimumDistance: 5)
                     .onChanged { value in
-                        // 드래그 시작
                         if dragStartFrameIndex == nil {
                             dragStartFrameIndex = frameIndex
                             viewModel.selectionAnchor = frameIndex
                         }
 
-                        // 현재 위치까지 범위 선택
                         if let startIndex = dragStartFrameIndex {
                             let currentHoverIndex = calculateFrameIndex(from: value.location)
                             viewModel.updateDragSelection(from: startIndex, to: currentHoverIndex)
@@ -220,7 +217,6 @@ struct TimelinePanel: View {
                     .onEnded { _ in
                         dragStartFrameIndex = nil
 
-                        // 선택된 프레임 중 마지막 프레임으로 이동
                         if let lastSelected = viewModel.selectedFrameIndices.max() {
                             viewModel.selectFrame(at: lastSelected, clearSelection: false)
                         }
@@ -228,7 +224,6 @@ struct TimelinePanel: View {
             )
             .simultaneousGesture(
                 TapGesture().onEnded {
-                    // 일반 탭: 단일 선택
                     viewModel.selectSingleFrame(at: frameIndex)
                 }
             )
@@ -391,25 +386,6 @@ struct TimelinePanel: View {
                 .stroke(Color(nsColor: .separatorColor).opacity(isOutOfRange ? 0.15 : 0.3), lineWidth: 0.5)
         )
         .overlay(cellBorder(isSelected: isSelected, isMultiSelected: isMultiSelected))
-        .overlay(
-            // 현재 프레임 표시 (재생 헤드)
-            Group {
-                if isCurrentFrame {
-                    VStack(spacing: 0) {
-                        // 위쪽 삼각형 (재생 헤드)
-                        Triangle()
-                            .fill(Color.red)
-                            .frame(width: 8, height: 6)
-
-                        // 세로선
-                        Rectangle()
-                            .fill(Color.red)
-                            .frame(width: 2, height: cellSize - 6)
-                    }
-                    .offset(x: -cellSize / 2 + 1)
-                }
-            }
-        )
         .help(makeTooltipText(layer: layer, frameIndex: frameIndex, spanPosition: spanPosition, isOutOfRange: isOutOfRange))
         .contentShape(Rectangle())
         .opacity(isOutOfRange ? 0.4 : 1.0)
@@ -503,17 +479,7 @@ struct TimelinePanel: View {
                 return Color(nsColor: .controlBackgroundColor).opacity(0.5)
             }
 
-            // Selected: 미묘한 accentColor (macOS 스타일)
-            if isSelected {
-                return Color.accentColor.opacity(0.15)
-            }
-
-            // Multi-selected: 더 연한 accentColor
-            if isMultiSelected {
-                return Color.accentColor.opacity(0.08)
-            }
-
-            // Span 배경색 (회색 톤)
+            // Span 배경색 (회색 톤) - 선택 효과 제거
             switch spanPosition {
             case .keyframeStart:
                 // 키프레임: 연한 회색
@@ -575,13 +541,9 @@ struct TimelinePanel: View {
     @ViewBuilder
     private func cellBorder(isSelected: Bool, isMultiSelected: Bool) -> some View {
         if isSelected {
-            // 선택된 셀: 두꺼운 accentColor 테두리
+            // 선택된 레이어의 현재 프레임: 두꺼운 accentColor 테두리
             Rectangle()
                 .stroke(Color.accentColor, lineWidth: 2)
-        } else if isMultiSelected {
-            // 다중 선택: 얇은 accentColor 테두리
-            Rectangle()
-                .stroke(Color.accentColor, lineWidth: 1.5)
         }
     }
 
@@ -791,22 +753,6 @@ struct CellThumbnailView: View {
 }
 
 // MARK: - Empty Frame View
-
-struct EmptyFrameView: View {
-    var body: some View {
-        GeometryReader { geometry in
-            Path { path in
-                // 점선 X 표시
-                path.move(to: CGPoint(x: 0, y: 0))
-                path.addLine(to: CGPoint(x: geometry.size.width, y: geometry.size.height))
-                path.move(to: CGPoint(x: geometry.size.width, y: 0))
-                path.addLine(to: CGPoint(x: 0, y: geometry.size.height))
-            }
-            .stroke(Color.secondary.opacity(0.2), style: StrokeStyle(lineWidth: 1, dash: [2, 2]))
-        }
-    }
-}
-
 // MARK: - Layer Drop Delegate
 
 struct LayerDropDelegate: DropDelegate {

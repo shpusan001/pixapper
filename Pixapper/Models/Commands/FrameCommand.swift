@@ -50,7 +50,7 @@ class DeleteFrameCommand: Command {
 
         // 백업된 키프레임 데이터 복원
         for (layerId, pixels) in deletedKeyframeData {
-            if let layerIndex = timelineViewModel.layerViewModel.layers.firstIndex(where: { $0.id == layerId }) {
+            if let layerIndex = timelineViewModel.getLayerIndex(for: layerId) {
                 timelineViewModel.layerViewModel.layers[layerIndex].timeline.setKeyframe(at: deletedIndex, pixels: pixels)
             }
         }
@@ -142,7 +142,7 @@ class DeleteFrameInLayerCommand: Command {
 
     func undo() {
         guard let timelineViewModel = timelineViewModel,
-              let layerIndex = timelineViewModel.layerViewModel.layers.firstIndex(where: { $0.id == layerId }) else {
+              let layerIndex = timelineViewModel.getLayerIndex(for: layerId) else {
             return
         }
 

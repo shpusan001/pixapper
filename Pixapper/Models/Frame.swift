@@ -176,7 +176,7 @@ struct CellData: Identifiable {
 
     init(width: Int, height: Int, layerId: UUID, isKeyframe: Bool = true) {
         self.layerId = layerId
-        self.pixels = Array(repeating: Array(repeating: nil, count: width), count: height)
+        self.pixels = Layer.createEmptyPixels(width: width, height: height)
         self.isKeyframe = isKeyframe
     }
 

@@ -15,9 +15,14 @@ struct Layer: Identifiable {
     var opacity: Double = 1.0
     var timeline: LayerTimeline  // 실제 키프레임 데이터 저장소
 
+    /// 빈 픽셀 배열 생성 헬퍼 메서드
+    static func createEmptyPixels(width: Int, height: Int) -> [[Color?]] {
+        return Array(repeating: Array(repeating: nil as Color?, count: width), count: height)
+    }
+
     init(name: String, width: Int, height: Int) {
         self.name = name
-        self.pixels = Array(repeating: Array(repeating: nil, count: width), count: height)
+        self.pixels = Layer.createEmptyPixels(width: width, height: height)
         self.timeline = LayerTimeline()
 
         // 첫 프레임을 빈 키프레임으로 초기화

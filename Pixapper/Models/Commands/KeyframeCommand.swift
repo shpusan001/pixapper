@@ -99,12 +99,13 @@ class ExtendFrameCommand: Command {
             return
         }
 
-        spanEnd = span.start + span.length - 1
+        let endIndex = span.start + span.length - 1
+        spanEnd = endIndex
 
         // spanEnd 이후의 모든 키프레임 백업 (Undo용)
         let allKeyframeIndices = layer.timeline.getAllKeyframeIndices()
         for keyframeIndex in allKeyframeIndices {
-            if keyframeIndex > spanEnd! {
+            if keyframeIndex > endIndex {
                 if let pixels = layer.timeline.getEffectivePixels(at: keyframeIndex) {
                     shiftedKeyframes[keyframeIndex] = pixels
                 }
@@ -112,12 +113,12 @@ class ExtendFrameCommand: Command {
         }
 
         // spanEnd 이후 키프레임들을 +1 이동
-        timelineViewModel.layerViewModel.layers[layerIndex].timeline.shiftKeyframes(after: spanEnd!, by: 1)
+        timelineViewModel.layerViewModel.layers[layerIndex].timeline.shiftKeyframes(after: endIndex, by: 1)
 
         // 마지막 키프레임인 경우 (shift할 키프레임이 없는 경우)
         // 키프레임 없이 span만 1 프레임 확장
         if shiftedKeyframes.isEmpty {
-            timelineViewModel.layerViewModel.layers[layerIndex].timeline.setSpanEnd(at: spanEnd! + 1)
+            timelineViewModel.layerViewModel.layers[layerIndex].timeline.setSpanEnd(at: endIndex + 1)
         }
 
         // totalFrames 자동 업데이트 (max 비교로 유지 또는 증가)
@@ -127,7 +128,7 @@ class ExtendFrameCommand: Command {
 
     func undo() {
         guard let timelineViewModel = timelineViewModel,
-              let layerIndex = timelineViewModel.layerViewModel.layers.firstIndex(where: { $0.id == layerId }),
+              let layerIndex = timelineViewModel.getLayerIndex(for: layerId),
               let originalSpanEnd = spanEnd else {
             return
         }
@@ -240,7 +241,7 @@ class ClearFrameContentCommand: Command {
 
     func undo() {
         guard let timelineViewModel = timelineViewModel,
-              let layerIndex = timelineViewModel.layerViewModel.layers.firstIndex(where: { $0.id == layerId }),
+              let layerIndex = timelineViewModel.getLayerIndex(for: layerId),
               let pixels = oldPixels else {
             return
         }
@@ -355,7 +356,7 @@ class AddKeyframeWithContentCommand: Command {
 
     func undo() {
         guard let timelineViewModel = timelineViewModel,
-              let layerIndex = timelineViewModel.layerViewModel.layers.firstIndex(where: { $0.id == layerId }),
+              let layerIndex = timelineViewModel.getLayerIndex(for: layerId),
               let inserted = insertedIndex else {
             return
         }
@@ -415,7 +416,7 @@ class AddBlankKeyframeCommand: Command {
         previousCurrentFrameIndex = timelineViewModel.currentFrameIndex
 
         // 빈 픽셀 미리 생성
-        let emptyPixels = Array(repeating: Array(repeating: nil as Color?, count: canvasWidth), count: canvasHeight)
+        let emptyPixels = Layer.createEmptyPixels(width: canvasWidth, height: canvasHeight)
 
         // 현재 프레임 다음에 삽입할 위치
         insertedIndex = timelineViewModel.currentFrameIndex + 1
@@ -439,7 +440,7 @@ class AddBlankKeyframeCommand: Command {
 
     func undo() {
         guard let timelineViewModel = timelineViewModel,
-              let layerIndex = timelineViewModel.layerViewModel.layers.firstIndex(where: { $0.id == layerId }),
+              let layerIndex = timelineViewModel.getLayerIndex(for: layerId),
               let inserted = insertedIndex else {
             return
         }

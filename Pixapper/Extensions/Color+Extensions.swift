@@ -28,9 +28,9 @@ extension Color {
     /// 다른 Color와의 정밀한 비교
     /// - Parameters:
     ///   - other: 비교할 Color
-    ///   - tolerance: 허용 오차 (기본값 0.001)
+    ///   - tolerance: 허용 오차 (기본값 Constants.Color.defaultTolerance)
     /// - Returns: 두 색상이 유사하면 true
-    func isEqual(to other: Color, tolerance: Double = 0.001) -> Bool {
+    func isEqual(to other: Color, tolerance: Double = Constants.Color.defaultTolerance) -> Bool {
         guard let rgb1 = self.rgbComponents(),
               let rgb2 = other.rgbComponents() else {
             return false

@@ -25,6 +25,7 @@ enum DrawingTool: String, CaseIterable, Identifiable {
     case rectangle
     case circle
     case line
+    case selection
 
     var id: String { rawValue }
 
@@ -38,6 +39,7 @@ enum DrawingTool: String, CaseIterable, Identifiable {
         case .rectangle: return "Rectangle"
         case .circle: return "Circle"
         case .line: return "Line"
+        case .selection: return "Selection"
         }
     }
 }

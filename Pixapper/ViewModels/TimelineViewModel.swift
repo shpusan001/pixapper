@@ -25,6 +25,9 @@ class TimelineViewModel: ObservableObject {
 
     var layerViewModel: LayerViewModel
 
+    // 성능 최적화: totalFrames 계산 캐싱
+    private var cachedMaxFrameIndex: Int?
+
     init(width: Int, height: Int, layerViewModel: LayerViewModel) {
         self.canvasWidth = width
         self.canvasHeight = height
@@ -40,9 +43,27 @@ class TimelineViewModel: ObservableObject {
         return index
     }
 
+    /// 레이어 ID로 인덱스 찾기 (Command에서 자주 사용)
+    func getLayerIndex(for layerId: UUID) -> Int? {
+        return layerViewModel.layers.firstIndex(where: { $0.id == layerId })
+    }
+
+    /// 캐시 무효화 (레이어 변경 시 호출)
+    func invalidateTotalFramesCache() {
+        cachedMaxFrameIndex = nil
+    }
+
     /// 모든 레이어의 최대 프레임 인덱스를 기준으로 totalFrames를 자동 업데이트
     func updateTotalFrames() {
+        // 캐시가 있으면 재계산 스킵
+        if let cached = cachedMaxFrameIndex {
+            totalFrames = max(totalFrames, cached + 1)
+            return
+        }
+
+        // 캐시가 없으면 계산 후 저장
         let maxIndex = layerViewModel.layers.map { $0.timeline.maxFrameIndex }.max() ?? 0
+        cachedMaxFrameIndex = maxIndex
         totalFrames = max(totalFrames, maxIndex + 1)  // 현재 totalFrames와 maxIndex + 1 중 큰 값 사용
     }
 
@@ -60,7 +81,8 @@ class TimelineViewModel: ObservableObject {
             layerViewModel.layers[layerIndex] = layer
         }
 
-        // 레이어별 키프레임 변경 후 totalFrames 자동 업데이트
+        // 레이어별 키프레임 변경 후 캐시 무효화 및 totalFrames 자동 업데이트
+        invalidateTotalFramesCache()
         updateTotalFrames()
     }
 
@@ -185,7 +207,7 @@ class TimelineViewModel: ObservableObject {
         guard let layerIndex = validateSelectedLayer() else { return }
 
         // 빈 픽셀 미리 생성
-        let emptyPixels = Array(repeating: Array(repeating: nil as Color?, count: canvasWidth), count: canvasHeight)
+        let emptyPixels = Layer.createEmptyPixels(width: canvasWidth, height: canvasHeight)
 
         // 현재 프레임 다음에 삽입할 위치
         let insertIndex = currentFrameIndex + 1
@@ -240,7 +262,7 @@ class TimelineViewModel: ObservableObject {
     func loadFrame(at index: Int) {
         guard index < totalFrames else { return }
 
-        let emptyPixels = Array(repeating: Array(repeating: nil as Color?, count: canvasWidth), count: canvasHeight)
+        let emptyPixels = createEmptyPixels()
 
         // 각 레이어의 timeline에서 effective 픽셀 로드
         for layerIndex in layerViewModel.layers.indices {
@@ -263,7 +285,7 @@ class TimelineViewModel: ObservableObject {
             layer.timeline.removeKeyframe(at: frameIndex)
         } else {
             // 키프레임으로 변환 (현재 보이는 픽셀 데이터를 복사)
-            let emptyPixels = Array(repeating: Array(repeating: nil as Color?, count: canvasWidth), count: canvasHeight)
+            let emptyPixels = createEmptyPixels()
             let effectivePixels = layer.timeline.getEffectivePixels(at: frameIndex) ?? emptyPixels
             layer.timeline.setKeyframe(at: frameIndex, pixels: effectivePixels)
         }
@@ -303,7 +325,7 @@ class TimelineViewModel: ObservableObject {
         guard frameIndex < totalFrames,
               let layerIndex = layerViewModel.layers.firstIndex(where: { $0.id == layerId }) else { return }
 
-        let emptyPixels = Array(repeating: Array(repeating: nil as Color?, count: canvasWidth), count: canvasHeight)
+        let emptyPixels = createEmptyPixels()
         layerViewModel.layers[layerIndex].timeline.setKeyframe(at: frameIndex, pixels: emptyPixels)
 
         updateTotalFrames()
@@ -319,7 +341,7 @@ class TimelineViewModel: ObservableObject {
         guard frameIndex < totalFrames,
               let layerIndex = layerViewModel.layers.firstIndex(where: { $0.id == layerId }) else { return }
 
-        let emptyPixels = Array(repeating: Array(repeating: nil as Color?, count: canvasWidth), count: canvasHeight)
+        let emptyPixels = createEmptyPixels()
         layerViewModel.layers[layerIndex].timeline.setKeyframe(at: frameIndex, pixels: emptyPixels)
 
         updateTotalFrames()
@@ -330,6 +352,11 @@ class TimelineViewModel: ObservableObject {
     }
 
     // MARK: - Helper Methods
+
+    /// 빈 픽셀 배열 생성 (중복 코드 제거)
+    private func createEmptyPixels() -> [[Color?]] {
+        return Layer.createEmptyPixels(width: canvasWidth, height: canvasHeight)
+    }
 
     /// 특정 프레임의 유효한 픽셀 반환 (TimelinePanel에서 사용)
     func getEffectivePixels(frameIndex: Int, layerId: UUID) -> [[Color?]]? {

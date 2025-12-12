@@ -67,7 +67,7 @@ struct ContentView: View {
     var body: some View {
         VStack(spacing: 0) {
             // Toolbar
-            HStack {
+            HStack(spacing: 12) {
                 Text("Pixapper")
                     .font(.headline)
 
@@ -89,7 +89,19 @@ struct ContentView: View {
                 }
                 .buttonStyle(.bordered)
 
-                Spacer().frame(width: 12)
+                // Zoom controls
+                HStack(spacing: 8) {
+                    Image(systemName: "magnifyingglass")
+                        .foregroundColor(.secondary)
+
+                    Slider(value: $canvasViewModel.zoomLevel, in: 100...1600, step: 100)
+                        .frame(width: 120)
+
+                    Text("\(Int(canvasViewModel.zoomLevel))%")
+                        .font(.callout)
+                        .foregroundColor(.secondary)
+                        .frame(width: 50, alignment: .trailing)
+                }
 
                 Button(action: { showingExportSheet = true }) {
                     HStack(spacing: 4) {
@@ -105,19 +117,25 @@ struct ContentView: View {
 
             Divider()
 
-            VStack(spacing: 0) {
-                HStack(spacing: 0) {
+            VSplitView {
+                // Top section: Tool + Canvas + Properties
+                HSplitView {
                     // Tool panel on the left
                     ToolPanel(viewModel: canvasViewModel, toolSettingsManager: toolSettingsManager)
-
-                    Divider()
+                        .frame(minWidth: 200, idealWidth: 200, maxWidth: 320)
 
                     // Canvas in the center
                     CanvasView(viewModel: canvasViewModel, timelineViewModel: timelineViewModel)
+                        .frame(minWidth: 400)
+
+                    // Properties panel on the right
+                    PropertiesPanel(toolSettingsManager: toolSettingsManager)
+                        .frame(minWidth: 200, idealWidth: 200, maxWidth: 320)
                 }
 
-                // Timeline panel at the bottom (includes layer management)
+                // Timeline panel at the bottom
                 TimelinePanel(viewModel: timelineViewModel, commandManager: commandManager)
+                    .frame(minHeight: 150, idealHeight: 280, maxHeight: 600)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
