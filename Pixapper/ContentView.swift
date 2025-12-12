@@ -129,7 +129,7 @@ struct ContentView: View {
                         .frame(minWidth: 400)
 
                     // Properties panel on the right
-                    PropertiesPanel(toolSettingsManager: toolSettingsManager)
+                    PropertiesPanel(toolSettingsManager: toolSettingsManager, viewModel: canvasViewModel)
                         .frame(minWidth: 200, idealWidth: 200, maxWidth: 320)
                 }
 
@@ -163,6 +163,40 @@ struct ContentView: View {
             else if keyPress.characters == "Z" && keyPress.modifiers.contains(.command) {
                 if commandManager.canRedo {
                     commandManager.redo()
+                }
+                return .handled
+            }
+            // Copy (Cmd+C)
+            else if keyPress.characters == "c" && keyPress.modifiers.contains(.command) {
+                canvasViewModel.copySelection()
+                return .handled
+            }
+            // Cut (Cmd+X)
+            else if keyPress.characters == "x" && keyPress.modifiers.contains(.command) {
+                canvasViewModel.cutSelection()
+                return .handled
+            }
+            // Paste (Cmd+V)
+            else if keyPress.characters == "v" && keyPress.modifiers.contains(.command) {
+                canvasViewModel.pasteSelection()
+                return .handled
+            }
+            // Delete selection (Delete/Backspace)
+            else if keyPress.key == .delete || keyPress.key == .deleteForward {
+                canvasViewModel.deleteSelection()
+                return .handled
+            }
+            // Commit selection (Enter/Return)
+            else if keyPress.key == .return {
+                if canvasViewModel.isFloatingSelection {
+                    canvasViewModel.commitSelection()
+                }
+                return .handled
+            }
+            // Cancel selection (Escape)
+            else if keyPress.key == .escape {
+                if canvasViewModel.selectionRect != nil {
+                    canvasViewModel.clearSelection()
                 }
                 return .handled
             }

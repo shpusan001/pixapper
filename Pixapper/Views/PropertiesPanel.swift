@@ -9,6 +9,7 @@ import SwiftUI
 
 struct PropertiesPanel: View {
     @ObservedObject var toolSettingsManager: ToolSettingsManager
+    @ObservedObject var viewModel: CanvasViewModel
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -63,7 +64,7 @@ struct PropertiesPanel: View {
                 toolName: "Line"
             )
         case .selection:
-            SelectionPropertiesView()
+            SelectionPropertiesView(viewModel: viewModel)
         }
     }
 }
@@ -287,6 +288,8 @@ struct EyedropperPropertiesView: View {
 
 // MARK: - Selection Properties
 struct SelectionPropertiesView: View {
+    @ObservedObject var viewModel: CanvasViewModel
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             PropertySectionHeader(title: "Selection")
@@ -294,11 +297,123 @@ struct SelectionPropertiesView: View {
             Divider()
                 .padding(.vertical, 12)
 
-            Text("Drag to select a rectangular area. Selection tool features coming soon.")
-                .font(.callout)
-                .foregroundColor(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
+            if viewModel.selectionPixels != nil {
+                // Clipboard section
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Clipboard")
+                        .font(.callout)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.primary)
+
+                    HStack(spacing: 8) {
+                        TransformButton(
+                            icon: "doc.on.doc",
+                            label: "Copy",
+                            action: viewModel.copySelection
+                        )
+                        TransformButton(
+                            icon: "scissors",
+                            label: "Cut",
+                            action: viewModel.cutSelection
+                        )
+                    }
+
+                    HStack(spacing: 8) {
+                        TransformButton(
+                            icon: "doc.on.clipboard",
+                            label: "Paste",
+                            action: viewModel.pasteSelection
+                        )
+                        .opacity(viewModel.hasClipboard ? 1.0 : 0.5)
+                        .disabled(!viewModel.hasClipboard)
+
+                        TransformButton(
+                            icon: "trash",
+                            label: "Delete",
+                            action: viewModel.deleteSelection
+                        )
+                    }
+                }
+
+                Divider()
+                    .padding(.vertical, 12)
+
+                // Transform section
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Transform")
+                        .font(.callout)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.primary)
+
+                    // Rotate buttons
+                    HStack(spacing: 8) {
+                        TransformButton(
+                            icon: "rotate.left",
+                            label: "90° CCW",
+                            action: viewModel.rotateSelectionCCW
+                        )
+                        TransformButton(
+                            icon: "rotate.right",
+                            label: "90° CW",
+                            action: viewModel.rotateSelectionCW
+                        )
+                    }
+
+                    TransformButton(
+                        icon: "arrow.triangle.2.circlepath",
+                        label: "180°",
+                        action: viewModel.rotateSelection180,
+                        fullWidth: true
+                    )
+
+                    Divider()
+                        .padding(.vertical, 8)
+
+                    // Flip buttons
+                    HStack(spacing: 8) {
+                        TransformButton(
+                            icon: "arrow.left.and.right",
+                            label: "Flip H",
+                            action: viewModel.flipSelectionHorizontal
+                        )
+                        TransformButton(
+                            icon: "arrow.up.and.down",
+                            label: "Flip V",
+                            action: viewModel.flipSelectionVertical
+                        )
+                    }
+                }
+            } else {
+                Text("Drag to select a rectangular area on the canvas.")
+                    .font(.callout)
+                    .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         }
+    }
+}
+
+struct TransformButton: View {
+    let icon: String
+    let label: String
+    let action: () -> Void
+    var fullWidth: Bool = false
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 8) {
+                Image(systemName: icon)
+                    .font(.system(size: 14))
+                Text(label)
+                    .font(.callout)
+            }
+            .frame(maxWidth: fullWidth ? .infinity : nil)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background(Color(nsColor: .controlColor))
+            .cornerRadius(6)
+        }
+        .buttonStyle(.plain)
     }
 }
 
