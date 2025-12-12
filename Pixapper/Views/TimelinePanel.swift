@@ -55,7 +55,6 @@ struct TimelinePanel: View {
                     )
                 }
             }
-            .frame(maxHeight: 300)
 
             Divider()
 

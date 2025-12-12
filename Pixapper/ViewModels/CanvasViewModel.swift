@@ -749,7 +749,7 @@ class CanvasViewModel: ObservableObject {
         rotateStartPixels = pixels
         lastDrawPoint = point
 
-        // 시작 각도 계산 (선택 영역 중심에서 마우스 위치까지의 각도)
+        // 시작 각도 계산 (중앙 기준)
         let centerX = rect.midX
         let centerY = rect.midY
         rotateStartAngle = atan2(Double(point.y) - Double(centerY), Double(point.x) - Double(centerX))
@@ -883,9 +883,15 @@ class CanvasViewModel: ObservableObject {
         guard let rect = selectionRect,
               let origPixels = rotateStartPixels else { return }
 
-        // 현재 각도 계산
+        // 선택 영역의 중앙 (회전 중심)
         let centerX = rect.midX
         let centerY = rect.midY
+
+        // 회전 핸들 위치
+        let handleX = rect.midX
+        let handleY = rect.minY - 3
+
+        // 현재 각도 계산 (중앙에서 마우스까지의 각도)
         let currentAngle = atan2(Double(point.y) - Double(centerY), Double(point.x) - Double(centerX))
 
         // 회전 각도 (라디안)
@@ -899,14 +905,14 @@ class CanvasViewModel: ObservableObject {
             angle = snappedDegrees * .pi / 180.0
         }
 
-        // 회전된 픽셀 생성
+        // 회전된 픽셀 생성 (중앙 기준으로 회전)
         let rotatedPixels = rotatePixelsByAngle(origPixels, angle: angle)
 
-        // 크기 변경 (회전 시 크기가 달라질 수 있음)
+        // 회전 후 크기
         let newHeight = rotatedPixels.count
         let newWidth = rotatedPixels.isEmpty ? 0 : rotatedPixels[0].count
 
-        // 중심 유지하면서 rect 업데이트
+        // 중앙 유지하면서 rect 업데이트
         let newRect = CGRect(
             x: centerX - CGFloat(newWidth) / 2,
             y: centerY - CGFloat(newHeight) / 2,
@@ -1394,17 +1400,14 @@ class CanvasViewModel: ObservableObject {
         return flipped
     }
 
-    /// 픽셀 배열을 임의의 각도로 회전 (라디안)
-    private func rotatePixelsByAngle(_ pixels: [[Color?]], angle: Double) -> [[Color?]] {
+    /// 픽셀 배열을 임의의 각도로 회전 (라디안) - 지정된 피벗 기준
+    private func rotatePixelsByAngle(_ pixels: [[Color?]], angle: Double, pivotX: Double, pivotY: Double) -> [[Color?]] {
         guard !pixels.isEmpty else { return [] }
 
         let oldHeight = pixels.count
         let oldWidth = pixels[0].count
 
-        let centerX = Double(oldWidth) / 2.0
-        let centerY = Double(oldHeight) / 2.0
-
-        // 회전 후 경계 박스 계산
+        // 회전 후 경계 박스 계산 (피벗 기준)
         let corners = [
             (0.0, 0.0),
             (Double(oldWidth), 0.0),
@@ -1418,10 +1421,10 @@ class CanvasViewModel: ObservableObject {
         var maxY = -Double.infinity
 
         for (x, y) in corners {
-            let dx = x - centerX
-            let dy = y - centerY
-            let rotatedX = dx * cos(angle) - dy * sin(angle) + centerX
-            let rotatedY = dx * sin(angle) + dy * cos(angle) + centerY
+            let dx = x - pivotX
+            let dy = y - pivotY
+            let rotatedX = dx * cos(angle) - dy * sin(angle)
+            let rotatedY = dx * sin(angle) + dy * cos(angle)
 
             minX = min(minX, rotatedX)
             maxX = max(maxX, rotatedX)
@@ -1432,21 +1435,18 @@ class CanvasViewModel: ObservableObject {
         let newWidth = Int(ceil(maxX - minX))
         let newHeight = Int(ceil(maxY - minY))
 
-        // 새 중심점
-        let newCenterX = Double(newWidth) / 2.0
-        let newCenterY = Double(newHeight) / 2.0
-
         var rotated: [[Color?]] = Array(repeating: Array(repeating: nil, count: newWidth), count: newHeight)
 
         // 역회전으로 소스 픽셀 찾기 (Nearest Neighbor)
         for y in 0..<newHeight {
             for x in 0..<newWidth {
-                let dx = Double(x) - newCenterX
-                let dy = Double(y) - newCenterY
+                // 새 좌표계에서의 피벗 기준 상대 좌표
+                let dx = Double(x) + minX
+                let dy = Double(y) + minY
 
                 // 역회전
-                let srcX = dx * cos(-angle) - dy * sin(-angle) + centerX
-                let srcY = dx * sin(-angle) + dy * cos(-angle) + centerY
+                let srcX = dx * cos(-angle) - dy * sin(-angle) + pivotX
+                let srcY = dx * sin(-angle) + dy * cos(-angle) + pivotY
 
                 let srcXInt = Int(round(srcX))
                 let srcYInt = Int(round(srcY))
@@ -1458,6 +1458,15 @@ class CanvasViewModel: ObservableObject {
         }
 
         return rotated
+    }
+
+    /// 픽셀 배열을 중심 기준으로 회전 (90도 회전용)
+    private func rotatePixelsByAngle(_ pixels: [[Color?]], angle: Double) -> [[Color?]] {
+        let oldHeight = pixels.count
+        let oldWidth = pixels.isEmpty ? 0 : pixels[0].count
+        let pivotX = Double(oldWidth) / 2.0
+        let pivotY = Double(oldHeight) / 2.0
+        return rotatePixelsByAngle(pixels, angle: angle, pivotX: pivotX, pivotY: pivotY)
     }
 
     // MARK: - Selection Clipboard Operations
@@ -1517,9 +1526,7 @@ class CanvasViewModel: ObservableObject {
             pasteY = (canvas.height - clipboardData.height) / 2
         }
 
-        // 캔버스 범위 내로 제한
-        pasteX = max(0, min(pasteX, canvas.width - clipboardData.width))
-        pasteY = max(0, min(pasteY, canvas.height - clipboardData.height))
+        // 캔버스 범위 제한 제거 - 선택 영역이 캔버스 밖으로 나갈 수 있도록 허용
 
         // 새 선택 영역 생성 (부유 상태로 시작)
         let newRect = CGRect(

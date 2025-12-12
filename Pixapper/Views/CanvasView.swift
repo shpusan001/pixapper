@@ -35,13 +35,47 @@ struct CanvasView: View {
         let canvasWidth = CGFloat(viewModel.canvas.width) * pixelSize
         let canvasHeight = CGFloat(viewModel.canvas.height) * pixelSize
 
+        // 확장된 전체 영역 (전부 캔버스)
+        let margin = max(canvasWidth, canvasHeight)
+        let totalWidth = canvasWidth + margin * 2
+        let totalHeight = canvasHeight + margin * 2
+
+        // 실제 그림이 보이는 영역의 시작점 (픽셀 좌표)
+        let visibleStartX = Int(margin / pixelSize)
+        let visibleStartY = Int(margin / pixelSize)
+
         return ScrollView([.horizontal, .vertical]) {
-            canvasLayers(pixelSize: pixelSize)
-                .frame(width: canvasWidth, height: canvasHeight)
-                .gesture(canvasDragGesture(pixelSize: pixelSize))
-                .onContinuousHover { phase in
-                    handleHover(phase: phase, pixelSize: pixelSize)
+            // 전체가 하나의 큰 캔버스
+            ZStack(alignment: .topLeading) {
+                // 배경 (전체 영역)
+                Color.clear
+                    .frame(width: totalWidth, height: totalHeight)
+
+                // 실제 그림 영역 (중앙)
+                canvasLayers(pixelSize: pixelSize)
+                    .frame(width: canvasWidth, height: canvasHeight)
+                    .offset(x: margin, y: margin)
+
+                // Selection overlay (같은 좌표계, 실제 캔버스 기준점에서 offset)
+                if let selectionRect = viewModel.selectionRect {
+                    SelectionRectView(
+                        rect: selectionRect,
+                        offset: viewModel.selectionOffset,
+                        pixelSize: pixelSize,
+                        selectionPixels: viewModel.selectionPixels,
+                        isMoving: viewModel.isMovingSelection,
+                        originalPixels: viewModel.originalPixels,
+                        originalRect: viewModel.originalRect,
+                        selectionMode: viewModel.selectionMode,
+                        hoveredHandle: viewModel.hoveredHandle
+                    )
+                    .offset(x: margin, y: margin)
                 }
+            }
+            .gesture(canvasDragGesture(pixelSize: pixelSize))
+            .onContinuousHover { phase in
+                handleHover(phase: phase, pixelSize: pixelSize)
+            }
         }
     }
 
@@ -73,21 +107,6 @@ struct CanvasView: View {
                 ShapePreviewView(
                     preview: viewModel.shapePreview,
                     pixelSize: pixelSize
-                )
-            }
-
-            // Selection rectangle overlay
-            if let selectionRect = viewModel.selectionRect {
-                SelectionRectView(
-                    rect: selectionRect,
-                    offset: viewModel.selectionOffset,
-                    pixelSize: pixelSize,
-                    selectionPixels: viewModel.selectionPixels,
-                    isMoving: viewModel.isMovingSelection,
-                    originalPixels: viewModel.originalPixels,
-                    originalRect: viewModel.originalRect,
-                    selectionMode: viewModel.selectionMode,
-                    hoveredHandle: viewModel.hoveredHandle
                 )
             }
         }
@@ -144,8 +163,22 @@ struct CanvasView: View {
     }
 
     private func handleDown(at location: CGPoint, pixelSize: CGFloat, altPressed: Bool = false) {
-        let x = Int(location.x / pixelSize)
-        let y = Int(location.y / pixelSize)
+        // 단일 좌표계: 화면 좌표 → 픽셀 좌표 (margin 고려)
+        let canvasWidth = CGFloat(viewModel.canvas.width) * pixelSize
+        let canvasHeight = CGFloat(viewModel.canvas.height) * pixelSize
+        let margin = max(canvasWidth, canvasHeight)
+
+        let x = Int((location.x - margin) / pixelSize)
+        let y = Int((location.y - margin) / pixelSize)
+
+        // 선택 도구이고 핸들 위에 있으면 캔버스 밖에서도 동작
+        if viewModel.toolSettingsManager.selectedTool == .selection {
+            viewModel.updateHover(x: x, y: y)
+            if viewModel.hoveredHandle != nil || viewModel.checkInsideSelection(x: x, y: y) {
+                viewModel.handleToolDown(x: x, y: y, altPressed: altPressed)
+                return
+            }
+        }
 
         if x >= 0 && x < viewModel.canvas.width && y >= 0 && y < viewModel.canvas.height {
             viewModel.handleToolDown(x: x, y: y, altPressed: altPressed)
@@ -156,8 +189,18 @@ struct CanvasView: View {
     }
 
     private func handleDrag(at location: CGPoint, pixelSize: CGFloat) {
-        let x = Int(location.x / pixelSize)
-        let y = Int(location.y / pixelSize)
+        let canvasWidth = CGFloat(viewModel.canvas.width) * pixelSize
+        let canvasHeight = CGFloat(viewModel.canvas.height) * pixelSize
+        let margin = max(canvasWidth, canvasHeight)
+
+        let x = Int((location.x - margin) / pixelSize)
+        let y = Int((location.y - margin) / pixelSize)
+
+        // 선택 도구이고 선택 모드가 활성화되어 있으면 캔버스 밖에서도 동작
+        if viewModel.toolSettingsManager.selectedTool == .selection && viewModel.selectionMode != .idle {
+            viewModel.handleToolDrag(x: x, y: y)
+            return
+        }
 
         // 캔버스 범위로 clamp (밖으로 나가도 계속 동작)
         let clampedX = max(0, min(x, viewModel.canvas.width - 1))
@@ -167,8 +210,18 @@ struct CanvasView: View {
     }
 
     private func handleUp(at location: CGPoint, pixelSize: CGFloat) {
-        let x = Int(location.x / pixelSize)
-        let y = Int(location.y / pixelSize)
+        let canvasWidth = CGFloat(viewModel.canvas.width) * pixelSize
+        let canvasHeight = CGFloat(viewModel.canvas.height) * pixelSize
+        let margin = max(canvasWidth, canvasHeight)
+
+        let x = Int((location.x - margin) / pixelSize)
+        let y = Int((location.y - margin) / pixelSize)
+
+        // 선택 도구이고 선택 모드가 활성화되어 있으면 캔버스 밖에서도 동작
+        if viewModel.toolSettingsManager.selectedTool == .selection && viewModel.selectionMode != .idle {
+            viewModel.handleToolUp(x: x, y: y)
+            return
+        }
 
         // 캔버스 범위로 clamp (밖에서 놓아도 계속 동작)
         let clampedX = max(0, min(x, viewModel.canvas.width - 1))
@@ -180,14 +233,20 @@ struct CanvasView: View {
     private func handleHover(phase: HoverPhase, pixelSize: CGFloat) {
         switch phase {
         case .active(let location):
-            let x = Int(location.x / pixelSize)
-            let y = Int(location.y / pixelSize)
+            let canvasWidth = CGFloat(viewModel.canvas.width) * pixelSize
+            let canvasHeight = CGFloat(viewModel.canvas.height) * pixelSize
+            let margin = max(canvasWidth, canvasHeight)
 
-            if x >= 0 && x < viewModel.canvas.width && y >= 0 && y < viewModel.canvas.height {
-                // 선택 도구일 때만 핸들 호버 업데이트
+            let x = Int((location.x - margin) / pixelSize)
+            let y = Int((location.y - margin) / pixelSize)
+
+            // 선택 도구일 때는 캔버스 밖에서도 호버 업데이트
+            if viewModel.toolSettingsManager.selectedTool == .selection {
                 viewModel.updateHover(x: x, y: y)
-
-                // 커서 모양 변경
+                updateCursor(x: x, y: y)
+            } else if x >= 0 && x < viewModel.canvas.width && y >= 0 && y < viewModel.canvas.height {
+                // 다른 도구는 캔버스 안에서만
+                viewModel.updateHover(x: x, y: y)
                 updateCursor(x: x, y: y)
             }
         case .ended:
@@ -218,8 +277,14 @@ struct CanvasView: View {
             case .left, .right:
                 NSCursor.resizeLeftRight.set()
             case .rotate:
-                // 회전 커서
-                NSCursor.crosshair.set()
+                // 회전 커서 (SF Symbol 사용)
+                if let image = NSImage(systemSymbolName: "arrow.clockwise", accessibilityDescription: "Rotate"),
+                   let tinted = image.withSymbolConfiguration(.init(pointSize: 16, weight: .regular)) {
+                    let cursor = NSCursor(image: tinted, hotSpot: NSPoint(x: 8, y: 8))
+                    cursor.set()
+                } else {
+                    NSCursor.crosshair.set()
+                }
             }
             return
         }

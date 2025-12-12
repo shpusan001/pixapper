@@ -13,15 +13,6 @@ struct PropertiesPanel: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // Header
-            Text("Properties")
-                .font(.headline)
-                .foregroundColor(.secondary)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 10)
-
-            Divider()
-
             // 도구별 속성 UI
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {

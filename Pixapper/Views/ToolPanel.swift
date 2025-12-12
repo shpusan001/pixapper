@@ -13,15 +13,6 @@ struct ToolPanel: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // Header
-            Text("Tools")
-                .font(.headline)
-                .foregroundColor(.secondary)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 10)
-
-            Divider()
-
             // Tools grid
             ScrollView {
                 VStack(alignment: .leading, spacing: 8) {
