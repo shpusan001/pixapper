@@ -8,10 +8,10 @@
 import SwiftUI
 
 /// 붙여넣기 작업을 캡슐화하는 Command (선택 상태 복원 지원)
-class PasteCommand: Command {
+class PasteCommand: LayerPixelApplicable {
     private weak var canvasViewModel: CanvasViewModel?
-    private weak var layerViewModel: LayerViewModel?
-    private let layerIndex: Int
+    weak var layerViewModel: LayerViewModel?
+    let layerIndex: Int
 
     // 이전 선택 상태 (undo 시 복원)
     private let previousSelectionRect: CGRect?
@@ -102,14 +102,5 @@ class PasteCommand: Command {
             originalRect: previousOriginalRect,
             isFloating: previousIsFloating
         )
-    }
-
-    private func applyPixelChanges(_ changes: [PixelChange]) {
-        guard let layerVM = layerViewModel,
-              layerIndex < layerVM.layers.count else { return }
-
-        for change in changes {
-            layerVM.layers[layerIndex].setPixel(x: change.x, y: change.y, color: change.color)
-        }
     }
 }

@@ -1,5 +1,5 @@
 //
-//  CanvasCompositeLayer.swift
+//  RenderLayer.swift
 //  Pixapper
 //
 //  Created by Claude on 2025-12-12.
@@ -7,22 +7,22 @@
 
 import SwiftUI
 
-/// Canvas 렌더링을 위한 합성 레이어 프로토콜
+/// Canvas 렌더링을 위한 레이어 프로토콜
 /// Timeline의 Layer와는 별개로, 렌더링 시 사용되는 임시 레이어
-protocol CanvasCompositeLayer: Identifiable {
+protocol RenderLayer: Identifiable {
     var id: UUID { get }
     var zIndex: Int { get }
     var opacity: Double { get }
     var isVisible: Bool { get }
-    var blendMode: CompositeBlendMode { get }
+    var blendMode: RenderBlendMode { get }
 
     /// 레이어의 픽셀 데이터를 반환
     /// - Returns: 2D 픽셀 배열 (nil은 투명)
     func render() -> [[Color?]]
 }
 
-/// Composite Layer의 블렌드 모드
-enum CompositeBlendMode {
+/// Render Layer의 블렌드 모드
+enum RenderBlendMode {
     case normal      // 기본 (알파 블렌딩)
     case multiply    // 곱하기
     case screen      // 스크린
@@ -30,8 +30,8 @@ enum CompositeBlendMode {
     // 필요시 추가 가능
 }
 
-/// Composite Layer 타입 구분
-enum CompositeLayerType {
+/// Render Layer 타입 구분
+enum RenderLayerType {
     case base               // Timeline Layer 기반
     case floatingSelection  // 부유 선택 영역
     case shapePreview       // 도형 미리보기
@@ -40,21 +40,21 @@ enum CompositeLayerType {
 }
 
 /// 기본 구현: 대부분의 레이어에 적용되는 기본값
-extension CanvasCompositeLayer {
+extension RenderLayer {
     var opacity: Double { 1.0 }
     var isVisible: Bool { true }
-    var blendMode: CompositeBlendMode { .normal }
+    var blendMode: RenderBlendMode { .normal }
 }
 
-// MARK: - BaseCompositeLayer
+// MARK: - BaseRenderLayer
 
-/// Timeline Layer를 래핑하는 기본 합성 레이어
-class BaseCompositeLayer: CanvasCompositeLayer {
+/// Timeline Layer를 래핑하는 기본 렌더 레이어
+class BaseRenderLayer: RenderLayer {
     let id: UUID
     let zIndex: Int
     var opacity: Double
     var isVisible: Bool
-    let blendMode: CompositeBlendMode = .normal
+    let blendMode: RenderBlendMode = .normal
 
     private let layer: Layer
 
@@ -74,12 +74,12 @@ class BaseCompositeLayer: CanvasCompositeLayer {
 // MARK: - FloatingSelectionLayer
 
 /// 부유 선택 영역 레이어 (이동/변형 중인 선택 영역)
-class FloatingSelectionLayer: CanvasCompositeLayer {
+class FloatingSelectionLayer: RenderLayer {
     let id = UUID()
     let zIndex: Int = 1000  // 항상 최상위
     var opacity: Double
     var isVisible: Bool = true
-    let blendMode: CompositeBlendMode = .normal
+    let blendMode: RenderBlendMode = .normal
 
     private let pixels: [[Color?]]
     private let rect: CGRect
@@ -131,12 +131,12 @@ class FloatingSelectionLayer: CanvasCompositeLayer {
 // MARK: - ShapePreviewLayer
 
 /// 도형 미리보기 레이어 (도형 그리기 중인 상태)
-class ShapePreviewLayer: CanvasCompositeLayer {
+class ShapePreviewLayer: RenderLayer {
     let id = UUID()
     let zIndex: Int = 999  // Floating selection 바로 아래
     var opacity: Double = 0.5  // 반투명
     var isVisible: Bool = true
-    let blendMode: CompositeBlendMode = .normal
+    let blendMode: RenderBlendMode = .normal
 
     private let preview: [(x: Int, y: Int, color: Color)]
     private let canvasWidth: Int
@@ -161,15 +161,15 @@ class ShapePreviewLayer: CanvasCompositeLayer {
     }
 }
 
-// MARK: - OnionSkinCompositeLayer
+// MARK: - OnionSkinRenderLayer
 
 /// 어니언 스킨 레이어 (이전/이후 프레임 표시)
-class OnionSkinCompositeLayer: CanvasCompositeLayer {
+class OnionSkinRenderLayer: RenderLayer {
     let id = UUID()
     let zIndex: Int = -100  // Base layers 아래
     var opacity: Double
     var isVisible: Bool = true
-    let blendMode: CompositeBlendMode = .normal
+    let blendMode: RenderBlendMode = .normal
 
     private let pixels: [[Color?]]
     private let tint: Color
@@ -195,12 +195,12 @@ class OnionSkinCompositeLayer: CanvasCompositeLayer {
 
 /// 오버레이 레이어 (Grid, Guides 등 - 실제로는 SwiftUI에서 렌더링)
 /// 이 레이어는 실제 픽셀을 반환하지 않고, 마커 역할만 함
-class OverlayLayer: CanvasCompositeLayer {
+class OverlayLayer: RenderLayer {
     let id = UUID()
     let zIndex: Int = 10000  // 최상위
     var opacity: Double = 1.0
     var isVisible: Bool = true
-    let blendMode: CompositeBlendMode = .normal
+    let blendMode: RenderBlendMode = .normal
 
     enum OverlayType {
         case grid

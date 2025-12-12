@@ -9,10 +9,10 @@ import SwiftUI
 
 /// Canvas 렌더링을 위한 레이어 합성기
 class CanvasCompositor {
-    private var layers: [any CanvasCompositeLayer] = []
+    private var layers: [any RenderLayer] = []
 
     /// 레이어 추가
-    func addLayer(_ layer: any CanvasCompositeLayer) {
+    func addLayer(_ layer: any RenderLayer) {
         layers.append(layer)
         sortLayers()
     }
@@ -28,7 +28,7 @@ class CanvasCompositor {
     }
 
     /// 특정 ID의 레이어 찾기
-    func findLayer(id: UUID) -> (any CanvasCompositeLayer)? {
+    func findLayer(id: UUID) -> (any RenderLayer)? {
         return layers.first { $0.id == id }
     }
 
@@ -62,7 +62,7 @@ class CanvasCompositor {
     }
 
     /// 두 레이어를 블렌드
-    private func blend(bottom: [[Color?]], top: [[Color?]], opacity: Double, mode: CompositeBlendMode) -> [[Color?]] {
+    private func blend(bottom: [[Color?]], top: [[Color?]], opacity: Double, mode: RenderBlendMode) -> [[Color?]] {
         var result = bottom
         let height = min(bottom.count, top.count)
         let width = height > 0 ? min(bottom[0].count, top[0].count) : 0
@@ -81,7 +81,7 @@ class CanvasCompositor {
     }
 
     /// 두 색상을 블렌드
-    private func blendColors(bottom: Color?, top: Color, opacity: Double, mode: CompositeBlendMode) -> Color {
+    private func blendColors(bottom: Color?, top: Color, opacity: Double, mode: RenderBlendMode) -> Color {
         guard let bottomColor = bottom else {
             return top.opacity(opacity)
         }

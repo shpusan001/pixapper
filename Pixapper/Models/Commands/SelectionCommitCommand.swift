@@ -8,10 +8,10 @@
 import SwiftUI
 
 /// 선택 영역 커밋 커맨드 (레이어에 픽셀 배치 + 선택 상태 해제)
-class SelectionCommitCommand: Command {
+class SelectionCommitCommand: LayerPixelApplicable {
     private weak var canvasViewModel: CanvasViewModel?
-    private weak var layerViewModel: LayerViewModel?
-    private let layerIndex: Int
+    weak var layerViewModel: LayerViewModel?
+    let layerIndex: Int
 
     // 커밋 전 상태 (floating 선택 있음)
     private let oldRect: CGRect
@@ -67,14 +67,5 @@ class SelectionCommitCommand: Command {
         canvasViewModel?.originalRect = oldOriginalRect
         canvasViewModel?.originalPixels = oldOriginalPixels
         canvasViewModel?.isFloatingSelection = true
-    }
-
-    private func applyPixelChanges(_ changes: [PixelChange]) {
-        guard let layerVM = layerViewModel,
-              layerIndex < layerVM.layers.count else { return }
-
-        for change in changes {
-            layerVM.layers[layerIndex].setPixel(x: change.x, y: change.y, color: change.color)
-        }
     }
 }

@@ -8,10 +8,10 @@
 import SwiftUI
 
 /// 선택 영역 이동 커맨드 (선택 상태 + 레이어 픽셀 변경 포함)
-class SelectionMoveCommand: Command {
+class SelectionMoveCommand: LayerPixelApplicable {
     private weak var canvasViewModel: CanvasViewModel?
-    private weak var layerViewModel: LayerViewModel?
-    private let layerIndex: Int
+    weak var layerViewModel: LayerViewModel?
+    let layerIndex: Int
 
     // 이동 전 상태
     private let oldRect: CGRect
@@ -84,14 +84,5 @@ class SelectionMoveCommand: Command {
         canvasViewModel?.selectionPixels = oldPixels
         canvasViewModel?.originalRect = oldOriginalRect
         canvasViewModel?.originalPixels = oldOriginalPixels
-    }
-
-    private func applyPixelChanges(_ changes: [PixelChange]) {
-        guard let layerVM = layerViewModel,
-              layerIndex < layerVM.layers.count else { return }
-
-        for change in changes {
-            layerVM.layers[layerIndex].setPixel(x: change.x, y: change.y, color: change.color)
-        }
     }
 }

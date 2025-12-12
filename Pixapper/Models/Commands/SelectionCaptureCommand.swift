@@ -8,10 +8,10 @@
 import SwiftUI
 
 /// 선택 영역 생성 커맨드 (레이어에서 픽셀 제거 + 선택 상태 설정)
-class SelectionCaptureCommand: Command {
+class SelectionCaptureCommand: LayerPixelApplicable {
     private weak var canvasViewModel: CanvasViewModel?
-    private weak var layerViewModel: LayerViewModel?
-    private let layerIndex: Int
+    weak var layerViewModel: LayerViewModel?
+    let layerIndex: Int
 
     // 선택 전 상태 (선택 없음)
     private let wasFloating: Bool
@@ -82,14 +82,5 @@ class SelectionCaptureCommand: Command {
         canvasViewModel?.originalRect = oldOriginalRect
         canvasViewModel?.originalPixels = oldOriginalPixels
         canvasViewModel?.isFloatingSelection = wasFloating
-    }
-
-    private func applyPixelChanges(_ changes: [PixelChange]) {
-        guard let layerVM = layerViewModel,
-              layerIndex < layerVM.layers.count else { return }
-
-        for change in changes {
-            layerVM.layers[layerIndex].setPixel(x: change.x, y: change.y, color: change.color)
-        }
     }
 }

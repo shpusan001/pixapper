@@ -434,6 +434,154 @@ class TimelineViewModel: ObservableObject {
         }
     }
 
+    // MARK: - Frame Selection
+
+    /// 단일 프레임 선택 (기존 선택 해제)
+    func selectSingleFrame(at index: Int) {
+        guard index < totalFrames else { return }
+        selectedFrameIndices = [index]
+        currentFrameIndex = index
+        selectionAnchor = index
+        loadFrame(at: index)
+    }
+
+    /// 드래그로 범위 선택
+    func updateDragSelection(from startIndex: Int, to currentIndex: Int) {
+        let range = min(startIndex, currentIndex)...max(startIndex, currentIndex)
+        selectedFrameIndices = Set(range.filter { $0 < totalFrames })
+    }
+
+    /// 프레임 선택 (Command에서 사용)
+    func selectFrame(at index: Int, clearSelection: Bool = true) {
+        guard index < totalFrames else { return }
+        currentFrameIndex = index
+
+        if clearSelection {
+            selectedFrameIndices = [index]
+        }
+
+        loadFrame(at: index)
+    }
+
+    // MARK: - Playback
+
+    func togglePlayback() {
+        isPlaying.toggle()
+        if isPlaying {
+            startPlayback()
+        } else {
+            stopPlayback()
+        }
+    }
+
+    func play() {
+        isPlaying = true
+        startPlayback()
+    }
+
+    func pause() {
+        isPlaying = false
+        stopPlayback()
+    }
+
+    func startPlayback() {
+        stopPlayback()
+
+        let interval = settings.frameDuration
+        playbackTimer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { [weak self] _ in
+            Task { @MainActor in
+                guard let self = self else { return }
+                self.advanceFrame()
+            }
+        }
+        if let timer = playbackTimer {
+            RunLoop.main.add(timer, forMode: .common)
+        }
+    }
+
+    func stopPlayback() {
+        playbackTimer?.invalidate()
+        playbackTimer = nil
+    }
+
+    func advanceFrame() {
+        if currentFrameIndex < totalFrames - 1 {
+            currentFrameIndex += 1
+        } else if settings.isLooping {
+            currentFrameIndex = 0
+        } else {
+            pause()
+            return
+        }
+        loadFrame(at: currentFrameIndex)
+    }
+
+    func nextFrame() {
+        if currentFrameIndex < totalFrames - 1 {
+            currentFrameIndex += 1
+            loadFrame(at: currentFrameIndex)
+        }
+    }
+
+    func previousFrame() {
+        if currentFrameIndex > 0 {
+            currentFrameIndex -= 1
+            loadFrame(at: currentFrameIndex)
+        }
+    }
+
+    func setFPS(_ fps: Int) {
+        settings.fps = fps
+        if isPlaying {
+            startPlayback()
+        }
+    }
+
+    func setPlaybackSpeed(_ speed: Double) {
+        settings.playbackSpeed = speed
+        if isPlaying {
+            startPlayback()
+        }
+    }
+
+    func toggleLoop() {
+        settings.isLooping.toggle()
+    }
+
+    func toggleOnionSkin() {
+        settings.onionSkinEnabled.toggle()
+    }
+
+    // MARK: - Onion Skin
+
+    func getOnionSkinFrames() -> [(frameIndex: Int, tint: Color, opacity: Double)] {
+        var result: [(frameIndex: Int, tint: Color, opacity: Double)] = []
+
+        if !settings.onionSkinEnabled {
+            return result
+        }
+
+        // Previous frames (red tint)
+        for i in 1...settings.onionSkinPrevFrames {
+            let frameIndex = currentFrameIndex - i
+            if frameIndex >= 0 && frameIndex < totalFrames {
+                let opacity = settings.onionSkinOpacity / Double(i)
+                result.append((frameIndex, .red, opacity))
+            }
+        }
+
+        // Next frames (blue tint)
+        for i in 1...settings.onionSkinNextFrames {
+            let frameIndex = currentFrameIndex + i
+            if frameIndex >= 0 && frameIndex < totalFrames {
+                let opacity = settings.onionSkinOpacity / Double(i)
+                result.append((frameIndex, .blue, opacity))
+            }
+        }
+
+        return result
+    }
+
     deinit {
         playbackTimer?.invalidate()
     }

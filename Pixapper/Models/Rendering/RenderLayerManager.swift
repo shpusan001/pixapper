@@ -1,5 +1,5 @@
 //
-//  CompositeLayerManager.swift
+//  RenderLayerManager.swift
 //  Pixapper
 //
 //  Created by Claude on 2025-12-12.
@@ -7,8 +7,8 @@
 
 import SwiftUI
 
-/// Composite Layer 관리 및 Compositor 업데이트를 담당하는 매니저
-class CompositeLayerManager {
+/// Render Layer 관리 및 Compositor 업데이트를 담당하는 매니저
+class RenderLayerManager {
     private let compositor: CanvasCompositor
 
     init() {
@@ -33,13 +33,13 @@ class CompositeLayerManager {
 
         // 1. Base layers (Timeline layers)
         for (index, layer) in layers.enumerated().reversed() {
-            let baseLayer = CompositeLayerFactory.createBaseLayer(layer: layer, zIndex: index)
+            let baseLayer = RenderLayerFactory.createBaseLayer(layer: layer, zIndex: index)
             compositor.addLayer(baseLayer)
         }
 
         // 2. Shape preview layer
         if !shapePreview.isEmpty {
-            let shapeLayer = CompositeLayerFactory.createShapePreviewLayer(
+            let shapeLayer = RenderLayerFactory.createShapePreviewLayer(
                 preview: shapePreview,
                 canvasWidth: canvasWidth,
                 canvasHeight: canvasHeight
@@ -50,7 +50,7 @@ class CompositeLayerManager {
         // 3. Floating selection layer (최상위)
         if let state = selectionState,
            state.isFloating {
-            let floatingLayer = CompositeLayerFactory.createFloatingSelectionLayer(
+            let floatingLayer = RenderLayerFactory.createFloatingSelectionLayer(
                 pixels: state.pixels,
                 rect: state.rect,
                 offset: state.offset,

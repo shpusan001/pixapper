@@ -34,7 +34,7 @@ class CanvasViewModel: ObservableObject {
     weak var timelineViewModel: TimelineViewModel?  // Timeline 동기화용
 
     // Canvas Compositor (렌더링 레이어 합성)
-    private let compositeLayerManager = CompositeLayerManager()
+    private let compositeLayerManager = RenderLayerManager()
 
     private var shapeStartPoint: (x: Int, y: Int)?
     private var lastDrawPoint: (x: Int, y: Int)?

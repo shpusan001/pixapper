@@ -1,5 +1,5 @@
 //
-//  CompositeLayerFactory.swift
+//  RenderLayerFactory.swift
 //  Pixapper
 //
 //  Created by Claude on 2025-12-12.
@@ -7,12 +7,12 @@
 
 import SwiftUI
 
-/// Composite Layer 생성을 위한 Factory
-class CompositeLayerFactory {
+/// Render Layer 생성을 위한 Factory
+class RenderLayerFactory {
 
-    /// Base composite layer 생성 (Timeline Layer 래핑)
-    static func createBaseLayer(layer: Layer, zIndex: Int) -> BaseCompositeLayer {
-        return BaseCompositeLayer(layer: layer, zIndex: zIndex)
+    /// Base render layer 생성 (Timeline Layer 래핑)
+    static func createBaseLayer(layer: Layer, zIndex: Int) -> BaseRenderLayer {
+        return BaseRenderLayer(layer: layer, zIndex: zIndex)
     }
 
     /// Floating selection layer 생성
@@ -52,8 +52,8 @@ class CompositeLayerFactory {
         pixels: [[Color?]],
         tint: Color,
         opacity: Double
-    ) -> OnionSkinCompositeLayer {
-        return OnionSkinCompositeLayer(
+    ) -> OnionSkinRenderLayer {
+        return OnionSkinRenderLayer(
             pixels: pixels,
             tint: tint,
             opacity: opacity
