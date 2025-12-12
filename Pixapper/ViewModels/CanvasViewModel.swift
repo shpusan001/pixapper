@@ -538,6 +538,24 @@ class CanvasViewModel: ObservableObject {
         selectionMode = .idle
     }
 
+    /// 선택 상태를 복원 (undo/redo 지원)
+    func restoreSelectionState(
+        rect: CGRect?,
+        pixels: [[Color?]]?,
+        originalPixels: [[Color?]]?,
+        originalRect: CGRect?,
+        isFloating: Bool
+    ) {
+        selectionRect = rect
+        selectionPixels = pixels
+        self.originalPixels = originalPixels
+        self.originalRect = originalRect
+        isFloatingSelection = isFloating
+        selectionOffset = .zero
+        isMovingSelection = false
+        selectionMode = .idle
+    }
+
     /// 주어진 좌표가 선택 영역 내부인지 확인
     private func isInsideSelection(x: Int, y: Int) -> Bool {
         guard let rect = selectionRect else { return false }
@@ -1158,16 +1176,18 @@ class CanvasViewModel: ObservableObject {
         guard let clipboardData = clipboard,
               currentLayerIndex < layerViewModel.layers.count else { return }
 
-        // 기존 선택이 있으면 커밋
-        if isFloatingSelection {
-            commitSelection()
-        }
+        // 이전 선택 상태 저장 (undo 시 복원용)
+        let prevRect = selectionRect
+        let prevPixels = selectionPixels
+        let prevOriginalPixels = originalPixels
+        let prevOriginalRect = originalRect
+        let prevIsFloating = isFloatingSelection
 
         // 붙여넣기 위치 결정
         var pasteX: Int
         var pasteY: Int
 
-        if let lastRect = selectionRect {
+        if let lastRect = prevRect {
             // 마지막 선택 위치에서 +10, +10 오프셋
             pasteX = Int(lastRect.minX) + 10
             pasteY = Int(lastRect.minY) + 10
@@ -1182,18 +1202,30 @@ class CanvasViewModel: ObservableObject {
         pasteY = max(0, min(pasteY, canvas.height - clipboardData.height))
 
         // 새 선택 영역 생성 (부유 상태로 시작)
-        selectionRect = CGRect(
+        let newRect = CGRect(
             x: pasteX,
             y: pasteY,
             width: clipboardData.width,
             height: clipboardData.height
         )
 
-        // 픽셀 데이터 설정
-        selectionPixels = clipboardData.pixels
-        originalPixels = clipboardData.pixels
-        originalRect = selectionRect
-        isFloatingSelection = true
+        // PasteCommand 생성 (이전 선택 커밋 + 새 선택 생성을 하나의 undo 단위로)
+        let command = PasteCommand(
+            canvasViewModel: self,
+            layerViewModel: layerViewModel,
+            layerIndex: currentLayerIndex,
+            previousSelectionRect: prevRect,
+            previousSelectionPixels: prevPixels,
+            previousOriginalPixels: prevOriginalPixels,
+            previousOriginalRect: prevOriginalRect,
+            previousIsFloating: prevIsFloating,
+            pastedSelectionRect: newRect,
+            pastedSelectionPixels: clipboardData.pixels
+        )
+
+        // Command 실행하여 상태 변경 및 스택에 추가
+        command.execute()
+        commandManager.addExecutedCommand(command)
     }
 
     /// 선택 영역 삭제 (선택된 픽셀만 투명으로)
