@@ -51,6 +51,7 @@ class CanvasViewModel: ObservableObject {
         case idle
         case moving
         case resizing(handle: ResizeHandle)
+        case rotating
     }
     @Published var selectionMode: SelectionMode = .idle
 
@@ -58,11 +59,16 @@ class CanvasViewModel: ObservableObject {
     enum ResizeHandle: Equatable {
         case topLeft, topRight, bottomLeft, bottomRight
         case top, bottom, left, right
+        case rotate  // 회전 핸들
     }
     private var resizeStartRect: CGRect?
     private var resizeStartPixels: [[Color?]]?
     private var moveStartRect: CGRect?
+    private var rotateStartAngle: Double = 0  // 회전 시작 각도
+    private var rotateStartPixels: [[Color?]]?  // 회전 시작 시 픽셀
+    private var currentRotationAngle: Double = 0  // 현재 누적 회전 각도
     @Published var hoveredHandle: ResizeHandle?  // 호버 중인 핸들
+    @Published var shiftPressed: Bool = false  // Shift 키 상태
 
     init(width: Int = 32, height: Int = 32, layerViewModel: LayerViewModel, commandManager: CommandManager, toolSettingsManager: ToolSettingsManager) {
         self.canvas = PixelCanvas(width: width, height: height)
@@ -100,8 +106,13 @@ class CanvasViewModel: ObservableObject {
         case .selection:
             // 핸들 클릭 체크
             if let handle = getResizeHandle(x: x, y: y) {
-                // 크기 조절 시작
-                startResizingSelection(handle: handle, at: (x, y))
+                if handle == .rotate {
+                    // 회전 시작
+                    startRotatingSelection(at: (x, y))
+                } else {
+                    // 크기 조절 시작
+                    startResizingSelection(handle: handle, at: (x, y))
+                }
             }
             // 기존 선택 영역 내부를 클릭했는지 확인
             else if isInsideSelection(x: x, y: y) {
@@ -163,6 +174,9 @@ class CanvasViewModel: ObservableObject {
             case .resizing(let handle):
                 // 선택 영역 크기 조절 중
                 updateSelectionResize(handle: handle, to: (x, y))
+            case .rotating:
+                // 선택 영역 회전 중
+                updateSelectionRotation(to: (x, y))
             case .idle:
                 // 선택 영역 그리기 중이 아니면 호버 체크
                 if shapeStartPoint == nil {
@@ -212,6 +226,9 @@ class CanvasViewModel: ObservableObject {
             case .resizing:
                 // 선택 영역 크기 조절 완료
                 commitSelectionResize()
+            case .rotating:
+                // 선택 영역 회전 완료
+                commitSelectionRotation()
             case .idle:
                 // 드래그 없이 클릭만 한 경우 (1x1 선택 방지)
                 if let start = shapeStartPoint, start.x == x && start.y == y {
@@ -619,9 +636,17 @@ class CanvasViewModel: ObservableObject {
     private func getResizeHandle(x: Int, y: Int) -> ResizeHandle? {
         guard let rect = selectionRect else { return nil }
 
-        let handleSize: CGFloat = 2  // 픽셀 단위로 핸들 크기 (정확한 판정)
+        let handleSize: CGFloat = 1  // 픽셀 단위로 핸들 크기 (더 정확한 판정)
         let px = CGFloat(x)
         let py = CGFloat(y)
+
+        // 회전 핸들 체크 (가장 우선 - 선택 영역 위쪽 중앙에서 3픽셀 위)
+        let centerX = rect.midX
+        let rotateY = rect.minY - 3
+        let rotateHandleSize: CGFloat = 2
+        if abs(px - centerX) <= rotateHandleSize && abs(py - rotateY) <= rotateHandleSize {
+            return .rotate
+        }
 
         let nearLeft = abs(px - rect.minX) <= handleSize
         let nearRight = abs(px - rect.maxX) <= handleSize
@@ -716,6 +741,26 @@ class CanvasViewModel: ObservableObject {
         }
     }
 
+    /// 선택 영역 회전 시작
+    private func startRotatingSelection(at point: (x: Int, y: Int)) {
+        guard let rect = selectionRect,
+              let pixels = selectionPixels else { return }
+        selectionMode = .rotating
+        rotateStartPixels = pixels
+        lastDrawPoint = point
+
+        // 시작 각도 계산 (선택 영역 중심에서 마우스 위치까지의 각도)
+        let centerX = rect.midX
+        let centerY = rect.midY
+        rotateStartAngle = atan2(Double(point.y) - Double(centerY), Double(point.x) - Double(centerX))
+        currentRotationAngle = 0
+
+        if originalPixels == nil {
+            originalPixels = pixels
+            originalRect = rect
+        }
+    }
+
     /// 선택 영역 크기 조절 중
     private func updateSelectionResize(handle: ResizeHandle, to point: (x: Int, y: Int)) {
         guard let startRect = resizeStartRect,
@@ -755,11 +800,41 @@ class CanvasViewModel: ObservableObject {
             newRect.size.width -= CGFloat(dx)
         case .right:
             newRect.size.width += CGFloat(dx)
+        case .rotate:
+            // rotate는 크기 조절이 아니므로 여기서 처리하지 않음
+            return
         }
 
         // 최소 크기 제한 (1x1)
         if newRect.width < 1 || newRect.height < 1 {
             return
+        }
+
+        // Shift 키가 눌렸으면 1:1 비율 유지
+        if shiftPressed {
+            let size = max(abs(newRect.width), abs(newRect.height))
+
+            // 핸들 위치에 따라 rect 조정
+            switch handle {
+            case .topLeft:
+                newRect.origin.x = newRect.maxX - size
+                newRect.origin.y = newRect.maxY - size
+                newRect.size.width = size
+                newRect.size.height = size
+            case .topRight:
+                newRect.origin.y = newRect.maxY - size
+                newRect.size.width = size
+                newRect.size.height = size
+            case .bottomLeft:
+                newRect.origin.x = newRect.maxX - size
+                newRect.size.width = size
+                newRect.size.height = size
+            case .bottomRight:
+                newRect.size.width = size
+                newRect.size.height = size
+            default:
+                break  // 가장자리 핸들은 1:1 비율 적용 안 함
+            }
         }
 
         selectionRect = newRect
@@ -800,6 +875,90 @@ class CanvasViewModel: ObservableObject {
         selectionMode = .idle
         resizeStartRect = nil
         resizeStartPixels = nil
+        lastDrawPoint = nil
+    }
+
+    /// 선택 영역 회전 중
+    private func updateSelectionRotation(to point: (x: Int, y: Int)) {
+        guard let rect = selectionRect,
+              let origPixels = rotateStartPixels else { return }
+
+        // 현재 각도 계산
+        let centerX = rect.midX
+        let centerY = rect.midY
+        let currentAngle = atan2(Double(point.y) - Double(centerY), Double(point.x) - Double(centerX))
+
+        // 회전 각도 (라디안)
+        var angle = currentAngle - rotateStartAngle
+        currentRotationAngle = angle
+
+        // Shift 키가 눌렸으면 45도 단위로 스냅
+        if shiftPressed {
+            let degrees = angle * 180.0 / .pi
+            let snappedDegrees = round(degrees / 45.0) * 45.0
+            angle = snappedDegrees * .pi / 180.0
+        }
+
+        // 회전된 픽셀 생성
+        let rotatedPixels = rotatePixelsByAngle(origPixels, angle: angle)
+
+        // 크기 변경 (회전 시 크기가 달라질 수 있음)
+        let newHeight = rotatedPixels.count
+        let newWidth = rotatedPixels.isEmpty ? 0 : rotatedPixels[0].count
+
+        // 중심 유지하면서 rect 업데이트
+        let newRect = CGRect(
+            x: centerX - CGFloat(newWidth) / 2,
+            y: centerY - CGFloat(newHeight) / 2,
+            width: CGFloat(newWidth),
+            height: CGFloat(newHeight)
+        )
+
+        selectionPixels = rotatedPixels
+        selectionRect = newRect
+    }
+
+    /// 선택 영역 회전 완료 (SelectionTransformCommand 생성)
+    private func commitSelectionRotation() {
+        guard let oldPixels = rotateStartPixels,
+              let newRect = selectionRect,
+              let newPixels = selectionPixels,
+              let origRect = originalRect else {
+            selectionMode = .idle
+            rotateStartPixels = nil
+            lastDrawPoint = nil
+            return
+        }
+
+        // 실제로 회전이 발생했을 때만 Command 생성
+        if abs(currentRotationAngle) > 0.01 {
+            // 원래 rect를 계산 (회전 전)
+            let centerX = newRect.midX
+            let centerY = newRect.midY
+            let oldHeight = oldPixels.count
+            let oldWidth = oldPixels.isEmpty ? 0 : oldPixels[0].count
+            let oldRect = CGRect(
+                x: centerX - CGFloat(oldWidth) / 2,
+                y: centerY - CGFloat(oldHeight) / 2,
+                width: CGFloat(oldWidth),
+                height: CGFloat(oldHeight)
+            )
+
+            let command = SelectionTransformCommand(
+                canvasViewModel: self,
+                oldPixels: oldPixels,
+                newPixels: newPixels,
+                oldRect: oldRect,
+                newRect: newRect
+            )
+            commandManager.addExecutedCommand(command)
+        }
+
+        // 상태 초기화
+        selectionMode = .idle
+        rotateStartPixels = nil
+        rotateStartAngle = 0
+        currentRotationAngle = 0
         lastDrawPoint = nil
     }
 
@@ -1233,6 +1392,72 @@ class CanvasViewModel: ObservableObject {
         }
 
         return flipped
+    }
+
+    /// 픽셀 배열을 임의의 각도로 회전 (라디안)
+    private func rotatePixelsByAngle(_ pixels: [[Color?]], angle: Double) -> [[Color?]] {
+        guard !pixels.isEmpty else { return [] }
+
+        let oldHeight = pixels.count
+        let oldWidth = pixels[0].count
+
+        let centerX = Double(oldWidth) / 2.0
+        let centerY = Double(oldHeight) / 2.0
+
+        // 회전 후 경계 박스 계산
+        let corners = [
+            (0.0, 0.0),
+            (Double(oldWidth), 0.0),
+            (0.0, Double(oldHeight)),
+            (Double(oldWidth), Double(oldHeight))
+        ]
+
+        var minX = Double.infinity
+        var maxX = -Double.infinity
+        var minY = Double.infinity
+        var maxY = -Double.infinity
+
+        for (x, y) in corners {
+            let dx = x - centerX
+            let dy = y - centerY
+            let rotatedX = dx * cos(angle) - dy * sin(angle) + centerX
+            let rotatedY = dx * sin(angle) + dy * cos(angle) + centerY
+
+            minX = min(minX, rotatedX)
+            maxX = max(maxX, rotatedX)
+            minY = min(minY, rotatedY)
+            maxY = max(maxY, rotatedY)
+        }
+
+        let newWidth = Int(ceil(maxX - minX))
+        let newHeight = Int(ceil(maxY - minY))
+
+        // 새 중심점
+        let newCenterX = Double(newWidth) / 2.0
+        let newCenterY = Double(newHeight) / 2.0
+
+        var rotated: [[Color?]] = Array(repeating: Array(repeating: nil, count: newWidth), count: newHeight)
+
+        // 역회전으로 소스 픽셀 찾기 (Nearest Neighbor)
+        for y in 0..<newHeight {
+            for x in 0..<newWidth {
+                let dx = Double(x) - newCenterX
+                let dy = Double(y) - newCenterY
+
+                // 역회전
+                let srcX = dx * cos(-angle) - dy * sin(-angle) + centerX
+                let srcY = dx * sin(-angle) + dy * cos(-angle) + centerY
+
+                let srcXInt = Int(round(srcX))
+                let srcYInt = Int(round(srcY))
+
+                if srcXInt >= 0 && srcXInt < oldWidth && srcYInt >= 0 && srcYInt < oldHeight {
+                    rotated[y][x] = pixels[srcYInt][srcXInt]
+                }
+            }
+        }
+
+        return rotated
     }
 
     // MARK: - Selection Clipboard Operations

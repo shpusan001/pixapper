@@ -11,10 +11,23 @@ struct CanvasView: View {
     @ObservedObject var viewModel: CanvasViewModel
     var timelineViewModel: TimelineViewModel?
     @State private var isDragging = false
+    @State private var eventMonitor: Any?
 
     var body: some View {
         canvasContent
             .background(Color(nsColor: .controlBackgroundColor))
+            .onAppear {
+                // Shift 키 모니터링
+                eventMonitor = NSEvent.addLocalMonitorForEvents(matching: .flagsChanged) { event in
+                    viewModel.shiftPressed = event.modifierFlags.contains(.shift)
+                    return event
+                }
+            }
+            .onDisappear {
+                if let monitor = eventMonitor {
+                    NSEvent.removeMonitor(monitor)
+                }
+            }
     }
 
     private var canvasContent: some View {
@@ -204,6 +217,9 @@ struct CanvasView: View {
                 NSCursor.resizeUpDown.set()
             case .left, .right:
                 NSCursor.resizeLeftRight.set()
+            case .rotate:
+                // 회전 커서
+                NSCursor.crosshair.set()
             }
             return
         }
@@ -434,11 +450,11 @@ struct SelectionRectView: View {
                 style: StrokeStyle(lineWidth: 2.5, dash: [6, 4])
             )
 
-            // Draw resize handles (8 handles) - 크기 증가 및 시각적 개선
+            // Draw resize handles (9 handles including rotate) - 크기 증가 및 시각적 개선
             let baseHandleSize: CGFloat = 11
             let handleTypes: [CanvasViewModel.ResizeHandle] = [
                 .topLeft, .topRight, .bottomLeft, .bottomRight,
-                .top, .bottom, .left, .right
+                .top, .bottom, .left, .right, .rotate
             ]
             let handlePositions: [(x: CGFloat, y: CGFloat)] = [
                 // Corners
@@ -450,7 +466,9 @@ struct SelectionRectView: View {
                 (borderRect.midX, borderRect.minY),        // top
                 (borderRect.midX, borderRect.maxY),        // bottom
                 (borderRect.minX, borderRect.midY),        // left
-                (borderRect.maxX, borderRect.midY)         // right
+                (borderRect.maxX, borderRect.midY),        // right
+                // Rotate handle (위쪽 중앙에서 3픽셀 위)
+                (borderRect.midX, borderRect.minY - 3 * pixelSize)
             ]
 
             for (index, position) in handlePositions.enumerated() {
@@ -460,28 +478,58 @@ struct SelectionRectView: View {
                 // 호버 시 핸들 크기 증가
                 let handleSize = isHovered ? baseHandleSize * 1.3 : baseHandleSize
 
-                let handleRect = CGRect(
-                    x: position.x - handleSize / 2,
-                    y: position.y - handleSize / 2,
-                    width: handleSize,
-                    height: handleSize
-                )
+                // 회전 핸들은 원형으로 표시
+                if handleType == .rotate {
+                    let circleRect = CGRect(
+                        x: position.x - handleSize / 2,
+                        y: position.y - handleSize / 2,
+                        width: handleSize,
+                        height: handleSize
+                    )
 
-                // 그림자 효과 (깊이감 추가)
-                let shadowPath = Path(handleRect)
-                context.fill(
-                    shadowPath,
-                    with: .color(.black.opacity(0.15))
-                )
+                    // 선으로 연결 (위쪽 중앙과 회전 핸들)
+                    var linePath = Path()
+                    linePath.move(to: CGPoint(x: borderRect.midX, y: borderRect.minY))
+                    linePath.addLine(to: CGPoint(x: position.x, y: position.y))
+                    context.stroke(
+                        linePath,
+                        with: .color(Color(red: 0.0, green: 0.5, blue: 1.0).opacity(0.5)),
+                        lineWidth: 1.5
+                    )
 
-                // Fill color: white or bright blue if hovered
-                let fillColor: Color = isHovered ? Color(red: 0.4, green: 0.7, blue: 1.0, opacity: 0.5) : .white
-                // Border color: bright blue
-                let borderColor: Color = isHovered ? Color(red: 0.0, green: 0.5, blue: 1.0) : Color(red: 0.0, green: 0.45, blue: 0.9)
-                let borderWidth: CGFloat = isHovered ? 2.5 : 2
+                    // 원형 핸들
+                    let circlePath = Path(ellipseIn: circleRect)
+                    let fillColor: Color = isHovered ? Color(red: 0.4, green: 0.7, blue: 1.0, opacity: 0.7) : Color(red: 0.0, green: 0.5, blue: 1.0, opacity: 0.9)
+                    let borderColor: Color = .white
+                    let borderWidth: CGFloat = 2
 
-                context.fill(Path(handleRect), with: .color(fillColor))
-                context.stroke(Path(handleRect), with: .color(borderColor), lineWidth: borderWidth)
+                    context.fill(circlePath, with: .color(fillColor))
+                    context.stroke(circlePath, with: .color(borderColor), lineWidth: borderWidth)
+                } else {
+                    // 일반 핸들은 사각형
+                    let handleRect = CGRect(
+                        x: position.x - handleSize / 2,
+                        y: position.y - handleSize / 2,
+                        width: handleSize,
+                        height: handleSize
+                    )
+
+                    // 그림자 효과 (깊이감 추가)
+                    let shadowPath = Path(handleRect)
+                    context.fill(
+                        shadowPath,
+                        with: .color(.black.opacity(0.15))
+                    )
+
+                    // Fill color: white or bright blue if hovered
+                    let fillColor: Color = isHovered ? Color(red: 0.4, green: 0.7, blue: 1.0, opacity: 0.5) : .white
+                    // Border color: bright blue
+                    let borderColor: Color = isHovered ? Color(red: 0.0, green: 0.5, blue: 1.0) : Color(red: 0.0, green: 0.45, blue: 0.9)
+                    let borderWidth: CGFloat = isHovered ? 2.5 : 2
+
+                    context.fill(Path(handleRect), with: .color(fillColor))
+                    context.stroke(Path(handleRect), with: .color(borderColor), lineWidth: borderWidth)
+                }
             }
         }
     }

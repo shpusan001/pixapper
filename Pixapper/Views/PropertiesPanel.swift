@@ -297,121 +297,76 @@ struct SelectionPropertiesView: View {
             Divider()
                 .padding(.vertical, 12)
 
-            if viewModel.selectionPixels != nil {
-                // Clipboard section
-                VStack(alignment: .leading, spacing: 12) {
-                    Text("Clipboard")
-                        .font(.callout)
-                        .fontWeight(.semibold)
-                        .foregroundColor(.primary)
-
-                    HStack(spacing: 8) {
-                        TransformButton(
-                            icon: "doc.on.doc",
-                            label: "Copy",
-                            action: viewModel.copySelection
-                        )
-                        TransformButton(
-                            icon: "scissors",
-                            label: "Cut",
-                            action: viewModel.cutSelection
-                        )
-                    }
-
-                    HStack(spacing: 8) {
-                        TransformButton(
-                            icon: "doc.on.clipboard",
-                            label: "Paste",
-                            action: viewModel.pasteSelection
-                        )
-                        .opacity(viewModel.hasClipboard ? 1.0 : 0.5)
-                        .disabled(!viewModel.hasClipboard)
-
-                        TransformButton(
-                            icon: "trash",
-                            label: "Delete",
-                            action: viewModel.deleteSelection
-                        )
-                    }
+            if let rect = viewModel.selectionRect, viewModel.selectionPixels != nil {
+                // 선택 정보
+                VStack(alignment: .leading, spacing: 8) {
+                    InfoRow(label: "Size", value: "\(Int(rect.width)) × \(Int(rect.height))")
+                    InfoRow(label: "Position", value: "(\(Int(rect.minX)), \(Int(rect.minY)))")
                 }
+                .padding(.bottom, 16)
 
                 Divider()
-                    .padding(.vertical, 12)
 
-                // Transform section
+                // Transform 버튼들
                 VStack(alignment: .leading, spacing: 12) {
                     Text("Transform")
                         .font(.callout)
-                        .fontWeight(.semibold)
-                        .foregroundColor(.primary)
+                        .fontWeight(.medium)
+                        .foregroundColor(.secondary)
+                        .padding(.top, 12)
 
-                    // Rotate buttons
+                    // Rotate
                     HStack(spacing: 8) {
-                        TransformButton(
-                            icon: "rotate.left",
-                            label: "90° CCW",
-                            action: viewModel.rotateSelectionCCW
-                        )
-                        TransformButton(
-                            icon: "rotate.right",
-                            label: "90° CW",
-                            action: viewModel.rotateSelectionCW
-                        )
+                        QuickButton(icon: "rotate.left", action: viewModel.rotateSelectionCCW)
+                        QuickButton(icon: "rotate.right", action: viewModel.rotateSelectionCW)
+                        QuickButton(icon: "arrow.triangle.2.circlepath", action: viewModel.rotateSelection180)
                     }
 
-                    TransformButton(
-                        icon: "arrow.triangle.2.circlepath",
-                        label: "180°",
-                        action: viewModel.rotateSelection180,
-                        fullWidth: true
-                    )
-
-                    Divider()
-                        .padding(.vertical, 8)
-
-                    // Flip buttons
+                    // Flip
                     HStack(spacing: 8) {
-                        TransformButton(
-                            icon: "arrow.left.and.right",
-                            label: "Flip H",
-                            action: viewModel.flipSelectionHorizontal
-                        )
-                        TransformButton(
-                            icon: "arrow.up.and.down",
-                            label: "Flip V",
-                            action: viewModel.flipSelectionVertical
-                        )
+                        QuickButton(icon: "arrow.left.and.right", action: viewModel.flipSelectionHorizontal)
+                        QuickButton(icon: "arrow.up.and.down", action: viewModel.flipSelectionVertical)
                     }
                 }
             } else {
-                Text("Drag to select a rectangular area on the canvas.")
+                Text("Select an area to see properties")
                     .font(.callout)
                     .foregroundColor(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
             }
         }
     }
 }
 
-struct TransformButton: View {
-    let icon: String
+struct InfoRow: View {
     let label: String
+    let value: String
+
+    var body: some View {
+        HStack {
+            Text(label)
+                .font(.callout)
+                .foregroundColor(.secondary)
+            Spacer()
+            Text(value)
+                .font(.callout)
+                .foregroundColor(.primary)
+                .monospacedDigit()
+        }
+    }
+}
+
+struct QuickButton: View {
+    let icon: String
     let action: () -> Void
-    var fullWidth: Bool = false
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 8) {
-                Image(systemName: icon)
-                    .font(.system(size: 14))
-                Text(label)
-                    .font(.callout)
-            }
-            .frame(maxWidth: fullWidth ? .infinity : nil)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
-            .background(Color(nsColor: .controlColor))
-            .cornerRadius(6)
+            Image(systemName: icon)
+                .font(.system(size: 16))
+                .frame(maxWidth: .infinity)
+                .frame(height: 32)
+                .background(Color(nsColor: .controlColor))
+                .cornerRadius(6)
         }
         .buttonStyle(.plain)
     }
