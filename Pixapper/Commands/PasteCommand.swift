@@ -59,67 +59,16 @@ class PasteCommand: Command {
         if previousIsFloating,
            let rect = previousSelectionRect,
            let origRect = previousOriginalRect,
-           let pixels = previousSelectionPixels,
-           let origPixels = previousOriginalPixels {
-            saveCommitPixelChanges(
-                rect: rect,
-                origRect: origRect,
+           let pixels = previousSelectionPixels {
+            let changes = canvasViewModel.calculatePixelChanges(
                 pixels: pixels,
-                origPixels: origPixels,
-                layerVM: layerViewModel,
-                layerIdx: layerIndex
+                origPixels: previousOriginalPixels,
+                from: origRect,
+                to: rect,
+                layerIndex: layerIndex
             )
-        }
-    }
-
-    private func saveCommitPixelChanges(
-        rect: CGRect,
-        origRect: CGRect,
-        pixels: [[Color?]],
-        origPixels: [[Color?]],
-        layerVM: LayerViewModel,
-        layerIdx: Int
-    ) {
-        guard layerIdx < layerVM.layers.count else { return }
-
-        // 1. 원본 위치에서 제거될 픽셀들
-        let origStartX = Int(origRect.minX)
-        let origStartY = Int(origRect.minY)
-
-        for y in 0..<origPixels.count {
-            for x in 0..<origPixels[y].count {
-                if origPixels[y][x] != nil {
-                    let pixelX = origStartX + x
-                    let pixelY = origStartY + y
-                    if pixelX >= 0 && pixelX < layerVM.layers[layerIdx].pixels[0].count &&
-                       pixelY >= 0 && pixelY < layerVM.layers[layerIdx].pixels.count {
-                        let oldColor = layerVM.layers[layerIdx].getPixel(x: pixelX, y: pixelY)
-                        oldLayerPixels.append(PixelChange(x: pixelX, y: pixelY, color: oldColor))
-                        newLayerPixels.append(PixelChange(x: pixelX, y: pixelY, color: nil))
-                    }
-                }
-            }
-        }
-
-        // 2. 새 위치에 추가될 픽셀들
-        let startX = Int(rect.minX)
-        let startY = Int(rect.minY)
-
-        for y in 0..<pixels.count {
-            for x in 0..<pixels[y].count {
-                if let color = pixels[y][x] {
-                    let pixelX = startX + x
-                    let pixelY = startY + y
-                    if pixelX >= 0 && pixelX < layerVM.layers[layerIdx].pixels[0].count &&
-                       pixelY >= 0 && pixelY < layerVM.layers[layerIdx].pixels.count {
-                        let oldColor = layerVM.layers[layerIdx].getPixel(x: pixelX, y: pixelY)
-                        if !oldLayerPixels.contains(where: { $0.x == pixelX && $0.y == pixelY }) {
-                            oldLayerPixels.append(PixelChange(x: pixelX, y: pixelY, color: oldColor))
-                        }
-                        newLayerPixels.append(PixelChange(x: pixelX, y: pixelY, color: color))
-                    }
-                }
-            }
+            oldLayerPixels = changes.old
+            newLayerPixels = changes.new
         }
     }
 

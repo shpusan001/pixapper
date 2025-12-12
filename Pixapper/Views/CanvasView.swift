@@ -146,18 +146,22 @@ struct CanvasView: View {
         let x = Int(location.x / pixelSize)
         let y = Int(location.y / pixelSize)
 
-        if x >= 0 && x < viewModel.canvas.width && y >= 0 && y < viewModel.canvas.height {
-            viewModel.handleToolDrag(x: x, y: y)
-        }
+        // 캔버스 범위로 clamp (밖으로 나가도 계속 동작)
+        let clampedX = max(0, min(x, viewModel.canvas.width - 1))
+        let clampedY = max(0, min(y, viewModel.canvas.height - 1))
+
+        viewModel.handleToolDrag(x: clampedX, y: clampedY)
     }
 
     private func handleUp(at location: CGPoint, pixelSize: CGFloat) {
         let x = Int(location.x / pixelSize)
         let y = Int(location.y / pixelSize)
 
-        if x >= 0 && x < viewModel.canvas.width && y >= 0 && y < viewModel.canvas.height {
-            viewModel.handleToolUp(x: x, y: y)
-        }
+        // 캔버스 범위로 clamp (밖에서 놓아도 계속 동작)
+        let clampedX = max(0, min(x, viewModel.canvas.width - 1))
+        let clampedY = max(0, min(y, viewModel.canvas.height - 1))
+
+        viewModel.handleToolUp(x: clampedX, y: clampedY)
     }
 
     private func handleHover(phase: HoverPhase, pixelSize: CGFloat) {

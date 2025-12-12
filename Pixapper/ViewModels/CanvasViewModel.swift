@@ -16,15 +16,25 @@ class CanvasViewModel: ObservableObject {
     @Published var selectionRect: CGRect?  // 선택 영역
     @Published var selectionPixels: [[Color?]]?  // 선택된 픽셀 데이터
     @Published var selectionOffset: CGPoint = .zero  // 이동 오프셋
-    @Published var isMovingSelection: Bool = false  // 이동 중인지
     @Published var isFloatingSelection: Bool = false  // 부유 선택 상태 (원본에 영향 없음)
     @Published var originalPixels: [[Color?]]?  // 선택 전 원본 픽셀 (잔상 표시용)
     @Published var originalRect: CGRect?  // 선택 전 원본 위치
+
+    // isMovingSelection 대체: computed property
+    var isMovingSelection: Bool {
+        if case .moving = selectionMode {
+            return true
+        }
+        return false
+    }
 
     var layerViewModel: LayerViewModel
     var commandManager: CommandManager
     var toolSettingsManager: ToolSettingsManager
     weak var timelineViewModel: TimelineViewModel?  // Timeline 동기화용
+
+    // Canvas Compositor (렌더링 레이어 합성)
+    private let compositeLayerManager = CompositeLayerManager()
 
     private var shapeStartPoint: (x: Int, y: Int)?
     private var lastDrawPoint: (x: Int, y: Int)?
@@ -50,6 +60,8 @@ class CanvasViewModel: ObservableObject {
         case top, bottom, left, right
     }
     private var resizeStartRect: CGRect?
+    private var resizeStartPixels: [[Color?]]?
+    private var moveStartRect: CGRect?
     @Published var hoveredHandle: ResizeHandle?  // 호버 중인 핸들
 
     init(width: Int = 32, height: Int = 32, layerViewModel: LayerViewModel, commandManager: CommandManager, toolSettingsManager: ToolSettingsManager) {
@@ -490,7 +502,7 @@ class CanvasViewModel: ObservableObject {
         )
     }
 
-    /// 선택 영역의 픽셀 데이터를 캡처합니다
+    /// 선택 영역의 픽셀 데이터를 캡처하고 레이어에서 즉시 제거 (Command 생성)
     func captureSelection() {
         guard let rect = selectionRect,
               currentLayerIndex < layerViewModel.layers.count else {
@@ -499,20 +511,37 @@ class CanvasViewModel: ObservableObject {
             return
         }
 
+        // 이전 선택 상태 백업
+        let wasFloating = isFloatingSelection
+        let oldRect = selectionRect
+        let oldPixels = selectionPixels
+        let oldOriginalRect = originalRect
+        let oldOriginalPixels = originalPixels
+
         let startX = Int(rect.minX)
         let startY = Int(rect.minY)
         let width = Int(rect.width)
         let height = Int(rect.height)
 
-        // 선택 영역의 픽셀 데이터 복사
+        // 1. 선택 영역의 픽셀 데이터 복사
         var pixels: [[Color?]] = []
+        var layerOldPixels: [PixelChange] = []
+        var layerNewPixels: [PixelChange] = []
+
         for y in 0..<height {
             var row: [Color?] = []
             for x in 0..<width {
                 let pixelX = startX + x
                 let pixelY = startY + y
                 if pixelX >= 0 && pixelX < canvas.width && pixelY >= 0 && pixelY < canvas.height {
-                    row.append(layerViewModel.layers[currentLayerIndex].getPixel(x: pixelX, y: pixelY))
+                    let color = layerViewModel.layers[currentLayerIndex].getPixel(x: pixelX, y: pixelY)
+                    row.append(color)
+
+                    // 색칠된 픽셀만 제거
+                    if color != nil {
+                        layerOldPixels.append(PixelChange(x: pixelX, y: pixelY, color: color))
+                        layerNewPixels.append(PixelChange(x: pixelX, y: pixelY, color: nil))
+                    }
                 } else {
                     row.append(nil)
                 }
@@ -520,10 +549,36 @@ class CanvasViewModel: ObservableObject {
             pixels.append(row)
         }
 
+        // 2. 레이어에서 픽셀 제거 (Command 생성 전에 직접 실행)
+        for change in layerNewPixels {
+            layerViewModel.layers[currentLayerIndex].setPixel(x: change.x, y: change.y, color: change.color)
+        }
+
+        // 3. 선택 상태 설정 (Command 생성 전에 직접 실행)
         selectionPixels = pixels
-        originalPixels = pixels  // 원본 백업
-        originalRect = rect  // 원본 위치 백업
-        isFloatingSelection = true  // 부유 상태로 설정
+        originalPixels = pixels
+        originalRect = rect
+        isFloatingSelection = true
+
+        // 4. Command 생성 (이미 실행된 상태)
+        if !layerOldPixels.isEmpty {
+            let command = SelectionCaptureCommand(
+                canvasViewModel: self,
+                layerViewModel: layerViewModel,
+                layerIndex: currentLayerIndex,
+                wasFloating: wasFloating,
+                oldRect: oldRect,
+                oldPixels: oldPixels,
+                oldOriginalRect: oldOriginalRect,
+                oldOriginalPixels: oldOriginalPixels,
+                newRect: rect,
+                newPixels: pixels,
+                layerOldPixels: layerOldPixels,
+                layerNewPixels: layerNewPixels
+            )
+            commandManager.addExecutedCommand(command)
+            timelineViewModel?.syncCurrentLayerToKeyframe()
+        }
     }
 
     /// 선택 영역을 해제합니다
@@ -533,7 +588,6 @@ class CanvasViewModel: ObservableObject {
         originalPixels = nil
         originalRect = nil
         selectionOffset = .zero
-        isMovingSelection = false
         isFloatingSelection = false
         selectionMode = .idle
     }
@@ -552,7 +606,6 @@ class CanvasViewModel: ObservableObject {
         self.originalRect = originalRect
         isFloatingSelection = isFloating
         selectionOffset = .zero
-        isMovingSelection = false
         selectionMode = .idle
     }
 
@@ -642,9 +695,9 @@ class CanvasViewModel: ObservableObject {
     /// 선택 영역 이동 시작
     private func startMovingSelection(at point: (x: Int, y: Int)) {
         guard selectionPixels != nil else { return }
-        isMovingSelection = true
         selectionMode = .moving
         lastDrawPoint = point  // 시작 위치 저장
+        moveStartRect = selectionRect  // 이동 전 rect 저장 (Command용)
     }
 
     /// 선택 영역 크기 조절 시작
@@ -653,6 +706,7 @@ class CanvasViewModel: ObservableObject {
               let pixels = selectionPixels else { return }
         selectionMode = .resizing(handle: handle)
         resizeStartRect = rect
+        resizeStartPixels = pixels  // 크기 조절 전 pixels 저장 (Command용)
         lastDrawPoint = point
 
         // 처음 선택 시점의 원본 유지 (선택 취소될 때까지 유지)
@@ -716,40 +770,36 @@ class CanvasViewModel: ObservableObject {
         selectionPixels = scalePixels(origPixels, toWidth: newWidth, toHeight: newHeight)
     }
 
-    /// 선택 영역 크기 조절 완료
+    /// 선택 영역 크기 조절 완료 (SelectionTransformCommand 생성)
     private func commitSelectionResize() {
-        guard let rect = selectionRect,
-              let scaledPixels = selectionPixels,
-              let startRect = resizeStartRect,
-              let origPixels = originalPixels,
-              let origRect = originalRect else {
+        guard let oldRect = resizeStartRect,
+              let oldPixels = resizeStartPixels,
+              let newRect = selectionRect,
+              let newPixels = selectionPixels else {
             selectionMode = .idle
             resizeStartRect = nil
+            resizeStartPixels = nil
             lastDrawPoint = nil
             return
         }
 
-        // Transform Command 생성 (undo/redo 지원)
-        let command = SelectionTransformCommand(
-            canvasViewModel: self,
-            oldPixels: origPixels,
-            newPixels: scaledPixels,
-            oldRect: origRect,
-            newRect: rect
-        )
-        commandManager.performCommand(command)
-
-        // 크기 조절 완료 후 레이어에 즉시 적용
-        if isFloatingSelection {
-            applySelectionToLayer(pixels: scaledPixels, newRect: rect, origRect: origRect)
-            // 연속 작업을 위해 현재 상태를 새 원본으로 설정
-            originalRect = rect
-            originalPixels = scaledPixels
+        // 크기가 실제로 변경되었을 때만 Command 생성
+        if oldRect != newRect {
+            // 선택 상태는 이미 updateSelectionResize에서 업데이트됨
+            let command = SelectionTransformCommand(
+                canvasViewModel: self,
+                oldPixels: oldPixels,
+                newPixels: newPixels,
+                oldRect: oldRect,
+                newRect: newRect
+            )
+            commandManager.addExecutedCommand(command)
         }
 
         // 상태 초기화
         selectionMode = .idle
         resizeStartRect = nil
+        resizeStartPixels = nil
         lastDrawPoint = nil
     }
 
@@ -774,198 +824,183 @@ class CanvasViewModel: ObservableObject {
         return scaled
     }
 
-    /// 선택 영역 이동 중
+    /// 선택 영역 이동 중 (실시간 rect 업데이트)
     private func updateSelectionMove(to point: (x: Int, y: Int)) {
-        guard let last = lastDrawPoint else { return }
+        guard let last = lastDrawPoint,
+              let rect = selectionRect else { return }
 
         let dx = point.x - last.x
         let dy = point.y - last.y
 
-        selectionOffset = CGPoint(x: CGFloat(dx), y: CGFloat(dy))
+        // 실시간으로 rect 업데이트 (드래그 중 바로바로 이동)
+        let newRect = CGRect(
+            x: rect.minX + CGFloat(dx),
+            y: rect.minY + CGFloat(dy),
+            width: rect.width,
+            height: rect.height
+        )
+
+        selectionRect = newRect
+        lastDrawPoint = point  // 현재 위치를 새로운 기준점으로
     }
 
-    /// 선택 영역 이동 완료 (부유 상태에서는 offset만 적용)
+    /// 선택 영역 이동 완료 (SelectionTransformCommand 생성)
     private func commitSelectionMove() {
-        guard let rect = selectionRect,
-              selectionOffset != .zero else {
-            isMovingSelection = false
+        guard let oldRect = moveStartRect,
+              let newRect = selectionRect,
+              let pixels = selectionPixels else {
             selectionMode = .idle
             lastDrawPoint = nil
+            moveStartRect = nil
             return
         }
 
-        let dx = Int(selectionOffset.x)
-        let dy = Int(selectionOffset.y)
-
-        // 선택 영역 위치 업데이트
-        selectionRect = CGRect(
-            x: Int(rect.minX) + dx,
-            y: Int(rect.minY) + dy,
-            width: Int(rect.width),
-            height: Int(rect.height)
-        )
-
-        // 드래그 완료 후 레이어에 즉시 적용
-        if isFloatingSelection, let pixels = selectionPixels, let origRect = originalRect {
-            applySelectionToLayer(pixels: pixels, newRect: selectionRect!, origRect: origRect)
-            // 연속 작업을 위해 현재 위치를 새 원본으로 설정
-            originalRect = selectionRect
-            originalPixels = pixels
+        // rect가 실제로 변경되었을 때만 Command 생성
+        if oldRect != newRect {
+            // 선택 상태는 이미 updateSelectionMove에서 업데이트됨
+            let command = SelectionTransformCommand(
+                canvasViewModel: self,
+                oldPixels: pixels,  // 이동 시 pixels는 변하지 않음
+                newPixels: pixels,
+                oldRect: oldRect,
+                newRect: newRect
+            )
+            commandManager.addExecutedCommand(command)
         }
 
         // 상태 초기화
-        selectionOffset = .zero
-        isMovingSelection = false
         selectionMode = .idle
         lastDrawPoint = nil
+        moveStartRect = nil
     }
 
-    /// 선택 영역을 레이어에 적용 (선택은 유지)
-    private func applySelectionToLayer(pixels: [[Color?]], newRect: CGRect, origRect: CGRect) {
-        guard currentLayerIndex < layerViewModel.layers.count else { return }
+    /// 선택 픽셀 적용 시 PixelChange 계산 (중복 로직 통합)
+    /// - Parameters:
+    ///   - pixels: 적용할 픽셀 데이터
+    ///   - origPixels: 원본 위치에서 제거할 픽셀 (nil이면 pixels 사용)
+    ///   - origRect: 원본 위치
+    ///   - newRect: 새로운 위치
+    ///   - layerIndex: 대상 레이어 인덱스
+    /// - Returns: (oldPixels, newPixels) 튜플
+    func calculatePixelChanges(
+        pixels: [[Color?]],
+        origPixels: [[Color?]]?,
+        from origRect: CGRect,
+        to newRect: CGRect,
+        layerIndex: Int
+    ) -> (old: [PixelChange], new: [PixelChange]) {
+        guard layerIndex < layerViewModel.layers.count else {
+            return ([], [])
+        }
 
         var oldPixels: [PixelChange] = []
-        var newPixelsChanges: [PixelChange] = []
+        var newPixels: [PixelChange] = []
 
-        // 1. 원본 위치에서 색칠된 픽셀만 제거 (원본 크기 기준으로!)
+        // 1. 원본 위치에서 색칠된 픽셀만 제거
         let origStartX = Int(origRect.minX)
         let origStartY = Int(origRect.minY)
-        let origWidth = Int(origRect.width)
-        let origHeight = Int(origRect.height)
+        let pixelsToRemove = origPixels ?? pixels
 
-        // originalPixels가 있으면 그걸 기준으로, 없으면 현재 pixels 기준
-        if let origPixels = originalPixels {
-            for y in 0..<origPixels.count {
-                for x in 0..<origPixels[y].count {
-                    // 원본에서 색칠되어 있던 픽셀만 제거
-                    if origPixels[y][x] != nil {
-                        let pixelX = origStartX + x
-                        let pixelY = origStartY + y
-                        if pixelX >= 0 && pixelX < canvas.width && pixelY >= 0 && pixelY < canvas.height {
-                            let oldColor = layerViewModel.layers[currentLayerIndex].getPixel(x: pixelX, y: pixelY)
-                            oldPixels.append(PixelChange(x: pixelX, y: pixelY, color: oldColor))
-                            newPixelsChanges.append(PixelChange(x: pixelX, y: pixelY, color: nil))
-                            layerViewModel.layers[currentLayerIndex].setPixel(x: pixelX, y: pixelY, color: nil)
-                        }
-                    }
-                }
-            }
-        } else {
-            // originalPixels가 없으면 현재 pixels 기준
-            for y in 0..<pixels.count {
-                for x in 0..<pixels[y].count {
-                    if pixels[y][x] != nil {
-                        let pixelX = origStartX + x
-                        let pixelY = origStartY + y
-                        if pixelX >= 0 && pixelX < canvas.width && pixelY >= 0 && pixelY < canvas.height {
-                            let oldColor = layerViewModel.layers[currentLayerIndex].getPixel(x: pixelX, y: pixelY)
-                            oldPixels.append(PixelChange(x: pixelX, y: pixelY, color: oldColor))
-                            newPixelsChanges.append(PixelChange(x: pixelX, y: pixelY, color: nil))
-                            layerViewModel.layers[currentLayerIndex].setPixel(x: pixelX, y: pixelY, color: nil)
-                        }
+        for y in 0..<pixelsToRemove.count {
+            for x in 0..<pixelsToRemove[y].count {
+                if pixelsToRemove[y][x] != nil {
+                    let pixelX = origStartX + x
+                    let pixelY = origStartY + y
+                    if pixelX >= 0 && pixelX < canvas.width && pixelY >= 0 && pixelY < canvas.height {
+                        let oldColor = layerViewModel.layers[layerIndex].getPixel(x: pixelX, y: pixelY)
+                        oldPixels.append(PixelChange(x: pixelX, y: pixelY, color: oldColor))
+                        newPixels.append(PixelChange(x: pixelX, y: pixelY, color: nil))
                     }
                 }
             }
         }
 
-        // 2. 새 위치에 색칠된 픽셀만 배치 (투명한 픽셀은 건너뛰어 아래 레이어 보존)
+        // 2. 새 위치에 색칠된 픽셀만 배치
         let startX = Int(newRect.minX)
         let startY = Int(newRect.minY)
 
         for y in 0..<pixels.count {
             for x in 0..<pixels[y].count {
-                // 색칠된 픽셀만 배치 (투명한 픽셀은 덮어쓰지 않음)
                 if let color = pixels[y][x] {
                     let pixelX = startX + x
                     let pixelY = startY + y
                     if pixelX >= 0 && pixelX < canvas.width && pixelY >= 0 && pixelY < canvas.height {
-                        let oldColor = layerViewModel.layers[currentLayerIndex].getPixel(x: pixelX, y: pixelY)
-                        // 이미 oldPixels에 있으면 추가하지 않음
+                        let oldColor = layerViewModel.layers[layerIndex].getPixel(x: pixelX, y: pixelY)
                         if !oldPixels.contains(where: { $0.x == pixelX && $0.y == pixelY }) {
                             oldPixels.append(PixelChange(x: pixelX, y: pixelY, color: oldColor))
                         }
-                        newPixelsChanges.append(PixelChange(x: pixelX, y: pixelY, color: color))
-                        layerViewModel.layers[currentLayerIndex].setPixel(x: pixelX, y: pixelY, color: color)
+                        newPixels.append(PixelChange(x: pixelX, y: pixelY, color: color))
                     }
                 }
             }
         }
 
-        // 3. Command 생성
-        if !newPixelsChanges.isEmpty {
-            let command = DrawCommand(layerViewModel: layerViewModel, layerIndex: currentLayerIndex, oldPixels: oldPixels, newPixels: newPixelsChanges)
+        return (oldPixels, newPixels)
+    }
+
+    /// 선택 픽셀을 레이어에 적용하는 헬퍼 함수 (중복 로직 통합)
+    /// - Parameters:
+    ///   - pixels: 적용할 픽셀 데이터
+    ///   - origRect: 원본 위치
+    ///   - newRect: 새로운 위치
+    ///   - clearSelection: 적용 후 선택 해제 여부
+    private func applyPixelsToLayer(
+        pixels: [[Color?]],
+        from origRect: CGRect,
+        to newRect: CGRect,
+        clearSelection: Bool = false
+    ) {
+        guard currentLayerIndex < layerViewModel.layers.count else { return }
+
+        // PixelChange 계산
+        let (oldPixels, newPixels) = calculatePixelChanges(
+            pixels: pixels,
+            origPixels: originalPixels,
+            from: origRect,
+            to: newRect,
+            layerIndex: currentLayerIndex
+        )
+
+        // 레이어에 적용
+        for change in newPixels {
+            layerViewModel.layers[currentLayerIndex].setPixel(x: change.x, y: change.y, color: change.color)
+        }
+
+        // Command 생성 및 Timeline 동기화
+        if !newPixels.isEmpty {
+            let command = DrawCommand(layerViewModel: layerViewModel, layerIndex: currentLayerIndex, oldPixels: oldPixels, newPixels: newPixels)
             commandManager.addExecutedCommand(command)
             timelineViewModel?.syncCurrentLayerToKeyframe()
         }
+
+        // 선택 해제 (옵션)
+        if clearSelection {
+            self.clearSelection()
+        }
     }
 
-    /// 선택 영역을 최종 커밋 (레이어에 적용)
-    func commitSelection() {
-        guard let rect = selectionRect,
-              let pixels = selectionPixels,
-              let origRect = originalRect,
-              currentLayerIndex < layerViewModel.layers.count,
-              isFloatingSelection else { return }
+    /// 현재 위치에만 픽셀 배치 (원본 위치 제거 없음)
+    /// - Parameters:
+    ///   - pixels: 배치할 픽셀 데이터
+    ///   - rect: 배치할 위치
+    private func applyPixelsToCurrentPosition(pixels: [[Color?]], rect: CGRect) {
+        guard currentLayerIndex < layerViewModel.layers.count else { return }
+
+        let startX = Int(rect.minX)
+        let startY = Int(rect.minY)
 
         var oldPixels: [PixelChange] = []
         var newPixels: [PixelChange] = []
 
-        // 1. 원본 위치에서 색칠된 픽셀만 제거 (원본 크기 기준으로!)
-        let origStartX = Int(origRect.minX)
-        let origStartY = Int(origRect.minY)
-
-        // originalPixels를 기준으로 원본 위치 제거 (리사이즈된 경우 대비)
-        if let origPixels = originalPixels {
-            for y in 0..<origPixels.count {
-                for x in 0..<origPixels[y].count {
-                    // 원본에서 색칠되어 있던 픽셀만 제거
-                    if origPixels[y][x] != nil {
-                        let pixelX = origStartX + x
-                        let pixelY = origStartY + y
-                        if pixelX >= 0 && pixelX < canvas.width && pixelY >= 0 && pixelY < canvas.height {
-                            let oldColor = layerViewModel.layers[currentLayerIndex].getPixel(x: pixelX, y: pixelY)
-                            oldPixels.append(PixelChange(x: pixelX, y: pixelY, color: oldColor))
-                            newPixels.append(PixelChange(x: pixelX, y: pixelY, color: nil))
-                            layerViewModel.layers[currentLayerIndex].setPixel(x: pixelX, y: pixelY, color: nil)
-                        }
-                    }
-                }
-            }
-        } else {
-            // originalPixels가 없으면 현재 pixels 기준
-            for y in 0..<pixels.count {
-                for x in 0..<pixels[y].count {
-                    // 색칠된 픽셀만 처리 (투명한 픽셀은 무시)
-                    if pixels[y][x] != nil {
-                        let pixelX = origStartX + x
-                        let pixelY = origStartY + y
-                        if pixelX >= 0 && pixelX < canvas.width && pixelY >= 0 && pixelY < canvas.height {
-                            let oldColor = layerViewModel.layers[currentLayerIndex].getPixel(x: pixelX, y: pixelY)
-                            oldPixels.append(PixelChange(x: pixelX, y: pixelY, color: oldColor))
-                            newPixels.append(PixelChange(x: pixelX, y: pixelY, color: nil))
-                            layerViewModel.layers[currentLayerIndex].setPixel(x: pixelX, y: pixelY, color: nil)
-                        }
-                    }
-                }
-            }
-        }
-
-        // 2. 새 위치에 색칠된 픽셀만 배치 (투명한 픽셀은 건너뛰어 아래 레이어 보존)
-        let startX = Int(rect.minX)
-        let startY = Int(rect.minY)
-
+        // 새 위치에만 픽셀 배치
         for y in 0..<pixels.count {
             for x in 0..<pixels[y].count {
-                // 색칠된 픽셀만 배치 (투명한 픽셀은 덮어쓰지 않음)
                 if let color = pixels[y][x] {
                     let pixelX = startX + x
                     let pixelY = startY + y
                     if pixelX >= 0 && pixelX < canvas.width && pixelY >= 0 && pixelY < canvas.height {
                         let oldColor = layerViewModel.layers[currentLayerIndex].getPixel(x: pixelX, y: pixelY)
-                        // 이미 oldPixels에 있으면 추가하지 않음
-                        if !oldPixels.contains(where: { $0.x == pixelX && $0.y == pixelY }) {
-                            oldPixels.append(PixelChange(x: pixelX, y: pixelY, color: oldColor))
-                        }
+                        oldPixels.append(PixelChange(x: pixelX, y: pixelY, color: oldColor))
                         newPixels.append(PixelChange(x: pixelX, y: pixelY, color: color))
                         layerViewModel.layers[currentLayerIndex].setPixel(x: pixelX, y: pixelY, color: color)
                     }
@@ -973,15 +1008,71 @@ class CanvasViewModel: ObservableObject {
             }
         }
 
-        // 3. Command 생성
+        // Command 생성 및 Timeline 동기화
         if !newPixels.isEmpty {
             let command = DrawCommand(layerViewModel: layerViewModel, layerIndex: currentLayerIndex, oldPixels: oldPixels, newPixels: newPixels)
             commandManager.addExecutedCommand(command)
             timelineViewModel?.syncCurrentLayerToKeyframe()
         }
+    }
 
-        // 선택 해제
+    /// 선택 영역을 최종 커밋 (현재 위치에 픽셀 배치 + Command 생성)
+    func commitSelection() {
+        guard let rect = selectionRect,
+              let pixels = selectionPixels,
+              let origRect = originalRect,
+              let origPixels = originalPixels,
+              isFloatingSelection,
+              currentLayerIndex < layerViewModel.layers.count else { return }
+
+        let startX = Int(rect.minX)
+        let startY = Int(rect.minY)
+
+        var layerOldPixels: [PixelChange] = []
+        var layerNewPixels: [PixelChange] = []
+
+        // 현재 위치에 픽셀 배치 준비 (PixelChange 계산)
+        for y in 0..<pixels.count {
+            for x in 0..<pixels[y].count {
+                if let color = pixels[y][x] {
+                    let pixelX = startX + x
+                    let pixelY = startY + y
+                    if pixelX >= 0 && pixelX < canvas.width && pixelY >= 0 && pixelY < canvas.height {
+                        let oldColor = layerViewModel.layers[currentLayerIndex].getPixel(x: pixelX, y: pixelY)
+                        layerOldPixels.append(PixelChange(x: pixelX, y: pixelY, color: oldColor))
+                        layerNewPixels.append(PixelChange(x: pixelX, y: pixelY, color: color))
+                    }
+                }
+            }
+        }
+
+        // 레이어에 픽셀 배치 (Command 생성 전에 직접 실행)
+        for change in layerNewPixels {
+            layerViewModel.layers[currentLayerIndex].setPixel(x: change.x, y: change.y, color: change.color)
+        }
+
+        // 선택 상태 해제 (Command 생성 전에 직접 실행)
         clearSelection()
+
+        // 커밋 Command 생성 (이미 실행된 상태)
+        if !layerNewPixels.isEmpty {
+            let command = SelectionCommitCommand(
+                canvasViewModel: self,
+                layerViewModel: layerViewModel,
+                layerIndex: currentLayerIndex,
+                oldRect: rect,
+                oldPixels: pixels,
+                oldOriginalRect: origRect,
+                oldOriginalPixels: origPixels,
+                layerOldPixels: layerOldPixels,
+                layerNewPixels: layerNewPixels
+            )
+            commandManager.addExecutedCommand(command)
+            timelineViewModel?.syncCurrentLayerToKeyframe()
+        } else {
+            // 픽셀이 없어도 선택은 해제
+            clearSelection()
+        }
     }
 
     // MARK: - Selection Transform
@@ -1021,15 +1112,15 @@ class CanvasViewModel: ObservableObject {
         applyTransformedSelection(flipped)
     }
 
-    /// 변형된 픽셀을 선택 영역에 적용 (부유 상태 유지)
+    /// 변형된 픽셀을 선택 영역에 적용 (SelectionTransformCommand 생성)
     private func applyTransformedSelection(_ transformedPixels: [[Color?]]) {
-        guard let rect = selectionRect,
-              let currentPixels = selectionPixels else { return }
+        guard let oldRect = selectionRect,
+              let oldPixels = selectionPixels else { return }
 
-        let startX = Int(rect.minX)
-        let startY = Int(rect.minY)
-        let oldWidth = Int(rect.width)
-        let oldHeight = Int(rect.height)
+        let startX = Int(oldRect.minX)
+        let startY = Int(oldRect.minY)
+        let oldWidth = Int(oldRect.width)
+        let oldHeight = Int(oldRect.height)
         let newHeight = transformedPixels.count
         let newWidth = transformedPixels[0].count
 
@@ -1045,15 +1136,19 @@ class CanvasViewModel: ObservableObject {
             height: newHeight
         )
 
-        // Transform Command 생성 (undo/redo 지원)
+        // 선택 상태 업데이트 (Command 생성 전에 직접 실행)
+        selectionPixels = transformedPixels
+        selectionRect = newRect
+
+        // SelectionTransformCommand 생성 (이미 실행된 상태)
         let command = SelectionTransformCommand(
             canvasViewModel: self,
-            oldPixels: currentPixels,
+            oldPixels: oldPixels,
             newPixels: transformedPixels,
-            oldRect: rect,
+            oldRect: oldRect,
             newRect: newRect
         )
-        commandManager.performCommand(command)
+        commandManager.addExecutedCommand(command)
     }
 
     /// Command로부터 변형 적용 (undo/redo용)
@@ -1285,6 +1380,41 @@ class CanvasViewModel: ObservableObject {
     /// 클립보드가 비어있지 않은지 확인
     var hasClipboard: Bool {
         return clipboard != nil
+    }
+
+    // MARK: - Compositor Methods
+
+    /// Compositor를 통해 합성된 픽셀 배열 반환
+    func getCompositePixels() -> [[Color?]] {
+        // 선택 상태 생성
+        var selectionState: SelectionState? = nil
+        if let rect = selectionRect,
+           let pixels = selectionPixels,
+           isFloatingSelection {
+            let opacity = isMovingSelection ? 0.6 : 1.0
+            selectionState = SelectionState(
+                pixels: pixels,
+                rect: rect,
+                offset: .zero,  // rect가 실시간 업데이트되므로 offset 불필요
+                isFloating: true,
+                opacity: opacity
+            )
+        }
+
+        // Compositor 업데이트
+        compositeLayerManager.updateCompositor(
+            layers: layerViewModel.layers,
+            shapePreview: shapePreview,
+            selectionState: selectionState,
+            canvasWidth: canvas.width,
+            canvasHeight: canvas.height
+        )
+
+        // 합성된 픽셀 반환
+        return compositeLayerManager.getCompositePixels(
+            width: canvas.width,
+            height: canvas.height
+        )
     }
 }
 
