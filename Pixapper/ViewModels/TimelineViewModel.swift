@@ -8,9 +8,16 @@
 import SwiftUI
 import Combine
 
+/// 타임라인 프레임 정보 (UI 업데이트를 위한 Identifiable 구조체)
+struct FrameInfo: Identifiable {
+    let id = UUID()
+    let index: Int
+}
+
 @MainActor
 class TimelineViewModel: ObservableObject {
     @Published var totalFrames: Int = 1  // Frame 배열 대신 개수만 관리
+    @Published var frames: [FrameInfo] = []  // UI 업데이트를 위한 프레임 배열
     @Published var currentFrameIndex: Int = 0
     @Published var isPlaying: Bool = false
     @Published var settings = AnimationSettings()
@@ -32,6 +39,9 @@ class TimelineViewModel: ObservableObject {
         self.canvasWidth = width
         self.canvasHeight = height
         self.layerViewModel = layerViewModel
+
+        // 초기 frames 배열 생성
+        self.frames = (0..<totalFrames).map { FrameInfo(index: $0) }
     }
 
     // MARK: - Helper Methods
@@ -55,16 +65,24 @@ class TimelineViewModel: ObservableObject {
 
     /// 모든 레이어의 최대 프레임 인덱스를 기준으로 totalFrames를 자동 업데이트
     func updateTotalFrames() {
-        // 캐시가 있으면 재계산 스킵
-        if let cached = cachedMaxFrameIndex {
-            totalFrames = max(totalFrames, cached + 1)
-            return
-        }
-
         // 캐시가 없으면 계산 후 저장
         let maxIndex = layerViewModel.layers.map { $0.timeline.maxFrameIndex }.max() ?? 0
+        let newTotalFrames = max(1, maxIndex + 1)
+
+        // totalFrames가 실제로 변경된 경우에만 업데이트
+        if totalFrames != newTotalFrames {
+            totalFrames = newTotalFrames
+            // frames 배열도 재생성 (SwiftUI가 변경사항 감지)
+            regenerateFrames()
+        }
+
+        // 캐시 업데이트
         cachedMaxFrameIndex = maxIndex
-        totalFrames = max(totalFrames, maxIndex + 1)  // 현재 totalFrames와 maxIndex + 1 중 큰 값 사용
+    }
+
+    /// frames 배열 재생성 (UI 업데이트 보장)
+    private func regenerateFrames() {
+        frames = (0..<totalFrames).map { FrameInfo(index: $0) }
     }
 
     /// 현재 작업 중인 레이어의 픽셀을 소속 키프레임에 저장 (CanvasViewModel에서 호출)
@@ -139,8 +157,9 @@ class TimelineViewModel: ObservableObject {
             }
         }
 
-        totalFrames += 1
+        // updateTotalFrames()가 totalFrames와 frames를 자동으로 업데이트
         currentFrameIndex = insertIndex
+        invalidateTotalFramesCache()
         updateTotalFrames()
         loadFrame(at: insertIndex)
     }
@@ -323,7 +342,13 @@ class TimelineViewModel: ObservableObject {
         }
 
         layerViewModel.layers[layerIndex] = layer
+
+        // 캐시 무효화 및 totalFrames 업데이트
+        invalidateTotalFramesCache()
         updateTotalFrames()
+
+        // UI 강제 갱신 (키프레임 상태 변경은 totalFrames를 바꾸지 않으므로)
+        objectWillChange.send()
 
         // UI 갱신을 위해 프레임 재로드
         if frameIndex == currentFrameIndex {
@@ -348,7 +373,9 @@ class TimelineViewModel: ObservableObject {
         // span 끝 다음에 키프레임이 있으면 제거하여 연장
         if layerViewModel.layers[layerIndex].timeline.isKeyframe(at: nextFrameIndex) {
             layerViewModel.layers[layerIndex].timeline.removeKeyframe(at: nextFrameIndex)
+            invalidateTotalFramesCache()
             updateTotalFrames()
+            objectWillChange.send()
         }
     }
 
@@ -360,7 +387,9 @@ class TimelineViewModel: ObservableObject {
         let emptyPixels = createEmptyPixels()
         layerViewModel.layers[layerIndex].timeline.setKeyframe(at: frameIndex, pixels: emptyPixels)
 
+        invalidateTotalFramesCache()
         updateTotalFrames()
+        objectWillChange.send()
 
         if frameIndex == currentFrameIndex {
             layerViewModel.layers[layerIndex].pixels = emptyPixels
@@ -376,7 +405,9 @@ class TimelineViewModel: ObservableObject {
         let emptyPixels = createEmptyPixels()
         layerViewModel.layers[layerIndex].timeline.setKeyframe(at: frameIndex, pixels: emptyPixels)
 
+        invalidateTotalFramesCache()
         updateTotalFrames()
+        objectWillChange.send()
 
         if frameIndex == currentFrameIndex {
             layerViewModel.layers[layerIndex].pixels = emptyPixels

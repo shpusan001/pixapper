@@ -183,8 +183,8 @@ struct TimelinePanel: View {
                 .background(Color(nsColor: .controlBackgroundColor))
 
             // Frame numbers with drag selection support
-            ForEach(0..<viewModel.totalFrames, id: \.self) { frameIndex in
-                frameHeaderCell(frameIndex: frameIndex)
+            ForEach(viewModel.frames) { frame in
+                frameHeaderCell(frameIndex: frame.index)
             }
         }
         .background(Color(nsColor: .controlBackgroundColor))
@@ -240,13 +240,12 @@ struct TimelinePanel: View {
             // Layer info column
             layerInfoColumn(layer: layer, layerIndex: layerIndex)
 
-            // Frame cells for this layer - 해당 레이어의 프레임 개수만큼만 표시
-            let displayFrameCount = max(layer.timeline.maxFrameIndex + 1, 1)
-            ForEach(0..<displayFrameCount, id: \.self) { frameIndex in
+            // Frame cells for this layer - viewModel.frames와 동기화
+            ForEach(viewModel.frames) { frame in
                 cellView(
                     layer: layer,
                     layerIndex: layerIndex,
-                    frameIndex: frameIndex
+                    frameIndex: frame.index
                 )
             }
         }
