@@ -36,13 +36,6 @@ struct ToolPanel: View {
                         isSelected: toolSettingsManager.selectedTool == .fill,
                         action: { toolSettingsManager.selectTool(.fill) }
                     )
-
-                    ToolIconButton(
-                        icon: "eyedropper",
-                        tooltip: "Eyedropper (I)",
-                        isSelected: toolSettingsManager.selectedTool == .eyedropper,
-                        action: { toolSettingsManager.selectTool(.eyedropper) }
-                    )
                 }
 
                 Divider()

@@ -21,7 +21,6 @@ enum DrawingTool: String, CaseIterable, Identifiable {
     case pencil
     case eraser
     case fill
-    case eyedropper
     case rectangle
     case circle
     case line
@@ -35,7 +34,6 @@ enum DrawingTool: String, CaseIterable, Identifiable {
         case .pencil: return "Pencil"
         case .eraser: return "Eraser"
         case .fill: return "Fill"
-        case .eyedropper: return "Eyedropper"
         case .rectangle: return "Rectangle"
         case .circle: return "Circle"
         case .line: return "Line"

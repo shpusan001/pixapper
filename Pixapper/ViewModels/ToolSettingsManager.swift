@@ -31,9 +31,6 @@ class ToolSettingsManager: ObservableObject {
     /// 채우기 설정
     @Published var fillSettings = FillSettings()
 
-    /// 스포이트 설정
-    @Published var eyedropperSettings = EyedropperSettings()
-
     /// 선택 도구 설정
     @Published var selectionSettings = SelectionSettings()
 
@@ -47,8 +44,6 @@ class ToolSettingsManager: ObservableObject {
                 return .clear
             case .fill:
                 return fillSettings.color
-            case .eyedropper:
-                return .black
             case .rectangle:
                 return rectangleSettings.strokeColor
             case .circle:
@@ -130,8 +125,6 @@ class ToolSettingsManager: ObservableObject {
             return eraserSettings
         case .fill:
             return fillSettings
-        case .eyedropper:
-            return eyedropperSettings
         case .rectangle:
             return rectangleSettings
         case .circle:
@@ -151,7 +144,6 @@ class ToolSettingsManager: ObservableObject {
         circleSettings = ShapeSettings(toolType: .circle)
         lineSettings = ShapeSettings(toolType: .line)
         fillSettings = FillSettings()
-        eyedropperSettings = EyedropperSettings()
         selectionSettings = SelectionSettings()
     }
 }

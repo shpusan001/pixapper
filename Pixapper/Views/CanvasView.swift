@@ -88,6 +88,9 @@ struct CanvasView: View {
                         // 도형 프리뷰 (전체 영역)
                         renderShapePreview(marginX: marginX, marginY: marginY)
 
+                        // 브러시 미리보기 (연필/지우개)
+                        renderBrushPreview(marginX: marginX, marginY: marginY)
+
                         // 선택 영역 (전체 영역)
                         renderSelection(marginX: marginX, marginY: marginY)
                     }
@@ -167,6 +170,40 @@ struct CanvasView: View {
     private func renderShapePreview(marginX: CGFloat, marginY: CGFloat) -> some View {
         if !viewModel.shapePreview.isEmpty {
             ShapePreviewView(preview: viewModel.shapePreview, pixelSize: pixelSize, marginX: marginX, marginY: marginY)
+        }
+    }
+
+    @ViewBuilder
+    private func renderBrushPreview(marginX: CGFloat, marginY: CGFloat) -> some View {
+        if let brushPos = viewModel.brushPreviewPosition {
+            if viewModel.toolSettingsManager.selectedTool == .pencil {
+                let brushSize = viewModel.toolSettingsManager.pencilSettings.brushSize
+                let brushColor = viewModel.toolSettingsManager.pencilSettings.color
+
+                BrushPreviewView(
+                    brushPos: brushPos,
+                    brushSize: brushSize,
+                    brushColor: brushColor,
+                    canvasWidth: viewModel.canvas.width,
+                    canvasHeight: viewModel.canvas.height,
+                    pixelSize: pixelSize,
+                    marginX: marginX,
+                    marginY: marginY
+                )
+            } else if viewModel.toolSettingsManager.selectedTool == .eraser {
+                let brushSize = viewModel.toolSettingsManager.eraserSettings.brushSize
+
+                BrushPreviewView(
+                    brushPos: brushPos,
+                    brushSize: brushSize,
+                    brushColor: .gray,
+                    canvasWidth: viewModel.canvas.width,
+                    canvasHeight: viewModel.canvas.height,
+                    pixelSize: pixelSize,
+                    marginX: marginX,
+                    marginY: marginY
+                )
+            }
         }
     }
 
@@ -307,12 +344,18 @@ struct CanvasView: View {
         case .active(let location):
             let pixelCoord = screenToPixel(location, marginX: marginX, marginY: marginY)
 
-            if viewModel.toolSettingsManager.selectedTool == .selection {
-                viewModel.updateHover(x: pixelCoord.x, y: pixelCoord.y)
-                updateCursor(for: pixelCoord)
-            } else if isInsideCanvas(pixelCoord) {
-                viewModel.updateHover(x: pixelCoord.x, y: pixelCoord.y)
-                NSCursor.crosshair.set()
+            if isInsideCanvas(pixelCoord) {
+                let clampedCoord = clampToCanvas(pixelCoord)
+                viewModel.updateHover(x: clampedCoord.x, y: clampedCoord.y)
+
+                if viewModel.toolSettingsManager.selectedTool == .selection {
+                    updateCursor(for: clampedCoord)
+                } else {
+                    NSCursor.crosshair.set()
+                }
+            } else {
+                viewModel.clearHover()
+                NSCursor.arrow.set()
             }
         case .ended:
             viewModel.clearHover()
@@ -484,6 +527,39 @@ struct ShapePreviewView: View {
                     height: pixelSize
                 )
                 context.fill(Path(rect), with: .color(pixel.color.opacity(Constants.Opacity.Canvas.shapePreview)))
+            }
+        }
+    }
+}
+
+struct BrushPreviewView: View {
+    let brushPos: (x: Int, y: Int)
+    let brushSize: Int
+    let brushColor: Color
+    let canvasWidth: Int
+    let canvasHeight: Int
+    let pixelSize: CGFloat
+    let marginX: CGFloat
+    let marginY: CGFloat
+
+    var body: some View {
+        Canvas { context, size in
+            let halfSize = (brushSize - 1) / 2
+            for dy in -halfSize...halfSize {
+                for dx in -halfSize...halfSize {
+                    let px = brushPos.x + dx
+                    let py = brushPos.y + dy
+
+                    if px >= 0 && px < canvasWidth && py >= 0 && py < canvasHeight {
+                        let rect = CGRect(
+                            x: marginX + CGFloat(px) * pixelSize,
+                            y: marginY + CGFloat(py) * pixelSize,
+                            width: pixelSize,
+                            height: pixelSize
+                        )
+                        context.fill(Path(rect), with: .color(brushColor.opacity(0.3)))
+                    }
+                }
             }
         }
     }

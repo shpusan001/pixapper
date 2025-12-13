@@ -32,8 +32,6 @@ struct PropertiesPanel: View {
             EraserPropertiesView(settings: $toolSettingsManager.eraserSettings)
         case .fill:
             FillPropertiesView(settings: $toolSettingsManager.fillSettings)
-        case .eyedropper:
-            EyedropperPropertiesView()
         case .rectangle:
             ShapePropertiesView(
                 settings: $toolSettingsManager.rectangleSettings,
@@ -82,7 +80,7 @@ struct PencilPropertiesView: View {
 
             // Color
             PropertyRow(label: "Color") {
-                ColorPicker("", selection: $settings.color, supportsOpacity: false)
+                ColorPicker("", selection: $settings.color, supportsOpacity: true)
                     .labelsHidden()
                     .frame(width: 44, height: 32)
             }
@@ -126,7 +124,7 @@ struct FillPropertiesView: View {
 
             // Color
             PropertyRow(label: "Color") {
-                ColorPicker("", selection: $settings.color, supportsOpacity: false)
+                ColorPicker("", selection: $settings.color, supportsOpacity: true)
                     .labelsHidden()
                     .frame(width: 44, height: 32)
             }
@@ -160,7 +158,7 @@ struct ShapePropertiesView: View {
 
             // Stroke Color
             PropertyRow(label: "Stroke") {
-                ColorPicker("", selection: $settings.strokeColor, supportsOpacity: false)
+                ColorPicker("", selection: $settings.strokeColor, supportsOpacity: true)
                     .labelsHidden()
                     .frame(width: 44, height: 32)
             }
@@ -205,7 +203,7 @@ struct ShapePropertiesView: View {
                     ColorPicker("", selection: Binding(
                         get: { settings.fillColor ?? .clear },
                         set: { settings.fillColor = $0 }
-                    ), supportsOpacity: false)
+                    ), supportsOpacity: true)
                         .labelsHidden()
                         .frame(width: 44, height: 32)
                 }
@@ -213,20 +211,6 @@ struct ShapePropertiesView: View {
         }
         .onAppear {
             hasFill = settings.fillColor != nil
-        }
-    }
-}
-
-// MARK: - Eyedropper Properties
-struct EyedropperPropertiesView: View {
-    var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            PropertySectionHeader(title: "Eyedropper")
-
-            Text("Click on canvas to pick a color")
-                .font(.caption)
-                .foregroundColor(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
         }
     }
 }

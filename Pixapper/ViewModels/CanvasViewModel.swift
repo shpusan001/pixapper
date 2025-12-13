@@ -21,6 +21,7 @@ class CanvasViewModel: ObservableObject {
     @Published var backgroundMode: CanvasBackgroundMode = .checkerboard  // 배경 모드
     @Published var showGrid: Bool = true  // 격자 보기
     @Published var shapePreview: [(x: Int, y: Int, color: Color)] = []
+    @Published var brushPreviewPosition: (x: Int, y: Int)?  // 브러시 미리보기 위치 (연필/지우개)
     @Published var selectionRect: CGRect?  // 선택 영역
     @Published var selectionPixels: [[Color?]]?  // 선택된 픽셀 데이터
     @Published var selectionOffset: CGPoint = .zero  // 이동 오프셋
@@ -126,15 +127,14 @@ class CanvasViewModel: ObservableObject {
 
         switch toolSettingsManager.selectedTool {
         case .pencil, .eraser:
+            brushPreviewPosition = nil  // 그리기 시작 시 미리보기 제거
             lastDrawPoint = (x, y)
             currentStrokePixels = []
             oldStrokePixels = []
             drawnPixelsInStroke = []
             drawPixel(x: x, y: y)
         case .fill:
-            floodFill(x: x, y: y, fillColor: toolSettingsManager.currentColor)
-        case .eyedropper:
-            pickColor(x: x, y: y)
+            floodFill(x: x, y: y, fillColor: toolSettingsManager.fillSettings.color, tolerance: toolSettingsManager.fillSettings.tolerance)
         case .rectangle, .circle, .line:
             shapeStartPoint = (x, y)
             updateShapePreview(endX: x, endY: y)
@@ -288,38 +288,77 @@ class CanvasViewModel: ObservableObject {
         guard currentLayerIndex < layerViewModel.layers.count else { return }
 
         let color: Color?
+        let brushSize: Int
+
         switch toolSettingsManager.selectedTool {
         case .pencil:
-            color = toolSettingsManager.currentColor
+            color = toolSettingsManager.pencilSettings.color
+            brushSize = toolSettingsManager.pencilSettings.brushSize
         case .eraser:
             color = nil
+            brushSize = toolSettingsManager.eraserSettings.brushSize
         default:
             return
         }
 
-        // 이미 그린 픽셀인지 체크 (보간 중 중복 방지)
-        let pixelKey = "\(x),\(y)"
-        if drawnPixelsInStroke.contains(pixelKey) {
-            return
+        // 브러시 크기에 따라 여러 픽셀 그리기
+        let radius = (brushSize - 1) / 2
+        for dy in -radius...radius {
+            for dx in -radius...radius {
+                let px = x + dx
+                let py = y + dy
+
+                // 캔버스 범위 체크
+                guard px >= 0 && px < canvas.width && py >= 0 && py < canvas.height else { continue }
+
+                // 이미 그린 픽셀인지 체크 (보간 중 중복 방지)
+                let pixelKey = "\(px),\(py)"
+                if drawnPixelsInStroke.contains(pixelKey) {
+                    continue
+                }
+                drawnPixelsInStroke.insert(pixelKey)
+
+                // 픽셀을 변경하기 **전에** 이전 값 저장
+                let oldColor = layerViewModel.layers[currentLayerIndex].getPixel(x: px, y: py)
+                oldStrokePixels.append(PixelChange(x: px, y: py, color: oldColor))
+
+                // 새로운 값 저장
+                currentStrokePixels.append(PixelChange(x: px, y: py, color: color))
+
+                // 픽셀 변경
+                layerViewModel.layers[currentLayerIndex].setPixel(x: px, y: py, color: color)
+            }
         }
-        drawnPixelsInStroke.insert(pixelKey)
-
-        // 픽셀을 변경하기 **전에** 이전 값 저장
-        let oldColor = layerViewModel.layers[currentLayerIndex].getPixel(x: x, y: y)
-        oldStrokePixels.append(PixelChange(x: x, y: y, color: oldColor))
-
-        // 새로운 값 저장
-        currentStrokePixels.append(PixelChange(x: x, y: y, color: color))
-
-        // 픽셀 변경
-        layerViewModel.layers[currentLayerIndex].setPixel(x: x, y: y, color: color)
     }
 
     /// 두 점 사이를 보간하여 끊김 없이 그립니다
     private func drawInterpolatedLine(from start: (x: Int, y: Int), to end: (x: Int, y: Int)) {
-        let pixels = getLinePixels(x1: start.x, y1: start.y, x2: end.x, y2: end.y)
-        for pixel in pixels {
-            drawPixel(x: pixel.x, y: pixel.y)
+        // Bresenham's line algorithm for interpolation
+        let dx = abs(end.x - start.x)
+        let dy = abs(end.y - start.y)
+        let sx = start.x < end.x ? 1 : -1
+        let sy = start.y < end.y ? 1 : -1
+        var err = dx - dy
+
+        var x = start.x
+        var y = start.y
+
+        while true {
+            drawPixel(x: x, y: y)
+
+            if x == end.x && y == end.y {
+                break
+            }
+
+            let e2 = 2 * err
+            if e2 > -dy {
+                err -= dy
+                x += sx
+            }
+            if e2 < dx {
+                err += dx
+                y += sy
+            }
         }
     }
 
@@ -329,13 +368,13 @@ class CanvasViewModel: ObservableObject {
         return layerViewModel.layers[currentLayerIndex].getPixel(x: x, y: y)
     }
 
-    private func floodFill(x: Int, y: Int, fillColor: Color) {
+    private func floodFill(x: Int, y: Int, fillColor: Color, tolerance: Double) {
         guard currentLayerIndex < layerViewModel.layers.count else { return }
         let layer = layerViewModel.layers[currentLayerIndex]
         let targetColor = layer.getPixel(x: x, y: y)
 
-        // Don't fill if target and fill colors are the same
-        if colorsEqual(targetColor, fillColor) {
+        // Don't fill if target and fill colors are the same (with tolerance)
+        if colorsEqualWithTolerance(targetColor, fillColor, tolerance: tolerance) {
             return
         }
 
@@ -354,7 +393,7 @@ class CanvasViewModel: ObservableObject {
             }
 
             let currentColor = layerViewModel.layers[currentLayerIndex].getPixel(x: px, y: py)
-            if !colorsEqual(currentColor, targetColor) {
+            if !colorsEqualWithTolerance(currentColor, targetColor, tolerance: tolerance) {
                 continue
             }
 
@@ -380,30 +419,34 @@ class CanvasViewModel: ObservableObject {
         }
     }
 
-    private func pickColor(x: Int, y: Int) {
-        guard currentLayerIndex < layerViewModel.layers.count else { return }
-        if let color = layerViewModel.layers[currentLayerIndex].getPixel(x: x, y: y) {
-            toolSettingsManager.currentColor = color
-        }
-    }
-
     private func updateShapePreview(endX: Int, endY: Int) {
         guard let start = shapeStartPoint else { return }
 
-        var pixels: [(x: Int, y: Int)] = []
+        var pixels: [(x: Int, y: Int, Color)] = []
 
         switch toolSettingsManager.selectedTool {
         case .rectangle:
-            pixels = getRectanglePixels(x1: start.x, y1: start.y, x2: endX, y2: endY)
+            let settings = toolSettingsManager.rectangleSettings
+            pixels = getRectanglePixels(x1: start.x, y1: start.y, x2: endX, y2: endY,
+                                       strokeWidth: settings.strokeWidth,
+                                       strokeColor: settings.strokeColor,
+                                       fillColor: settings.fillColor)
         case .circle:
-            pixels = getCirclePixels(centerX: start.x, centerY: start.y, toX: endX, toY: endY)
+            let settings = toolSettingsManager.circleSettings
+            pixels = getCirclePixels(centerX: start.x, centerY: start.y, toX: endX, toY: endY,
+                                    strokeWidth: settings.strokeWidth,
+                                    strokeColor: settings.strokeColor,
+                                    fillColor: settings.fillColor)
         case .line:
-            pixels = getLinePixels(x1: start.x, y1: start.y, x2: endX, y2: endY)
+            let settings = toolSettingsManager.lineSettings
+            pixels = getLinePixels(x1: start.x, y1: start.y, x2: endX, y2: endY,
+                                  strokeWidth: settings.strokeWidth,
+                                  strokeColor: settings.strokeColor)
         default:
             break
         }
 
-        shapePreview = pixels.map { ($0.x, $0.y, toolSettingsManager.currentColor) }
+        shapePreview = pixels
     }
 
     private func commitShape() {
@@ -427,68 +470,121 @@ class CanvasViewModel: ObservableObject {
         }
     }
 
-    private func getRectanglePixels(x1: Int, y1: Int, x2: Int, y2: Int) -> [(x: Int, y: Int)] {
-        var pixels: [(x: Int, y: Int)] = []
+    private func getRectanglePixels(x1: Int, y1: Int, x2: Int, y2: Int,
+                                   strokeWidth: Int, strokeColor: Color, fillColor: Color?) -> [(x: Int, y: Int, Color)] {
+        var pixels: [(x: Int, y: Int, Color)] = []
         let minX = min(x1, x2)
         let maxX = max(x1, x2)
         let minY = min(y1, y2)
         let maxY = max(y1, y2)
 
-        // Draw outline
-        for x in minX...maxX {
-            pixels.append((x, minY))
-            pixels.append((x, maxY))
+        // Fill interior if fillColor is set
+        if let fill = fillColor {
+            for y in minY...maxY {
+                for x in minX...maxX {
+                    pixels.append((x, y, fill))
+                }
+            }
         }
-        for y in minY...maxY {
-            pixels.append((minX, y))
-            pixels.append((maxX, y))
+
+        // Draw stroke (outline) with strokeWidth
+        let halfWidth = (strokeWidth - 1) / 2
+        for w in 0..<strokeWidth {
+            let offset = w - halfWidth
+
+            // Top and bottom edges
+            for x in minX...maxX {
+                let topY = minY + offset
+                let bottomY = maxY + offset
+                if topY >= 0 && topY < canvas.height {
+                    pixels.append((x, topY, strokeColor))
+                }
+                if bottomY >= 0 && bottomY < canvas.height {
+                    pixels.append((x, bottomY, strokeColor))
+                }
+            }
+
+            // Left and right edges
+            for y in minY...maxY {
+                let leftX = minX + offset
+                let rightX = maxX + offset
+                if leftX >= 0 && leftX < canvas.width {
+                    pixels.append((leftX, y, strokeColor))
+                }
+                if rightX >= 0 && rightX < canvas.width {
+                    pixels.append((rightX, y, strokeColor))
+                }
+            }
         }
 
         return pixels
     }
 
-    private func getCirclePixels(centerX: Int, centerY: Int, toX: Int, toY: Int) -> [(x: Int, y: Int)] {
-        var pixels: [(x: Int, y: Int)] = []
+    private func getCirclePixels(centerX: Int, centerY: Int, toX: Int, toY: Int,
+                                strokeWidth: Int, strokeColor: Color, fillColor: Color?) -> [(x: Int, y: Int, Color)] {
+        var pixels: [(x: Int, y: Int, Color)] = []
         let dx = toX - centerX
         let dy = toY - centerY
         let radius = Int(sqrt(Double(dx * dx + dy * dy)))
 
-        // Bresenham's circle algorithm
-        var x = 0
-        var y = radius
-        var d = 3 - 2 * radius
-
-        func addCirclePoints(_ cx: Int, _ cy: Int, _ x: Int, _ y: Int) {
-            pixels.append((cx + x, cy + y))
-            pixels.append((cx - x, cy + y))
-            pixels.append((cx + x, cy - y))
-            pixels.append((cx - x, cy - y))
-            pixels.append((cx + y, cy + x))
-            pixels.append((cx - y, cy + x))
-            pixels.append((cx + y, cy - x))
-            pixels.append((cx - y, cy - x))
+        // Fill interior if fillColor is set
+        if let fill = fillColor {
+            for y in (centerY - radius)...(centerY + radius) {
+                for x in (centerX - radius)...(centerX + radius) {
+                    let distSq = (x - centerX) * (x - centerX) + (y - centerY) * (y - centerY)
+                    if distSq <= radius * radius {
+                        pixels.append((x, y, fill))
+                    }
+                }
+            }
         }
 
-        addCirclePoints(centerX, centerY, x, y)
+        // Draw stroke with strokeWidth
+        let halfWidth = (strokeWidth - 1) / 2
+        for w in 0..<strokeWidth {
+            let r = radius + w - halfWidth
+            guard r > 0 else { continue }
 
-        while y >= x {
-            x += 1
-            if d > 0 {
-                y -= 1
-                d = d + 4 * (x - y) + 10
-            } else {
-                d = d + 4 * x + 6
+            // Bresenham's circle algorithm
+            var x = 0
+            var y = r
+            var d = 3 - 2 * r
+
+            func addCirclePoints(_ cx: Int, _ cy: Int, _ x: Int, _ y: Int) {
+                let points = [
+                    (cx + x, cy + y), (cx - x, cy + y), (cx + x, cy - y), (cx - x, cy - y),
+                    (cx + y, cy + x), (cx - y, cy + x), (cx + y, cy - x), (cx - y, cy - x)
+                ]
+                for point in points {
+                    if point.0 >= 0 && point.0 < canvas.width && point.1 >= 0 && point.1 < canvas.height {
+                        pixels.append((point.0, point.1, strokeColor))
+                    }
+                }
             }
+
             addCirclePoints(centerX, centerY, x, y)
+
+            while y >= x {
+                x += 1
+                if d > 0 {
+                    y -= 1
+                    d = d + 4 * (x - y) + 10
+                } else {
+                    d = d + 4 * x + 6
+                }
+                addCirclePoints(centerX, centerY, x, y)
+            }
         }
 
         return pixels
     }
 
-    private func getLinePixels(x1: Int, y1: Int, x2: Int, y2: Int) -> [(x: Int, y: Int)] {
-        var pixels: [(x: Int, y: Int)] = []
+    private func getLinePixels(x1: Int, y1: Int, x2: Int, y2: Int,
+                              strokeWidth: Int, strokeColor: Color) -> [(x: Int, y: Int, Color)] {
+        var pixels: [(x: Int, y: Int, Color)] = []
 
-        // Bresenham's line algorithm
+        // Get base line pixels using Bresenham's algorithm
+        var basePixels: [(x: Int, y: Int)] = []
         let dx = abs(x2 - x1)
         let dy = abs(y2 - y1)
         let sx = x1 < x2 ? 1 : -1
@@ -499,7 +595,7 @@ class CanvasViewModel: ObservableObject {
         var y = y1
 
         while true {
-            pixels.append((x, y))
+            basePixels.append((x, y))
 
             if x == x2 && y == y2 {
                 break
@@ -513,6 +609,20 @@ class CanvasViewModel: ObservableObject {
             if e2 < dx {
                 err += dx
                 y += sy
+            }
+        }
+
+        // Apply strokeWidth by drawing around each base pixel
+        let halfWidth = (strokeWidth - 1) / 2
+        for basePixel in basePixels {
+            for dy in -halfWidth...halfWidth {
+                for dx in -halfWidth...halfWidth {
+                    let px = basePixel.x + dx
+                    let py = basePixel.y + dy
+                    if px >= 0 && px < canvas.width && py >= 0 && py < canvas.height {
+                        pixels.append((px, py, strokeColor))
+                    }
+                }
             }
         }
 
@@ -533,6 +643,22 @@ class CanvasViewModel: ObservableObject {
         }
         // RGB 정밀 비교
         return c1.isEqual(to: c2, tolerance: Constants.Color.defaultTolerance)
+    }
+
+    /// 두 색상을 허용 오차(tolerance)와 함께 비교
+    /// - Parameters:
+    ///   - c1: 첫 번째 색상 (nil 허용)
+    ///   - c2: 두 번째 색상 (nil 허용)
+    ///   - tolerance: 허용 오차 (0.0~1.0)
+    /// - Returns: 두 색상이 tolerance 범위 내에서 같으면 true
+    private func colorsEqualWithTolerance(_ c1: Color?, _ c2: Color?, tolerance: Double) -> Bool {
+        if c1 == nil && c2 == nil {
+            return true
+        }
+        guard let c1 = c1, let c2 = c2 else {
+            return false
+        }
+        return c1.isEqual(to: c2, tolerance: tolerance)
     }
 
     // MARK: - Selection Tool
@@ -721,18 +847,23 @@ class CanvasViewModel: ObservableObject {
 
     /// 호버 상태 업데이트 (선택 도구 전용)
     func updateHover(x: Int, y: Int) {
-        guard toolSettingsManager.selectedTool == .selection,
-              selectionMode == .idle else {
-            hoveredHandle = nil
-            return
+        switch toolSettingsManager.selectedTool {
+        case .pencil, .eraser:
+            // 브러시 미리보기 위치 업데이트
+            brushPreviewPosition = (x, y)
+        case .selection:
+            if selectionMode == .idle {
+                hoveredHandle = getResizeHandle(x: x, y: y)
+            }
+        default:
+            break
         }
-
-        hoveredHandle = getResizeHandle(x: x, y: y)
     }
 
     /// 호버 상태 제거
     func clearHover() {
         hoveredHandle = nil
+        brushPreviewPosition = nil
     }
 
     /// 주어진 좌표가 선택 영역 내부인지 확인 (public wrapper)
