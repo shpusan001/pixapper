@@ -302,6 +302,7 @@ struct CanvasView: View {
         let pixelCoord = screenToPixel(location, marginX: marginX, marginY: marginY)
         let isAltPressed = type == .down && NSEvent.modifierFlags.contains(.option)
 
+        // 선택 도구는 캔버스 밖에서도 작동 가능
         if viewModel.toolSettingsManager.selectedTool == .selection {
             if type == .down {
                 viewModel.updateHover(x: pixelCoord.x, y: pixelCoord.y)
@@ -313,8 +314,12 @@ struct CanvasView: View {
                 handleToolAction(coord: pixelCoord, type: type)
                 return
             }
+            // 새 선택 영역 시작 - 캔버스 밖에서도 가능
+            handleToolAction(coord: pixelCoord, type: type)
+            return
         }
 
+        // 다른 도구들은 캔버스 내부로 제한
         guard isInsideCanvas(pixelCoord) else {
             if type == .down {
                 viewModel.handleOutsideClick()

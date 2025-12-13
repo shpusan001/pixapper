@@ -672,11 +672,17 @@ class CanvasViewModel: ObservableObject {
         let minY = min(start.y, endY)
         let maxY = max(start.y, endY)
 
+        // 캔버스 범위로 클램프
+        let clampedMinX = max(0, min(minX, canvas.width - 1))
+        let clampedMaxX = max(0, min(maxX, canvas.width - 1))
+        let clampedMinY = max(0, min(minY, canvas.height - 1))
+        let clampedMaxY = max(0, min(maxY, canvas.height - 1))
+
         selectionRect = CGRect(
-            x: minX,
-            y: minY,
-            width: maxX - minX + 1,
-            height: maxY - minY + 1
+            x: clampedMinX,
+            y: clampedMinY,
+            width: clampedMaxX - clampedMinX + 1,
+            height: clampedMaxY - clampedMinY + 1
         )
     }
 
@@ -1448,12 +1454,15 @@ class CanvasViewModel: ObservableObject {
         guard let oldRect = selectionRect,
               let oldPixels = selectionPixels else { return }
 
+        // 실제 픽셀만 남기도록 crop
+        let (croppedPixels, _) = cropToContent(transformedPixels)
+
         let startX = Int(oldRect.minX)
         let startY = Int(oldRect.minY)
         let oldWidth = Int(oldRect.width)
         let oldHeight = Int(oldRect.height)
-        let newHeight = transformedPixels.count
-        let newWidth = transformedPixels[0].count
+        let newHeight = croppedPixels.count
+        let newWidth = croppedPixels[0].count
 
         // 중심 정렬을 위한 오프셋 계산
         let offsetX = (oldWidth - newWidth) / 2
@@ -1468,18 +1477,60 @@ class CanvasViewModel: ObservableObject {
         )
 
         // 선택 상태 업데이트 (Command 생성 전에 직접 실행)
-        selectionPixels = transformedPixels
+        selectionPixels = croppedPixels
         selectionRect = newRect
 
         // SelectionTransformCommand 생성 (이미 실행된 상태)
         let command = SelectionTransformCommand(
             canvasViewModel: self,
             oldPixels: oldPixels,
-            newPixels: transformedPixels,
+            newPixels: croppedPixels,
             oldRect: oldRect,
             newRect: newRect
         )
         commandManager.addExecutedCommand(command)
+    }
+
+    /// 픽셀 배열에서 실제 내용만 남기고 빈 공간을 제거
+    private func cropToContent(_ pixels: [[Color?]]) -> ([[Color?]], (x: Int, y: Int)) {
+        guard !pixels.isEmpty, !pixels[0].isEmpty else {
+            return (pixels, (0, 0))
+        }
+
+        var minX = pixels[0].count
+        var minY = pixels.count
+        var maxX = -1
+        var maxY = -1
+
+        // 실제 픽셀이 있는 영역 찾기
+        for y in 0..<pixels.count {
+            for x in 0..<pixels[y].count {
+                if pixels[y][x] != nil {
+                    minX = min(minX, x)
+                    minY = min(minY, y)
+                    maxX = max(maxX, x)
+                    maxY = max(maxY, y)
+                }
+            }
+        }
+
+        // 모두 nil인 경우
+        if maxX < 0 {
+            return ([[nil]], (0, 0))
+        }
+
+        // 크롭된 배열 생성
+        let cropWidth = maxX - minX + 1
+        let cropHeight = maxY - minY + 1
+        var cropped: [[Color?]] = Array(repeating: Array(repeating: nil, count: cropWidth), count: cropHeight)
+
+        for y in 0..<cropHeight {
+            for x in 0..<cropWidth {
+                cropped[y][x] = pixels[minY + y][minX + x]
+            }
+        }
+
+        return (cropped, (minX, minY))
     }
 
     /// Command로부터 변형 적용 (undo/redo용)
