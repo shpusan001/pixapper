@@ -1,0 +1,44 @@
+{
+  "/Users/sanghoon/Desktop/MacApps/Pixapper/DerivedData/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/DerivedSources/GeneratedAssetSymbols.swift" : {
+    "const-values" : "/Users/sanghoon/Desktop/MacApps/Pixapper/DerivedData/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/GeneratedAssetSymbols.swiftconstvalues",
+    "dependencies" : "/Users/sanghoon/Desktop/MacApps/Pixapper/DerivedData/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/GeneratedAssetSymbols.d",
+    "diagnostics" : "/Users/sanghoon/Desktop/MacApps/Pixapper/DerivedData/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/GeneratedAssetSymbols.dia",
+    "object" : "/Users/sanghoon/Desktop/MacApps/Pixapper/DerivedData/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/GeneratedAssetSymbols.o",
+    "swift-dependencies" : "/Users/sanghoon/Desktop/MacApps/Pixapper/DerivedData/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/GeneratedAssetSymbols.swiftdeps"
+  },
+  "/Users/sanghoon/Desktop/MacApps/Pixapper/Pixapper/Constants.swift" : {
+    "const-values" : "/Users/sanghoon/Desktop/MacApps/Pixapper/DerivedData/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/Constants.swiftconstvalues",
+    "dependencies" : "/Users/sanghoon/Desktop/MacApps/Pixapper/DerivedData/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/Constants.d",
+    "diagnostics" : "/Users/sanghoon/Desktop/MacApps/Pixapper/DerivedData/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/Constants.dia",
+    "object" : "/Users/sanghoon/Desktop/MacApps/Pixapper/DerivedData/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/Constants.o",
+    "swift-dependencies" : "/Users/sanghoon/Desktop/MacApps/Pixapper/DerivedData/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/Constants.swiftdeps"
+  },
+  "/Users/sanghoon/Desktop/MacApps/Pixapper/Pixapper/ContentView.swift" : {
+    "const-values" : "/Users/sanghoon/Desktop/MacApps/Pixapper/DerivedData/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/ContentView.swiftconstvalues",
+    "dependencies" : "/Users/sanghoon/Desktop/MacApps/Pixapper/DerivedData/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/ContentView.d",
+    "diagnostics" : "/Users/sanghoon/Desktop/MacApps/Pixapper/DerivedData/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/ContentView.dia",
+    "object" : "/Users/sanghoon/Desktop/MacApps/Pixapper/DerivedData/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/ContentView.o",
+    "swift-dependencies" : "/Users/sanghoon/Desktop/MacApps/Pixapper/DerivedData/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/ContentView.swiftdeps"
+  },
+  "/Users/sanghoon/Desktop/MacApps/Pixapper/Pixapper/PixapperApp.swift" : {
+    "const-values" : "/Users/sanghoon/Desktop/MacApps/Pixapper/DerivedData/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/PixapperApp.swiftconstvalues",
+    "dependencies" : "/Users/sanghoon/Desktop/MacApps/Pixapper/DerivedData/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/PixapperApp.d",
+    "diagnostics" : "/Users/sanghoon/Desktop/MacApps/Pixapper/DerivedData/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/PixapperApp.dia",
+    "object" : "/Users/sanghoon/Desktop/MacApps/Pixapper/DerivedData/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/PixapperApp.o",
+    "swift-dependencies" : "/Users/sanghoon/Desktop/MacApps/Pixapper/DerivedData/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/PixapperApp.swiftdeps"
+  },
+  "/Users/sanghoon/Desktop/MacApps/Pixapper/Pixapper/Views/TimelinePanel.swift" : {
+    "const-values" : "/Users/sanghoon/Desktop/MacApps/Pixapper/DerivedData/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/TimelinePanel.swiftconstvalues",
+    "dependencies" : "/Users/sanghoon/Desktop/MacApps/Pixapper/DerivedData/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/TimelinePanel.d",
+    "diagnostics" : "/Users/sanghoon/Desktop/MacApps/Pixapper/DerivedData/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/TimelinePanel.dia",
+    "object" : "/Users/sanghoon/Desktop/MacApps/Pixapper/DerivedData/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/TimelinePanel.o",
+    "swift-dependencies" : "/Users/sanghoon/Desktop/MacApps/Pixapper/DerivedData/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/TimelinePanel.swiftdeps"
+  },
+  "/Users/sanghoon/Desktop/MacApps/Pixapper/Pixapper/Views/ToolPanel.swift" : {
+    "const-values" : "/Users/sanghoon/Desktop/MacApps/Pixapper/DerivedData/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/ToolPanel.swiftconstvalues",
+    "dependencies" : "/Users/sanghoon/Desktop/MacApps/Pixapper/DerivedData/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/ToolPanel.d",
+    "diagnostics" : "/Users/sanghoon/Desktop/MacApps/Pixapper/DerivedData/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/ToolPanel.dia",
+    "object" : "/Users/sanghoon/Desktop/MacApps/Pixapper/DerivedData/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/ToolPanel.o",
+    "swift-dependencies" : "/Users/sanghoon/Desktop/MacApps/Pixapper/DerivedData/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/ToolPanel.swiftdeps"
+  }
+}

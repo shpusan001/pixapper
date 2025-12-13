@@ -1,0 +1,144 @@
+{
+  "source": "/Users/sanghoon/Desktop/MacApps/Pixapper/Pixapper/Views/PropertiesPanel.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "%lld",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 72
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 29,
+          "startingLine": 83
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 107
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 29,
+          "startingLine": 127
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 29,
+          "startingLine": 161
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 176
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 187
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 33,
+          "startingLine": 203
+        }
+      },
+      {
+        "comment": "",
+        "key": "Select area to see properties",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 326
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld × %lld",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 229
+        }
+      },
+      {
+        "comment": "",
+        "key": "(%lld, %lld)",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 237
+        }
+      },
+      {
+        "comment": "",
+        "key": "Transform",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 246
+        }
+      },
+      {
+        "comment": "",
+        "key": "Actions",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 271
+        }
+      },
+      {
+        "comment": "",
+        "key": "Commit Selection (⏎)",
+        "location": {
+          "startingColumn": 31,
+          "startingLine": 298
+        }
+      },
+      {
+        "comment": "",
+        "key": "Delete Selection (⌫)",
+        "location": {
+          "startingColumn": 31,
+          "startingLine": 322
+        }
+      },
+      {
+        "comment": "",
+        "key": "Commit",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 284
+        }
+      },
+      {
+        "comment": "",
+        "key": "Delete",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 308
+        }
+      }
+    ]
+  },
+  "version": 1
+}

@@ -1,0 +1,112 @@
+{
+  "source": "/Users/sanghoon/Desktop/MacApps/Pixapper/Pixapper/ContentView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Unsaved Changes",
+        "location": {
+          "startingColumn": 16,
+          "startingLine": 235
+        }
+      },
+      {
+        "comment": "",
+        "key": "Pixapper",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 43
+        }
+      },
+      {
+        "comment": "",
+        "key": "Resize Canvas (⌘R)",
+        "location": {
+          "startingColumn": 23,
+          "startingLine": 139
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld%%",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 117
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld×%lld",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 131
+        }
+      },
+      {
+        "comment": "",
+        "key": "White Background (⌘B)",
+        "location": {
+          "startingColumn": 77,
+          "startingLine": 162
+        }
+      },
+      {
+        "comment": "",
+        "key": "Checkerboard (⌘B)",
+        "location": {
+          "startingColumn": 105,
+          "startingLine": 162
+        }
+      },
+      {
+        "comment": "",
+        "key": "Hide Grid (⌘G)",
+        "location": {
+          "startingColumn": 54,
+          "startingLine": 175
+        }
+      },
+      {
+        "comment": "",
+        "key": "Show Grid (⌘G)",
+        "location": {
+          "startingColumn": 75,
+          "startingLine": 175
+        }
+      },
+      {
+        "comment": "",
+        "key": "Cancel",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 236
+        }
+      },
+      {
+        "comment": "",
+        "key": "Discard",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 237
+        }
+      },
+      {
+        "comment": "",
+        "key": "Save",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 240
+        }
+      },
+      {
+        "comment": "",
+        "key": "You have unsaved changes. Do you want to save before creating a new project?",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 246
+        }
+      }
+    ]
+  },
+  "version": 1
+}

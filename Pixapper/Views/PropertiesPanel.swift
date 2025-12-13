@@ -263,6 +263,65 @@ struct SelectionPropertiesView: View {
                         Spacer()
                     }
                 }
+
+                PropertyDivider()
+
+                // Actions
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Actions")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .padding(.bottom, 6)
+
+                    VStack(spacing: 8) {
+                        // 확정 버튼
+                        Button(action: {
+                            viewModel.commitSelection()
+                        }) {
+                            HStack(spacing: 6) {
+                                Image(systemName: "checkmark")
+                                    .font(.system(size: 12))
+                                Text("Commit")
+                                    .font(.system(size: 11))
+                                Spacer()
+                            }
+                            .padding(.horizontal, 12)
+                            .frame(height: 32)
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .background(
+                            RoundedRectangle(cornerRadius: 4)
+                                .fill(Color.accentColor.opacity(0.15))
+                        )
+                        .foregroundColor(.accentColor)
+                        .help("Commit Selection (⏎)")
+                        .disabled(!viewModel.isFloatingSelection)
+
+                        // 지우기 버튼
+                        Button(action: {
+                            viewModel.deleteSelection()
+                        }) {
+                            HStack(spacing: 6) {
+                                Image(systemName: "trash")
+                                    .font(.system(size: 12))
+                                Text("Delete")
+                                    .font(.system(size: 11))
+                                Spacer()
+                            }
+                            .padding(.horizontal, 12)
+                            .frame(height: 32)
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .background(
+                            RoundedRectangle(cornerRadius: 4)
+                                .fill(Color.red.opacity(0.15))
+                        )
+                        .foregroundColor(.red)
+                        .help("Delete Selection (⌫)")
+                    }
+                }
             } else {
                 Text("Select area to see properties")
                     .font(.caption)

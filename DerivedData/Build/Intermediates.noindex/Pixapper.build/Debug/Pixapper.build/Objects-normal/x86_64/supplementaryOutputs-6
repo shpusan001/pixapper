@@ -1,0 +1,44 @@
+{
+  "/Users/sanghoon/Desktop/MacApps/Pixapper/Pixapper/Models/Tools/EraserSettings.swift" : {
+    "const-values" : "/Users/sanghoon/Desktop/MacApps/Pixapper/DerivedData/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/EraserSettings.swiftconstvalues",
+    "dependencies" : "/Users/sanghoon/Desktop/MacApps/Pixapper/DerivedData/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/EraserSettings.d",
+    "diagnostics" : "/Users/sanghoon/Desktop/MacApps/Pixapper/DerivedData/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/EraserSettings.dia",
+    "object" : "/Users/sanghoon/Desktop/MacApps/Pixapper/DerivedData/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/EraserSettings.o",
+    "swift-dependencies" : "/Users/sanghoon/Desktop/MacApps/Pixapper/DerivedData/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/EraserSettings.swiftdeps"
+  },
+  "/Users/sanghoon/Desktop/MacApps/Pixapper/Pixapper/Models/Tools/FillSettings.swift" : {
+    "const-values" : "/Users/sanghoon/Desktop/MacApps/Pixapper/DerivedData/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/FillSettings.swiftconstvalues",
+    "dependencies" : "/Users/sanghoon/Desktop/MacApps/Pixapper/DerivedData/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/FillSettings.d",
+    "diagnostics" : "/Users/sanghoon/Desktop/MacApps/Pixapper/DerivedData/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/FillSettings.dia",
+    "object" : "/Users/sanghoon/Desktop/MacApps/Pixapper/DerivedData/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/FillSettings.o",
+    "swift-dependencies" : "/Users/sanghoon/Desktop/MacApps/Pixapper/DerivedData/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/FillSettings.swiftdeps"
+  },
+  "/Users/sanghoon/Desktop/MacApps/Pixapper/Pixapper/Models/Tools/PencilSettings.swift" : {
+    "const-values" : "/Users/sanghoon/Desktop/MacApps/Pixapper/DerivedData/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/PencilSettings.swiftconstvalues",
+    "dependencies" : "/Users/sanghoon/Desktop/MacApps/Pixapper/DerivedData/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/PencilSettings.d",
+    "diagnostics" : "/Users/sanghoon/Desktop/MacApps/Pixapper/DerivedData/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/PencilSettings.dia",
+    "object" : "/Users/sanghoon/Desktop/MacApps/Pixapper/DerivedData/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/PencilSettings.o",
+    "swift-dependencies" : "/Users/sanghoon/Desktop/MacApps/Pixapper/DerivedData/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/PencilSettings.swiftdeps"
+  },
+  "/Users/sanghoon/Desktop/MacApps/Pixapper/Pixapper/Models/Tools/SelectionSettings.swift" : {
+    "const-values" : "/Users/sanghoon/Desktop/MacApps/Pixapper/DerivedData/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/SelectionSettings.swiftconstvalues",
+    "dependencies" : "/Users/sanghoon/Desktop/MacApps/Pixapper/DerivedData/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/SelectionSettings.d",
+    "diagnostics" : "/Users/sanghoon/Desktop/MacApps/Pixapper/DerivedData/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/SelectionSettings.dia",
+    "object" : "/Users/sanghoon/Desktop/MacApps/Pixapper/DerivedData/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/SelectionSettings.o",
+    "swift-dependencies" : "/Users/sanghoon/Desktop/MacApps/Pixapper/DerivedData/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/SelectionSettings.swiftdeps"
+  },
+  "/Users/sanghoon/Desktop/MacApps/Pixapper/Pixapper/Models/Tools/ShapeSettings.swift" : {
+    "const-values" : "/Users/sanghoon/Desktop/MacApps/Pixapper/DerivedData/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/ShapeSettings.swiftconstvalues",
+    "dependencies" : "/Users/sanghoon/Desktop/MacApps/Pixapper/DerivedData/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/ShapeSettings.d",
+    "diagnostics" : "/Users/sanghoon/Desktop/MacApps/Pixapper/DerivedData/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/ShapeSettings.dia",
+    "object" : "/Users/sanghoon/Desktop/MacApps/Pixapper/DerivedData/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/ShapeSettings.o",
+    "swift-dependencies" : "/Users/sanghoon/Desktop/MacApps/Pixapper/DerivedData/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/ShapeSettings.swiftdeps"
+  },
+  "/Users/sanghoon/Desktop/MacApps/Pixapper/Pixapper/Models/Tools/ToolSettings.swift" : {
+    "const-values" : "/Users/sanghoon/Desktop/MacApps/Pixapper/DerivedData/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/ToolSettings.swiftconstvalues",
+    "dependencies" : "/Users/sanghoon/Desktop/MacApps/Pixapper/DerivedData/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/ToolSettings.d",
+    "diagnostics" : "/Users/sanghoon/Desktop/MacApps/Pixapper/DerivedData/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/ToolSettings.dia",
+    "object" : "/Users/sanghoon/Desktop/MacApps/Pixapper/DerivedData/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/ToolSettings.o",
+    "swift-dependencies" : "/Users/sanghoon/Desktop/MacApps/Pixapper/DerivedData/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/ToolSettings.swiftdeps"
+  }
+}

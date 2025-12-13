@@ -378,7 +378,7 @@ struct CanvasView: View {
         }
     }
 
-    private func setCursor(for handle: CanvasViewModel.ResizeHandle) {
+    private func setCursor(for handle: SelectionTool.ResizeHandle) {
         switch handle {
         case .top, .bottom:
             NSCursor.resizeUpDown.set()
@@ -607,8 +607,8 @@ struct SelectionRectView: View {
     let isMoving: Bool
     let originalPixels: [[Color?]]?
     let originalRect: CGRect?
-    let selectionMode: CanvasViewModel.SelectionMode
-    let hoveredHandle: CanvasViewModel.ResizeHandle?
+    let selectionMode: SelectionTool.SelectionMode
+    let hoveredHandle: SelectionTool.ResizeHandle?
     let marginX: CGFloat
     let marginY: CGFloat
 
@@ -686,7 +686,7 @@ struct SelectionRectView: View {
         )
 
         let baseHandleSize: CGFloat = 11
-        let handleTypes: [CanvasViewModel.ResizeHandle] = [
+        let handleTypes: [SelectionTool.ResizeHandle] = [
             .topLeft, .topRight, .bottomLeft, .bottomRight,
             .top, .bottom, .left, .right, .rotate
         ]

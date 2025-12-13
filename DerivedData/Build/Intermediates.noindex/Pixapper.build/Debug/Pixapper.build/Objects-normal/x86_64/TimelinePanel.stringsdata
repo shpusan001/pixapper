@@ -1,0 +1,384 @@
+{
+  "source": "/Users/sanghoon/Desktop/MacApps/Pixapper/Pixapper/Views/TimelinePanel.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "%lld/%lld",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 91
+        }
+      },
+      {
+        "comment": "",
+        "key": "fps",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 123
+        }
+      },
+      {
+        "comment": "",
+        "key": "Play/Pause (Space)",
+        "location": {
+          "startingColumn": 19,
+          "startingLine": 78
+        }
+      },
+      {
+        "comment": "",
+        "key": "Previous Frame",
+        "location": {
+          "startingColumn": 19,
+          "startingLine": 89
+        }
+      },
+      {
+        "comment": "",
+        "key": "Next Frame",
+        "location": {
+          "startingColumn": 19,
+          "startingLine": 101
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 110
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 134
+        }
+      },
+      {
+        "comment": "",
+        "key": "Loop Playback",
+        "location": {
+          "startingColumn": 19,
+          "startingLine": 157
+        }
+      },
+      {
+        "comment": "",
+        "key": "Toggle Onion Skin (O)",
+        "location": {
+          "startingColumn": 19,
+          "startingLine": 166
+        }
+      },
+      {
+        "comment": "",
+        "key": "1",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 114
+        }
+      },
+      {
+        "comment": "",
+        "key": "6",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 115
+        }
+      },
+      {
+        "comment": "",
+        "key": "12",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 116
+        }
+      },
+      {
+        "comment": "",
+        "key": "24",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 117
+        }
+      },
+      {
+        "comment": "",
+        "key": "30",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 118
+        }
+      },
+      {
+        "comment": "",
+        "key": "60",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 119
+        }
+      },
+      {
+        "comment": "",
+        "key": "0.25x",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 138
+        }
+      },
+      {
+        "comment": "",
+        "key": "0.5x",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 139
+        }
+      },
+      {
+        "comment": "",
+        "key": "1x",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 140
+        }
+      },
+      {
+        "comment": "",
+        "key": "2x",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 141
+        }
+      },
+      {
+        "comment": "",
+        "key": "4x",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 142
+        }
+      },
+      {
+        "comment": "",
+        "key": "LAYERS",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 179
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld",
+        "location": {
+          "startingColumn": 21,
+          "startingLine": 197
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld%%",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 299
+        }
+      },
+      {
+        "comment": "",
+        "key": "Name",
+        "location": {
+          "startingColumn": 27,
+          "startingLine": 277
+        }
+      },
+      {
+        "comment": "",
+        "key": "Rename",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 335
+        }
+      },
+      {
+        "comment": "",
+        "key": "Duplicate",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 339
+        }
+      },
+      {
+        "comment": "",
+        "key": "Delete",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 343
+        }
+      },
+      {
+        "comment": "",
+        "key": "Remove %lld Keyframes",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 420
+        }
+      },
+      {
+        "comment": "",
+        "key": "Remove Keyframe",
+        "location": {
+          "startingColumn": 77,
+          "startingLine": 420
+        }
+      },
+      {
+        "comment": "",
+        "key": "Convert to %lld Keyframes (F6)",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 422
+        }
+      },
+      {
+        "comment": "",
+        "key": "Convert to Keyframe (F6)",
+        "location": {
+          "startingColumn": 86,
+          "startingLine": 422
+        }
+      },
+      {
+        "comment": "",
+        "key": "Extend %lld Frames (F5)",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 436
+        }
+      },
+      {
+        "comment": "",
+        "key": "Extend Frame (F5)",
+        "location": {
+          "startingColumn": 75,
+          "startingLine": 436
+        }
+      },
+      {
+        "comment": "",
+        "key": "Insert %lld Blank Keyframes (F7)",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 450
+        }
+      },
+      {
+        "comment": "",
+        "key": "Insert Blank Keyframe (F7)",
+        "location": {
+          "startingColumn": 84,
+          "startingLine": 450
+        }
+      },
+      {
+        "comment": "",
+        "key": "Clear %lld Keyframes",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 465
+        }
+      },
+      {
+        "comment": "",
+        "key": "Clear Content",
+        "location": {
+          "startingColumn": 72,
+          "startingLine": 465
+        }
+      },
+      {
+        "comment": "",
+        "key": "Layer",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 586
+        }
+      },
+      {
+        "comment": "",
+        "key": "Add Layer",
+        "location": {
+          "startingColumn": 23,
+          "startingLine": 599
+        }
+      },
+      {
+        "comment": "",
+        "key": "Delete Layer",
+        "location": {
+          "startingColumn": 23,
+          "startingLine": 612
+        }
+      },
+      {
+        "comment": "",
+        "key": "Keyframe",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 620
+        }
+      },
+      {
+        "comment": "",
+        "key": "Convert to Keyframe (F6)",
+        "location": {
+          "startingColumn": 23,
+          "startingLine": 633
+        }
+      },
+      {
+        "comment": "",
+        "key": "Add Keyframe with Current Drawing",
+        "location": {
+          "startingColumn": 23,
+          "startingLine": 647
+        }
+      },
+      {
+        "comment": "",
+        "key": "Add Blank Keyframe (F7)",
+        "location": {
+          "startingColumn": 23,
+          "startingLine": 663
+        }
+      },
+      {
+        "comment": "",
+        "key": "Frame",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 671
+        }
+      },
+      {
+        "comment": "",
+        "key": "Add Frame (Extend) (F5)",
+        "location": {
+          "startingColumn": 23,
+          "startingLine": 689
+        }
+      },
+      {
+        "comment": "",
+        "key": "Delete Frame (Current Layer)",
+        "location": {
+          "startingColumn": 23,
+          "startingLine": 704
+        }
+      }
+    ]
+  },
+  "version": 1
+}

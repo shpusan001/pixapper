@@ -1,0 +1,160 @@
+{
+  "source": "/Users/sanghoon/Desktop/MacApps/Pixapper/Pixapper/Views/ExportView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Export 실패",
+        "location": {
+          "startingColumn": 16,
+          "startingLine": 78
+        }
+      },
+      {
+        "comment": "",
+        "key": "Export",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 33
+        }
+      },
+      {
+        "comment": "",
+        "key": "Export Type",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 39
+        }
+      },
+      {
+        "comment": "",
+        "key": "Cancel",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 63
+        }
+      },
+      {
+        "comment": "",
+        "key": "Export",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 70
+        }
+      },
+      {
+        "comment": "",
+        "key": "확인",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 79
+        }
+      },
+      {
+        "comment": "",
+        "key": "Export current frame as PNG",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 87
+        }
+      },
+      {
+        "comment": "",
+        "key": "Frame: %lld/%lld",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 91
+        }
+      },
+      {
+        "comment": "",
+        "key": "Combine all frames into a single sprite sheet",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 99
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld frames",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 129
+        }
+      },
+      {
+        "comment": "",
+        "key": "Layout",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 104
+        }
+      },
+      {
+        "comment": "",
+        "key": "Layout",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 106
+        }
+      },
+      {
+        "comment": "",
+        "key": "Padding",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 116
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lldpx",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 119
+        }
+      },
+      {
+        "comment": "",
+        "key": "Export each frame as a separate PNG file",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 138
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld frames will be exported",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 153
+        }
+      },
+      {
+        "comment": "",
+        "key": "Base Name",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 143
+        }
+      },
+      {
+        "comment": "",
+        "key": "Files will be named: %@_001.png, %@_002.png, ...",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 148
+        }
+      },
+      {
+        "comment": "",
+        "key": "Base name",
+        "location": {
+          "startingColumn": 27,
+          "startingLine": 145
+        }
+      }
+    ]
+  },
+  "version": 1
+}

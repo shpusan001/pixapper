@@ -51,7 +51,7 @@ class AppViewModel: ObservableObject {
         self.timelineViewModel = timelineVM
 
         // Canvas → Timeline 연결
-        canvasVM.timelineViewModel = timelineVM
+        canvasVM.setTimelineViewModel(timelineVM)
 
         // 초기 프레임 로드
         timelineVM.loadFrame(at: 0)
