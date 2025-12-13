@@ -228,6 +228,7 @@ class CanvasViewModel: ObservableObject {
     }
 
     func handleToolUp(x: Int, y: Int) {
+        print("🔵 handleToolUp called: tool=\(toolSettingsManager.selectedTool), pos=(\(x),\(y))")
         switch toolSettingsManager.selectedTool {
         case .pencil, .eraser:
             // 스트로크 완료 - Command 생성
@@ -268,15 +269,18 @@ class CanvasViewModel: ObservableObject {
                 // 드래그 없이 클릭만 한 경우 (1x1 선택 방지)
                 if let start = shapeStartPoint, start.x == x && start.y == y {
                     // 클릭만 했으므로 선택 취소
+                    print("⭕️ Single click detected - clearing selection")
                     shapeStartPoint = nil
                     selectionRect = nil
                     return
                 }
 
                 // 선택 완료 - shapeStartPoint만 리셋 (selectionRect는 유지)
+                print("✨ Selection drag completed - calling captureSelection()")
                 shapeStartPoint = nil
                 // 선택 영역 픽셀 데이터 캡처
                 captureSelection()
+                print("✨ captureSelection() returned")
             }
 
         default:
@@ -692,6 +696,13 @@ class CanvasViewModel: ObservableObject {
               currentLayerIndex < layerViewModel.layers.count else {
             selectionPixels = nil
             originalPixels = nil
+            print("⚠️ captureSelection: early return - no rect or invalid layer")
+            return
+        }
+
+        // 이미 floating 상태면 중복 호출 방지
+        if isFloatingSelection {
+            print("⚠️ captureSelection: already floating - skipping")
             return
         }
 
@@ -706,6 +717,8 @@ class CanvasViewModel: ObservableObject {
         let startY = Int(rect.minY)
         let width = Int(rect.width)
         let height = Int(rect.height)
+
+        print("📦 captureSelection: rect=(\(startX),\(startY) \(width)x\(height)), layer=\(currentLayerIndex)")
 
         // 1. 선택 영역의 픽셀 데이터 복사
         var pixels: [[Color?]] = []
@@ -733,6 +746,8 @@ class CanvasViewModel: ObservableObject {
             pixels.append(row)
         }
 
+        print("📊 Captured \(layerOldPixels.count) colored pixels")
+
         // 2. 레이어에서 픽셀 제거 (Command 생성 전에 직접 실행)
         for change in layerNewPixels {
             layerViewModel.layers[currentLayerIndex].setPixel(x: change.x, y: change.y, color: change.color)
@@ -743,6 +758,8 @@ class CanvasViewModel: ObservableObject {
         originalPixels = pixels
         originalRect = rect
         isFloatingSelection = true
+
+        print("✅ Selection state set: selectionPixels=\(pixels.count)x\(pixels[0].count), isFloating=true")
 
         // 4. Command 생성 (이미 실행된 상태)
         if !layerOldPixels.isEmpty {
@@ -762,6 +779,9 @@ class CanvasViewModel: ObservableObject {
             )
             commandManager.addExecutedCommand(command)
             timelineViewModel?.syncCurrentLayerToKeyframe()
+            print("💾 SelectionCaptureCommand created and executed")
+        } else {
+            print("⚠️ No colored pixels - Command NOT created")
         }
     }
 
