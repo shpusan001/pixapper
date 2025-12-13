@@ -288,6 +288,15 @@ class TimelineViewModel: ObservableObject {
         // 해당 위치에 키프레임이 있으면 제거
         if layer.timeline.isKeyframe(at: index) {
             layerViewModel.layers[layerIndex].timeline.removeKeyframe(at: index)
+        } else {
+            // 키프레임이 아닌 경우 (extended frame), span을 축소
+            // index 이후에 다른 키프레임이 있는지 확인
+            let hasKeyframesAfter = layer.timeline.getAllKeyframeIndices().contains(where: { $0 > index })
+
+            if !hasKeyframesAfter {
+                // index 이후에 키프레임이 없으면, span 끝을 축소
+                layerViewModel.layers[layerIndex].timeline.shrinkSpanEnd(by: 1)
+            }
         }
 
         // 현재 레이어의 index 이후 키프레임들을 -1로 이동

@@ -32,6 +32,11 @@ struct TimelinePanel: View {
 
             Divider()
 
+            // Operations toolbar
+            operationsToolbar
+
+            Divider()
+
             // 2D Grid: Layers × Frames
             GeometryReader { geometry in
                 ScrollView([.horizontal, .vertical], showsIndicators: true) {
@@ -58,11 +63,6 @@ struct TimelinePanel: View {
                     )
                 }
             }
-
-            Divider()
-
-            // Operations toolbar
-            operationsToolbar
         }
         .background(Color(nsColor: .controlBackgroundColor))
     }
@@ -70,108 +70,101 @@ struct TimelinePanel: View {
     // MARK: - Playback Controls
 
     private var playbackControls: some View {
-        HStack(spacing: 8) {
-            // Playback button
-            Button(action: { viewModel.togglePlayback() }) {
-                Image(systemName: viewModel.isPlaying ? "pause.fill" : "play.fill")
-                    .font(.system(size: 14))
-                    .frame(width: 24, height: 24)
+        HStack(spacing: 12) {
+            // Left: Playback & Navigation
+            HStack(spacing: 6) {
+                Button(action: { viewModel.togglePlayback() }) {
+                    Image(systemName: viewModel.isPlaying ? "pause.fill" : "play.fill")
+                        .font(.system(size: 13))
+                        .frame(width: 28, height: 28)
+                }
+                .buttonStyle(.borderless)
+                .help("Play/Pause (Space)")
+
+                Divider()
+                    .frame(height: 18)
+
+                Button(action: { viewModel.previousFrame() }) {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 11))
+                }
+                .buttonStyle(.borderless)
+                .help("Previous Frame (,)")
+
+                Text("\(viewModel.currentFrameIndex + 1)/\(viewModel.totalFrames)")
+                    .font(.system(size: 11, design: .monospaced))
+                    .foregroundColor(.primary)
+                    .frame(minWidth: 50)
+
+                Button(action: { viewModel.nextFrame() }) {
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 11))
+                }
+                .buttonStyle(.borderless)
+                .help("Next Frame (.)")
             }
-            .buttonStyle(.borderless)
-            .help("Play/Pause (Space)")
 
             Divider()
-                .frame(height: 20)
+                .frame(height: 18)
 
-            // Frame navigation
-            Button(action: { viewModel.previousFrame() }) {
-                Image(systemName: "chevron.left")
-                    .font(.system(size: 12))
+            // Center: FPS & Speed
+            HStack(spacing: 8) {
+                Picker("", selection: Binding(
+                    get: { viewModel.settings.fps },
+                    set: { viewModel.setFPS($0) }
+                )) {
+                    Text("1").tag(1)
+                    Text("6").tag(6)
+                    Text("12").tag(12)
+                    Text("24").tag(24)
+                    Text("30").tag(30)
+                    Text("60").tag(60)
+                }
+                .labelsHidden()
+                .frame(width: 55)
+
+                Text("fps")
+                    .font(.system(size: 10))
+                    .foregroundColor(.secondary)
             }
-            .buttonStyle(.borderless)
-            .help("Previous Frame")
 
-            Text("\(viewModel.currentFrameIndex + 1)/\(viewModel.totalFrames)")
-                .font(.system(size: 11, design: .monospaced))
-                .foregroundColor(.secondary)
-                .frame(minWidth: 50)
-
-            Button(action: { viewModel.nextFrame() }) {
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 12))
-            }
-            .buttonStyle(.borderless)
-            .help("Next Frame")
-
-            Divider()
-                .frame(height: 20)
-
-            // FPS
-            Image(systemName: "timer")
-                .font(.system(size: 11))
-                .foregroundColor(.secondary)
-            Picker("", selection: Binding(
-                get: { viewModel.settings.fps },
-                set: { viewModel.setFPS($0) }
-            )) {
-                Text("1").tag(1)
-                Text("6").tag(6)
-                Text("12").tag(12)
-                Text("24").tag(24)
-                Text("30").tag(30)
-                Text("60").tag(60)
-            }
-            .labelsHidden()
-            .frame(width: 60)
-            Text("fps")
-                .font(.system(size: 10))
-                .foregroundColor(.secondary)
-
-            Divider()
-                .frame(height: 20)
-
-            // Speed
-            Image(systemName: "gauge.medium")
-                .font(.system(size: 11))
-                .foregroundColor(.secondary)
             Picker("", selection: Binding(
                 get: { viewModel.settings.playbackSpeed },
                 set: { viewModel.setPlaybackSpeed($0) }
             )) {
-                Text("0.25x").tag(0.25)
-                Text("0.5x").tag(0.5)
-                Text("1x").tag(1.0)
-                Text("2x").tag(2.0)
-                Text("4x").tag(4.0)
+                Text("0.25×").tag(0.25)
+                Text("0.5×").tag(0.5)
+                Text("1×").tag(1.0)
+                Text("2×").tag(2.0)
+                Text("4×").tag(4.0)
             }
             .labelsHidden()
-            .frame(width: 65)
-
-            Divider()
-                .frame(height: 20)
-
-            // Loop toggle
-            Button(action: { viewModel.toggleLoop() }) {
-                Image(systemName: viewModel.settings.isLooping ? "repeat.circle.fill" : "repeat.circle")
-                    .font(.system(size: 16))
-                    .foregroundColor(viewModel.settings.isLooping ? .accentColor : .secondary)
-            }
-            .buttonStyle(.borderless)
-            .help("Loop Playback")
-
-            // Onion skin
-            Button(action: { viewModel.toggleOnionSkin() }) {
-                Image(systemName: viewModel.settings.onionSkinEnabled ? "circle.lefthalf.filled" : "circle.lefthalf.striped.horizontal")
-                    .font(.system(size: 16))
-                    .foregroundColor(viewModel.settings.onionSkinEnabled ? .accentColor : .secondary)
-            }
-            .buttonStyle(.borderless)
-            .help("Toggle Onion Skin (O)")
+            .frame(width: 60)
 
             Spacer()
+
+            // Right: Options
+            HStack(spacing: 4) {
+                Button(action: { viewModel.toggleLoop() }) {
+                    Image(systemName: "repeat")
+                        .font(.system(size: 14))
+                        .foregroundColor(viewModel.settings.isLooping ? .accentColor : .secondary)
+                }
+                .buttonStyle(.borderless)
+                .help("Loop")
+
+                Button(action: { viewModel.toggleOnionSkin() }) {
+                    Image(systemName: "circle.lefthalf.filled")
+                        .font(.system(size: 14))
+                        .foregroundColor(viewModel.settings.onionSkinEnabled ? .accentColor : .secondary)
+                }
+                .buttonStyle(.borderless)
+                .help("Onion Skin (O)")
+            }
         }
         .padding(.horizontal, 12)
-        .padding(.vertical, 6)
+        .padding(.vertical, 8)
+        .background(Color(nsColor: .controlBackgroundColor))
     }
 
     // MARK: - Frame Header Row
@@ -461,69 +454,52 @@ struct TimelinePanel: View {
 
     @ViewBuilder
     private func contextMenuContent(layer: Layer, frameIndex: Int, spanPosition: TimelineViewModel.FrameSpanPosition) -> some View {
-        let targetFrames = viewModel.selectedFrameIndices.count > 1 ? viewModel.selectedFrameIndices : [frameIndex]
-        let isMultiOp = targetFrames.count > 1
-        let isKeyframe = spanPosition == .keyframeStart
-
-        // F6: Toggle Keyframe
-        Button(action: {
-            let command = BatchKeyframeCommand(
-                frameIndices: targetFrames,
-                layerId: layer.id,
-                timelineViewModel: viewModel,
-                operation: .toggle
-            )
-            commandManager.performCommand(command)
-        }) {
-            if isKeyframe {
-                Text(isMultiOp ? "Remove \(targetFrames.count) Keyframes" : "Remove Keyframe")
-            } else {
-                Text(isMultiOp ? "Convert to \(targetFrames.count) Keyframes (F6)" : "Convert to Keyframe (F6)")
-            }
+        // Convert to Keyframe (F6)
+        Button("Convert to Keyframe") {
+            viewModel.toggleKeyframe(frameIndex: frameIndex, layerId: layer.id)
         }
 
-        // F5: Extend Frame
-        Button(action: {
-            let command = BatchKeyframeCommand(
-                frameIndices: targetFrames,
-                layerId: layer.id,
+        // Add Keyframe with Current Drawing
+        Button("Add Keyframe with Current Drawing") {
+            let command = AddKeyframeWithContentCommand(
                 timelineViewModel: viewModel,
-                operation: .extend
+                layerId: layer.id
             )
             commandManager.performCommand(command)
-        }) {
-            Text(isMultiOp ? "Extend \(targetFrames.count) Frames (F5)" : "Extend Frame (F5)")
         }
-        .disabled(spanPosition == .empty)
 
-        // F7: Insert Blank Keyframe
-        Button(action: {
-            let command = BatchKeyframeCommand(
-                frameIndices: targetFrames,
-                layerId: layer.id,
+        // Add Blank Keyframe (F7)
+        Button("Add Blank Keyframe") {
+            let command = AddBlankKeyframeCommand(
                 timelineViewModel: viewModel,
-                operation: .insertBlank
+                layerId: layer.id,
+                canvasWidth: viewModel.canvasWidth,
+                canvasHeight: viewModel.canvasHeight
             )
             commandManager.performCommand(command)
-        }) {
-            Text(isMultiOp ? "Insert \(targetFrames.count) Blank Keyframes (F7)" : "Insert Blank Keyframe (F7)")
         }
 
         Divider()
 
-        // Clear Content
-        Button(action: {
-            let command = BatchKeyframeCommand(
-                frameIndices: targetFrames,
-                layerId: layer.id,
+        // Add Frame (Extend) (F5)
+        Button("Extend Frame") {
+            let command = ExtendFrameCommand(
                 timelineViewModel: viewModel,
-                operation: .clear
+                frameIndex: frameIndex,
+                layerId: layer.id
             )
             commandManager.performCommand(command)
-        }) {
-            Text(isMultiOp ? "Clear \(targetFrames.count) Keyframes" : "Clear Content")
         }
-        .disabled(!isKeyframe)
+
+        // Delete Frame
+        Button("Delete Frame", role: .destructive) {
+            let command = DeleteFrameInLayerCommand(
+                timelineViewModel: viewModel,
+                index: frameIndex,
+                layerId: layer.id
+            )
+            commandManager.performCommand(command)
+        }
     }
 
     // MARK: - Cell Components
@@ -640,21 +616,27 @@ struct TimelinePanel: View {
 
     private var operationsToolbar: some View {
         HStack(spacing: 6) {
-            // Layer operations section
-            HStack(spacing: 4) {
+            // Layer operations
+            HStack(spacing: 3) {
                 Text("Layer")
-                    .font(.system(size: 10))
+                    .font(.system(size: 9, weight: .medium))
                     .foregroundColor(.secondary)
-                    .padding(.trailing, 2)
 
                 Button(action: {
                     let command = AddLayerCommand(layerViewModel: viewModel.layerViewModel)
                     commandManager.performCommand(command)
                 }) {
-                    Image(systemName: "plus.square")
-                        .font(.system(size: 14))
+                    HStack(spacing: 3) {
+                        Image(systemName: "plus.square")
+                            .font(.system(size: 11))
+                        Text("Add")
+                            .font(.system(size: 10))
+                    }
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 3)
                 }
-                .buttonStyle(.borderless)
+                .buttonStyle(.bordered)
+                .controlSize(.small)
                 .help("Add Layer")
 
                 Button(action: {
@@ -663,33 +645,46 @@ struct TimelinePanel: View {
                         commandManager.performCommand(command)
                     }
                 }) {
-                    Image(systemName: "minus.square")
-                        .font(.system(size: 14))
+                    HStack(spacing: 3) {
+                        Image(systemName: "minus.square")
+                            .font(.system(size: 11))
+                        Text("Delete")
+                            .font(.system(size: 10))
+                    }
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 3)
                 }
-                .buttonStyle(.borderless)
+                .buttonStyle(.bordered)
+                .controlSize(.small)
                 .disabled(viewModel.layerViewModel.layers.count <= 1)
                 .help("Delete Layer")
             }
 
             Divider()
-                .frame(height: 20)
+                .frame(height: 14)
 
-            // Keyframe operations section
-            HStack(spacing: 4) {
+            // Keyframe operations
+            HStack(spacing: 3) {
                 Text("Keyframe")
-                    .font(.system(size: 10))
+                    .font(.system(size: 9, weight: .medium))
                     .foregroundColor(.secondary)
-                    .padding(.trailing, 2)
 
                 Button(action: {
                     let layerId = viewModel.layerViewModel.layers[viewModel.layerViewModel.selectedLayerIndex].id
                     viewModel.toggleKeyframe(frameIndex: viewModel.currentFrameIndex, layerId: layerId)
                 }) {
-                    Image(systemName: "scope")
-                        .font(.system(size: 14))
+                    HStack(spacing: 3) {
+                        Image(systemName: "scope")
+                            .font(.system(size: 11))
+                        Text("Toggle")
+                            .font(.system(size: 10))
+                    }
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 3)
                 }
-                .buttonStyle(.borderless)
-                .help("Convert to Keyframe (F6)")
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+                .help("Toggle Keyframe (F6)")
 
                 Button(action: {
                     let layerId = viewModel.layerViewModel.layers[viewModel.layerViewModel.selectedLayerIndex].id
@@ -699,11 +694,18 @@ struct TimelinePanel: View {
                     )
                     commandManager.performCommand(command)
                 }) {
-                    Image(systemName: "plus.circle.fill")
-                        .font(.system(size: 14))
+                    HStack(spacing: 3) {
+                        Image(systemName: "plus.circle.fill")
+                            .font(.system(size: 11))
+                        Text("Insert")
+                            .font(.system(size: 10))
+                    }
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 3)
                 }
-                .buttonStyle(.borderless)
-                .help("Add Keyframe with Current Drawing")
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+                .help("Insert Keyframe")
 
                 Button(action: {
                     let layerId = viewModel.layerViewModel.layers[viewModel.layerViewModel.selectedLayerIndex].id
@@ -715,22 +717,28 @@ struct TimelinePanel: View {
                     )
                     commandManager.performCommand(command)
                 }) {
-                    Image(systemName: "plus.circle.dashed")
-                        .font(.system(size: 14))
+                    HStack(spacing: 3) {
+                        Image(systemName: "plus.circle.dashed")
+                            .font(.system(size: 11))
+                        Text("Blank")
+                            .font(.system(size: 10))
+                    }
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 3)
                 }
-                .buttonStyle(.borderless)
-                .help("Add Blank Keyframe (F7)")
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+                .help("Blank Keyframe (F7)")
             }
 
             Divider()
-                .frame(height: 20)
+                .frame(height: 14)
 
-            // Frame operations section
-            HStack(spacing: 4) {
+            // Frame operations
+            HStack(spacing: 3) {
                 Text("Frame")
-                    .font(.system(size: 10))
+                    .font(.system(size: 9, weight: .medium))
                     .foregroundColor(.secondary)
-                    .padding(.trailing, 2)
 
                 Button(action: {
                     let layerId = viewModel.layerViewModel.layers[viewModel.layerViewModel.selectedLayerIndex].id
@@ -741,11 +749,18 @@ struct TimelinePanel: View {
                     )
                     commandManager.performCommand(command)
                 }) {
-                    Image(systemName: "plus.square")
-                        .font(.system(size: 14))
+                    HStack(spacing: 3) {
+                        Image(systemName: "plus.square")
+                            .font(.system(size: 11))
+                        Text("Extend")
+                            .font(.system(size: 10))
+                    }
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 3)
                 }
-                .buttonStyle(.borderless)
-                .help("Add Frame (Extend) (F5)")
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+                .help("Extend Frame (F5)")
 
                 Button(action: {
                     let layerId = viewModel.layerViewModel.layers[viewModel.layerViewModel.selectedLayerIndex].id
@@ -756,17 +771,25 @@ struct TimelinePanel: View {
                     )
                     commandManager.performCommand(command)
                 }) {
-                    Image(systemName: "minus.square")
-                        .font(.system(size: 14))
+                    HStack(spacing: 3) {
+                        Image(systemName: "minus.square")
+                            .font(.system(size: 11))
+                        Text("Remove")
+                            .font(.system(size: 10))
+                    }
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 3)
                 }
-                .buttonStyle(.borderless)
-                .help("Delete Frame (Current Layer)")
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+                .help("Remove Frame")
             }
 
             Spacer()
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 6)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 5)
+        .background(Color(nsColor: .controlBackgroundColor))
     }
 }
 
