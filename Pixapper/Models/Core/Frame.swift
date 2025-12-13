@@ -252,13 +252,13 @@ struct Frame: Identifiable {
 }
 
 struct AnimationSettings {
-    var fps: Int = 12
-    var playbackSpeed: Double = 1.0
-    var isLooping: Bool = true
-    var onionSkinEnabled: Bool = false
-    var onionSkinPrevFrames: Int = 1
-    var onionSkinNextFrames: Int = 1
-    var onionSkinOpacity: Double = 0.3
+    var fps: Int = Constants.Animation.defaultFPS
+    var playbackSpeed: Double = Constants.Animation.defaultPlaybackSpeed
+    var isLooping: Bool = Constants.Animation.defaultLooping
+    var onionSkinEnabled: Bool = Constants.Animation.defaultOnionSkinEnabled
+    var onionSkinPrevFrames: Int = Constants.Animation.defaultOnionSkinPrevFrames
+    var onionSkinNextFrames: Int = Constants.Animation.defaultOnionSkinNextFrames
+    var onionSkinOpacity: Double = Constants.Animation.defaultOnionSkinOpacity
 
     var effectiveFPS: Double {
         Double(fps) * playbackSpeed

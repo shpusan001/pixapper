@@ -14,6 +14,31 @@ struct FrameInfo: Identifiable {
     let index: Int
 }
 
+/// TimelineViewModel - 타임라인과 애니메이션 상태를 관리합니다
+///
+/// ## 책임 (Responsibilities)
+/// 1. **프레임 관리**: 총 프레임 수, 현재 프레임 인덱스 관리
+/// 2. **애니메이션 재생**: 재생/정지, FPS 기반 타이머 제어
+/// 3. **프레임 전환 조정**: `loadFrame()`을 통해 레이어 픽셀 동기화
+/// 4. **키프레임 동기화**: 현재 레이어 상태를 키프레임에 저장
+///
+/// ## LayerViewModel과의 관계
+/// - TimelineViewModel은 LayerViewModel을 **읽고** Layer.timeline에 **접근**할 수 있습니다
+/// - LayerViewModel.layers 배열을 직접 수정하여 픽셀을 업데이트합니다
+/// - LayerViewModel은 TimelineViewModel을 알지 못합니다 (단방향 의존성)
+///
+/// ## 데이터 흐름
+/// ```
+/// 사용자가 프레임 변경
+///   ↓
+/// TimelineViewModel.loadFrame(at: index)
+///   ↓
+/// 각 Layer.timeline.getEffectivePixels(at: index)로 키프레임 조회
+///   ↓
+/// LayerViewModel.layers[i].pixels = 조회된 픽셀 (캐시 업데이트)
+///   ↓
+/// UI 자동 업데이트 (@Published)
+/// ```
 @MainActor
 class TimelineViewModel: ObservableObject {
     @Published var totalFrames: Int = 1  // Frame 배열 대신 개수만 관리
@@ -30,6 +55,8 @@ class TimelineViewModel: ObservableObject {
     var canvasWidth: Int
     var canvasHeight: Int
 
+    /// LayerViewModel 참조 (읽기 및 수정 가능)
+    /// - Note: TimelineViewModel이 프레임 전환 시 레이어 픽셀을 직접 업데이트합니다
     var layerViewModel: LayerViewModel
 
     // 성능 최적화: totalFrames 계산 캐싱
@@ -85,7 +112,9 @@ class TimelineViewModel: ObservableObject {
         frames = (0..<totalFrames).map { FrameInfo(index: $0) }
     }
 
-    /// 현재 작업 중인 레이어의 픽셀을 소속 키프레임에 저장 (CanvasViewModel에서 호출)
+    /// 현재 작업 중인 레이어의 픽셀을 소속 키프레임에 저장
+    /// - Note: 도구(Tool)가 픽셀을 변경한 후 이 메서드를 호출하여 변경사항을 키프레임에 영구 저장합니다
+    /// - Important: Layer.pixels는 캐시이므로, 반드시 timeline.setKeyframe()으로 저장해야 합니다
     func syncCurrentLayerToKeyframe() {
         guard currentFrameIndex < totalFrames else { return }
 

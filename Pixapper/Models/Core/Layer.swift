@@ -10,10 +10,21 @@ import SwiftUI
 struct Layer: Identifiable {
     let id = UUID()
     var name: String
-    var pixels: [[Color?]]  // 현재 작업 중인 픽셀 (캐시)
+
+    /// 현재 프레임의 픽셀 캐시
+    /// - Note: 이 값은 `timeline`에 저장된 키프레임 데이터의 캐시입니다.
+    ///   프레임 전환 시 `TimelineViewModel.loadFrame()`이 `timeline.getEffectivePixels()`를 호출하여
+    ///   이 필드를 업데이트합니다. 직접 수정 시 timeline과 동기화되지 않을 수 있습니다.
+    /// - Warning: 픽셀 변경 후에는 `timeline.setKeyframe()`를 호출하여 키프레임에 저장해야 합니다.
+    var pixels: [[Color?]]
+
     var isVisible: Bool = true
     var opacity: Double = 1.0
-    var timeline: LayerTimeline  // 실제 키프레임 데이터 저장소
+
+    /// 실제 타임라인 키프레임 데이터 저장소
+    /// - Note: 모든 프레임의 픽셀을 저장하지 않고, 키프레임만 저장하여 메모리를 절약합니다.
+    ///   비키프레임은 이전 키프레임의 픽셀을 상속받습니다.
+    var timeline: LayerTimeline
 
     /// 빈 픽셀 배열 생성 헬퍼 메서드
     static func createEmptyPixels(width: Int, height: Int) -> [[Color?]] {

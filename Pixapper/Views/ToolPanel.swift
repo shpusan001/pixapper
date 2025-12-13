@@ -171,7 +171,7 @@ struct CanvasSizeSheet: View {
             }
         }
         .padding(24)
-        .frame(width: 320)
+        .frame(width: Constants.Layout.Panel.toolPanelWidth)
         .onAppear {
             width = "\(viewModel.canvas.width)"
             height = "\(viewModel.canvas.height)"

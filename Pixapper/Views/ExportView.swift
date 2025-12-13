@@ -74,7 +74,7 @@ struct ExportView: View {
             }
         }
         .padding(24)
-        .frame(width: 400)
+        .frame(width: Constants.Layout.Panel.exportViewWidth)
         .alert("Export 실패", isPresented: $showingErrorAlert) {
             Button("확인", role: .cancel) {}
         } message: {

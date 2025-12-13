@@ -38,6 +38,16 @@ enum Constants {
 
     /// UI 레이아웃 설정
     enum Layout {
+        /// 패널 너비
+        enum Panel {
+            /// 레이어 패널 너비
+            static let layerPanelWidth: CGFloat = 240
+            /// 도구 패널 너비
+            static let toolPanelWidth: CGFloat = 320
+            /// Export 뷰 너비
+            static let exportViewWidth: CGFloat = 400
+        }
+
         /// Timeline 패널 레이아웃
         enum Timeline {
             /// 레이어 컬럼 너비
@@ -57,6 +67,24 @@ enum Constants {
         }
     }
 
+    /// 애니메이션 설정
+    enum Animation {
+        /// 기본 FPS
+        static let defaultFPS: Int = 12
+        /// 기본 재생 속도 배율
+        static let defaultPlaybackSpeed: Double = 1.0
+        /// 기본 루프 설정
+        static let defaultLooping: Bool = true
+        /// Onion skin 기본 활성화 여부
+        static let defaultOnionSkinEnabled: Bool = false
+        /// Onion skin 이전 프레임 개수
+        static let defaultOnionSkinPrevFrames: Int = 1
+        /// Onion skin 다음 프레임 개수
+        static let defaultOnionSkinNextFrames: Int = 1
+        /// Onion skin 투명도
+        static let defaultOnionSkinOpacity: Double = 0.3
+    }
+
     /// UI 투명도 설정
     enum Opacity {
         /// Canvas 관련
@@ -65,8 +93,6 @@ enum Constants {
             static let gridLine: Double = 0.3
             /// Shape 미리보기 opacity
             static let shapePreview: Double = 0.5
-            /// Onion skin 틴트 opacity
-            static let onionSkinTint: Double = 0.3
         }
 
         /// Timeline 관련

@@ -8,6 +8,22 @@
 import SwiftUI
 import Combine
 
+/// LayerViewModel - 레이어 컬렉션을 관리합니다
+///
+/// ## 책임 (Responsibilities)
+/// 1. **레이어 배열 관리**: 추가, 삭제, 복제, 이동, 이름 변경
+/// 2. **레이어 속성 관리**: 가시성, 투명도
+/// 3. **선택된 레이어 추적**: selectedLayerIndex
+///
+/// ## TimelineViewModel과의 관계
+/// - LayerViewModel은 TimelineViewModel을 **알지 못합니다** (의존하지 않음)
+/// - TimelineViewModel이 LayerViewModel을 참조하여 프레임 전환 시 픽셀을 업데이트합니다
+/// - 단방향 의존성: TimelineViewModel → LayerViewModel
+///
+/// ## 중요 사항
+/// - Layer.pixels는 **현재 프레임의 캐시**입니다
+/// - 실제 타임라인 데이터는 **Layer.timeline**에 키프레임 형태로 저장됩니다
+/// - 픽셀 변경 후 반드시 `TimelineViewModel.syncCurrentLayerToKeyframe()`을 호출해야 합니다
 @MainActor
 class LayerViewModel: ObservableObject {
     @Published var layers: [Layer]

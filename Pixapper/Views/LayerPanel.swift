@@ -138,7 +138,7 @@ struct LayerPanel: View {
             }
             .padding(12)
         }
-        .frame(width: 240)
+        .frame(width: Constants.Layout.Panel.layerPanelWidth)
         .background(Color(nsColor: .controlBackgroundColor))
     }
 }

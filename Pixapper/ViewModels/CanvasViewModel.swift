@@ -41,67 +41,19 @@ class CanvasViewModel: ObservableObject {
     private var shapeTool: ShapeTool!
     private var _selectionTool: SelectionTool!
 
-    // MARK: - Canvas Compositor
-    private let compositeLayerManager = RenderLayerManager()
+    // MARK: - Internal State
     private var cancellables = Set<AnyCancellable>()
-    private var isUpdatingFromTool = false  // 순환 참조 방지
 
     // MARK: - Selection Properties (@Published로 실시간 UI 업데이트)
-    @Published var selectionRect: CGRect? {
-        didSet {
-            guard !isUpdatingFromTool else { return }
-            _selectionTool?.selectionRect = selectionRect
-        }
-    }
-
-    @Published var selectionPixels: [[Color?]]? {
-        didSet {
-            guard !isUpdatingFromTool else { return }
-            _selectionTool?.selectionPixels = selectionPixels
-        }
-    }
-
-    @Published var selectionOffset: CGPoint = .zero {
-        didSet {
-            guard !isUpdatingFromTool else { return }
-            _selectionTool?.selectionOffset = selectionOffset
-        }
-    }
-
-    @Published var isFloatingSelection: Bool = false {
-        didSet {
-            guard !isUpdatingFromTool else { return }
-            _selectionTool?.isFloatingSelection = isFloatingSelection
-        }
-    }
-
-    @Published var originalPixels: [[Color?]]? {
-        didSet {
-            guard !isUpdatingFromTool else { return }
-            _selectionTool?.originalPixels = originalPixels
-        }
-    }
-
-    @Published var originalRect: CGRect? {
-        didSet {
-            guard !isUpdatingFromTool else { return }
-            _selectionTool?.originalRect = originalRect
-        }
-    }
-
-    @Published var selectionMode: SelectionTool.SelectionMode = .idle {
-        didSet {
-            guard !isUpdatingFromTool else { return }
-            _selectionTool?.selectionMode = selectionMode
-        }
-    }
-
-    @Published var hoveredHandle: SelectionTool.ResizeHandle? {
-        didSet {
-            guard !isUpdatingFromTool else { return }
-            _selectionTool?.hoveredHandle = hoveredHandle
-        }
-    }
+    /// SelectionTool이 이 프로퍼티들을 직접 수정하여 UI를 업데이트합니다
+    @Published var selectionRect: CGRect?
+    @Published var selectionPixels: [[Color?]]?
+    @Published var selectionOffset: CGPoint = .zero
+    @Published var isFloatingSelection: Bool = false
+    @Published var originalPixels: [[Color?]]?
+    @Published var originalRect: CGRect?
+    @Published var selectionMode: SelectionTool.SelectionMode = .idle
+    @Published var hoveredHandle: SelectionTool.ResizeHandle?
 
     var isMovingSelection: Bool {
         if case .moving = selectionMode {
@@ -124,38 +76,8 @@ class CanvasViewModel: ObservableObject {
         self.commandManager = commandManager
         self.toolSettingsManager = toolSettingsManager
 
-        // Initialize tools
-        self._selectionTool = SelectionTool(
-            canvasViewModel: self,
-            layerViewModel: layerViewModel,
-            commandManager: commandManager,
-            toolSettingsManager: toolSettingsManager,
-            timelineViewModel: nil
-        )
-
-        self.pencilEraserTool = PencilEraserTool(
-            canvasViewModel: self,
-            layerViewModel: layerViewModel,
-            commandManager: commandManager,
-            toolSettingsManager: toolSettingsManager,
-            timelineViewModel: nil
-        )
-
-        self.fillTool = FillTool(
-            canvasViewModel: self,
-            layerViewModel: layerViewModel,
-            commandManager: commandManager,
-            toolSettingsManager: toolSettingsManager,
-            timelineViewModel: nil
-        )
-
-        self.shapeTool = ShapeTool(
-            canvasViewModel: self,
-            layerViewModel: layerViewModel,
-            commandManager: commandManager,
-            toolSettingsManager: toolSettingsManager,
-            timelineViewModel: nil
-        )
+        // Initialize tools (timelineViewModel will be set later)
+        setupTools(timelineViewModel: nil)
 
         // Setup bindings
         setupBindings()
@@ -163,38 +85,44 @@ class CanvasViewModel: ObservableObject {
 
     func setTimelineViewModel(_ timeline: TimelineViewModel) {
         self.timelineViewModel = timeline
-        // Update tools with timeline reference
+
+        // Recreate tools with timeline reference
+        setupTools(timelineViewModel: timeline)
+    }
+
+    /// 도구들을 생성하거나 재생성합니다
+    private func setupTools(timelineViewModel: TimelineViewModel?) {
         self._selectionTool = SelectionTool(
             canvasViewModel: self,
             layerViewModel: layerViewModel,
             commandManager: commandManager,
             toolSettingsManager: toolSettingsManager,
-            timelineViewModel: timeline
+            timelineViewModel: timelineViewModel
         )
+
         self.pencilEraserTool = PencilEraserTool(
             canvasViewModel: self,
             layerViewModel: layerViewModel,
             commandManager: commandManager,
             toolSettingsManager: toolSettingsManager,
-            timelineViewModel: timeline
+            timelineViewModel: timelineViewModel
         )
+
         self.fillTool = FillTool(
             canvasViewModel: self,
             layerViewModel: layerViewModel,
             commandManager: commandManager,
             toolSettingsManager: toolSettingsManager,
-            timelineViewModel: timeline
+            timelineViewModel: timelineViewModel
         )
+
         self.shapeTool = ShapeTool(
             canvasViewModel: self,
             layerViewModel: layerViewModel,
             commandManager: commandManager,
             toolSettingsManager: toolSettingsManager,
-            timelineViewModel: timeline
+            timelineViewModel: timelineViewModel
         )
-
-        // Re-setup bindings after tool recreation
-        setupToolBindings()
     }
 
     private func setupBindings() {
@@ -218,84 +146,6 @@ class CanvasViewModel: ObservableObject {
                         self.clearSelection()
                     }
                 }
-            }
-            .store(in: &cancellables)
-
-        // SelectionTool bindings
-        setupToolBindings()
-    }
-
-    private func setupToolBindings() {
-        // SelectionTool의 모든 @Published 프로퍼티를 CanvasViewModel로 전파
-        _selectionTool.$selectionRect
-            .sink { [weak self] value in
-                guard let self = self else { return }
-                self.isUpdatingFromTool = true
-                self.selectionRect = value
-                self.isUpdatingFromTool = false
-            }
-            .store(in: &cancellables)
-
-        _selectionTool.$selectionPixels
-            .sink { [weak self] value in
-                guard let self = self else { return }
-                self.isUpdatingFromTool = true
-                self.selectionPixels = value
-                self.isUpdatingFromTool = false
-            }
-            .store(in: &cancellables)
-
-        _selectionTool.$selectionOffset
-            .sink { [weak self] value in
-                guard let self = self else { return }
-                self.isUpdatingFromTool = true
-                self.selectionOffset = value
-                self.isUpdatingFromTool = false
-            }
-            .store(in: &cancellables)
-
-        _selectionTool.$isFloatingSelection
-            .sink { [weak self] value in
-                guard let self = self else { return }
-                self.isUpdatingFromTool = true
-                self.isFloatingSelection = value
-                self.isUpdatingFromTool = false
-            }
-            .store(in: &cancellables)
-
-        _selectionTool.$originalPixels
-            .sink { [weak self] value in
-                guard let self = self else { return }
-                self.isUpdatingFromTool = true
-                self.originalPixels = value
-                self.isUpdatingFromTool = false
-            }
-            .store(in: &cancellables)
-
-        _selectionTool.$originalRect
-            .sink { [weak self] value in
-                guard let self = self else { return }
-                self.isUpdatingFromTool = true
-                self.originalRect = value
-                self.isUpdatingFromTool = false
-            }
-            .store(in: &cancellables)
-
-        _selectionTool.$selectionMode
-            .sink { [weak self] value in
-                guard let self = self else { return }
-                self.isUpdatingFromTool = true
-                self.selectionMode = value
-                self.isUpdatingFromTool = false
-            }
-            .store(in: &cancellables)
-
-        _selectionTool.$hoveredHandle
-            .sink { [weak self] value in
-                guard let self = self else { return }
-                self.isUpdatingFromTool = true
-                self.hoveredHandle = value
-                self.isUpdatingFromTool = false
             }
             .store(in: &cancellables)
     }
@@ -466,40 +316,6 @@ class CanvasViewModel: ObservableObject {
         if let timeline = timelineViewModel {
             timeline.loadFrame(at: timeline.currentFrameIndex)
         }
-    }
-
-    // MARK: - Compositor Methods
-
-    func getCompositePixels() -> [[Color?]] {
-        // 선택 상태 생성
-        var selectionState: SelectionState? = nil
-        if let rect = selectionRect,
-           let pixels = selectionPixels,
-           isFloatingSelection {
-            let opacity = isMovingSelection ? 0.6 : 1.0
-            selectionState = SelectionState(
-                pixels: pixels,
-                rect: rect,
-                offset: .zero,
-                isFloating: true,
-                opacity: opacity
-            )
-        }
-
-        // Compositor 업데이트
-        compositeLayerManager.updateCompositor(
-            layers: layerViewModel.layers,
-            shapePreview: shapePreview,
-            selectionState: selectionState,
-            canvasWidth: canvas.width,
-            canvasHeight: canvas.height
-        )
-
-        // 합성된 픽셀 반환
-        return compositeLayerManager.getCompositePixels(
-            width: canvas.width,
-            height: canvas.height
-        )
     }
 
     // MARK: - Helper Methods

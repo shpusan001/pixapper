@@ -6,7 +6,7 @@
 	<integer>11</integer>
 	<key>logs</key>
 	<dict>
-		<key>0D1BCF8B-46BC-41BB-9CF0-A806B5CFCE66</key>
+		<key>15319440-0BA8-47A9-BBB3-905DBFFF0F7E</key>
 		<dict>
 			<key>className</key>
 			<string>IDECommandLineBuildLog</string>
@@ -15,91 +15,7 @@
 			<key>domainType</key>
 			<string>Xcode.IDEActivityLogDomainType.BuildLog</string>
 			<key>fileName</key>
-			<string>0D1BCF8B-46BC-41BB-9CF0-A806B5CFCE66.xcactivitylog</string>
-			<key>hasPrimaryLog</key>
-			<true/>
-			<key>primaryObservable</key>
-			<dict>
-				<key>highLevelStatus</key>
-				<string>E</string>
-				<key>totalNumberOfAnalyzerIssues</key>
-				<integer>0</integer>
-				<key>totalNumberOfErrors</key>
-				<integer>17</integer>
-				<key>totalNumberOfTestFailures</key>
-				<integer>0</integer>
-				<key>totalNumberOfWarnings</key>
-				<integer>1</integer>
-			</dict>
-			<key>schemeIdentifier-containerName</key>
-			<string>Pixapper project</string>
-			<key>schemeIdentifier-schemeName</key>
-			<string>Pixapper</string>
-			<key>schemeIdentifier-sharedScheme</key>
-			<integer>1</integer>
-			<key>signature</key>
-			<string>Building project Pixapper with scheme Pixapper and configuration Debug</string>
-			<key>timeStartedRecording</key>
-			<real>787305874.52895498</real>
-			<key>timeStoppedRecording</key>
-			<real>787305887.52269495</real>
-			<key>title</key>
-			<string>Building project Pixapper with scheme Pixapper and configuration Debug</string>
-			<key>uniqueIdentifier</key>
-			<string>0D1BCF8B-46BC-41BB-9CF0-A806B5CFCE66</string>
-		</dict>
-		<key>1ED3A0FF-7BA8-4424-8B83-1BAC763483A0</key>
-		<dict>
-			<key>className</key>
-			<string>IDECommandLineBuildLog</string>
-			<key>documentTypeString</key>
-			<string>&lt;nil&gt;</string>
-			<key>domainType</key>
-			<string>Xcode.IDEActivityLogDomainType.BuildLog</string>
-			<key>fileName</key>
-			<string>1ED3A0FF-7BA8-4424-8B83-1BAC763483A0.xcactivitylog</string>
-			<key>hasPrimaryLog</key>
-			<true/>
-			<key>primaryObservable</key>
-			<dict>
-				<key>highLevelStatus</key>
-				<string>S</string>
-				<key>totalNumberOfAnalyzerIssues</key>
-				<integer>0</integer>
-				<key>totalNumberOfErrors</key>
-				<integer>0</integer>
-				<key>totalNumberOfTestFailures</key>
-				<integer>0</integer>
-				<key>totalNumberOfWarnings</key>
-				<integer>0</integer>
-			</dict>
-			<key>schemeIdentifier-containerName</key>
-			<string>Pixapper project</string>
-			<key>schemeIdentifier-schemeName</key>
-			<string>Pixapper</string>
-			<key>schemeIdentifier-sharedScheme</key>
-			<integer>1</integer>
-			<key>signature</key>
-			<string>Cleaning project Pixapper with scheme Pixapper and configuration Debug</string>
-			<key>timeStartedRecording</key>
-			<real>787305961.04810095</real>
-			<key>timeStoppedRecording</key>
-			<real>787305961.73995697</real>
-			<key>title</key>
-			<string>Cleaning project Pixapper with scheme Pixapper and configuration Debug</string>
-			<key>uniqueIdentifier</key>
-			<string>1ED3A0FF-7BA8-4424-8B83-1BAC763483A0</string>
-		</dict>
-		<key>26B12649-5DC0-47BC-B82B-AD3BAA39E770</key>
-		<dict>
-			<key>className</key>
-			<string>IDECommandLineBuildLog</string>
-			<key>documentTypeString</key>
-			<string>&lt;nil&gt;</string>
-			<key>domainType</key>
-			<string>Xcode.IDEActivityLogDomainType.BuildLog</string>
-			<key>fileName</key>
-			<string>26B12649-5DC0-47BC-B82B-AD3BAA39E770.xcactivitylog</string>
+			<string>15319440-0BA8-47A9-BBB3-905DBFFF0F7E.xcactivitylog</string>
 			<key>hasPrimaryLog</key>
 			<true/>
 			<key>primaryObservable</key>
@@ -124,15 +40,15 @@
 			<key>signature</key>
 			<string>Building project Pixapper with scheme Pixapper and configuration Debug</string>
 			<key>timeStartedRecording</key>
-			<real>787305961.74959397</real>
+			<real>787307170.78490496</real>
 			<key>timeStoppedRecording</key>
-			<real>787305980.89266002</real>
+			<real>787307181.59286594</real>
 			<key>title</key>
 			<string>Building project Pixapper with scheme Pixapper and configuration Debug</string>
 			<key>uniqueIdentifier</key>
-			<string>26B12649-5DC0-47BC-B82B-AD3BAA39E770</string>
+			<string>15319440-0BA8-47A9-BBB3-905DBFFF0F7E</string>
 		</dict>
-		<key>592A9EEF-6606-42F4-9FF4-BDC643EB1895</key>
+		<key>2DD13331-E0B3-418E-970D-2BE90CA675B8</key>
 		<dict>
 			<key>className</key>
 			<string>IDECommandLineBuildLog</string>
@@ -141,49 +57,7 @@
 			<key>domainType</key>
 			<string>Xcode.IDEActivityLogDomainType.BuildLog</string>
 			<key>fileName</key>
-			<string>592A9EEF-6606-42F4-9FF4-BDC643EB1895.xcactivitylog</string>
-			<key>hasPrimaryLog</key>
-			<true/>
-			<key>primaryObservable</key>
-			<dict>
-				<key>highLevelStatus</key>
-				<string>S</string>
-				<key>totalNumberOfAnalyzerIssues</key>
-				<integer>0</integer>
-				<key>totalNumberOfErrors</key>
-				<integer>0</integer>
-				<key>totalNumberOfTestFailures</key>
-				<integer>0</integer>
-				<key>totalNumberOfWarnings</key>
-				<integer>0</integer>
-			</dict>
-			<key>schemeIdentifier-containerName</key>
-			<string>Pixapper project</string>
-			<key>schemeIdentifier-schemeName</key>
-			<string>Pixapper</string>
-			<key>schemeIdentifier-sharedScheme</key>
-			<integer>1</integer>
-			<key>signature</key>
-			<string>Cleaning project Pixapper with scheme Pixapper and configuration Debug</string>
-			<key>timeStartedRecording</key>
-			<real>787305873.73538101</real>
-			<key>timeStoppedRecording</key>
-			<real>787305874.51861703</real>
-			<key>title</key>
-			<string>Cleaning project Pixapper with scheme Pixapper and configuration Debug</string>
-			<key>uniqueIdentifier</key>
-			<string>592A9EEF-6606-42F4-9FF4-BDC643EB1895</string>
-		</dict>
-		<key>C21FB429-1AB4-4B5C-9A48-E93BA9ED17C5</key>
-		<dict>
-			<key>className</key>
-			<string>IDECommandLineBuildLog</string>
-			<key>documentTypeString</key>
-			<string>&lt;nil&gt;</string>
-			<key>domainType</key>
-			<string>Xcode.IDEActivityLogDomainType.BuildLog</string>
-			<key>fileName</key>
-			<string>C21FB429-1AB4-4B5C-9A48-E93BA9ED17C5.xcactivitylog</string>
+			<string>2DD13331-E0B3-418E-970D-2BE90CA675B8.xcactivitylog</string>
 			<key>hasPrimaryLog</key>
 			<true/>
 			<key>primaryObservable</key>
@@ -208,15 +82,15 @@
 			<key>signature</key>
 			<string>Building project Pixapper with scheme Pixapper and configuration Debug</string>
 			<key>timeStartedRecording</key>
-			<real>787306252.51115501</real>
+			<real>787307383.42508399</real>
 			<key>timeStoppedRecording</key>
-			<real>787306263.77940905</real>
+			<real>787307395.25886798</real>
 			<key>title</key>
 			<string>Building project Pixapper with scheme Pixapper and configuration Debug</string>
 			<key>uniqueIdentifier</key>
-			<string>C21FB429-1AB4-4B5C-9A48-E93BA9ED17C5</string>
+			<string>2DD13331-E0B3-418E-970D-2BE90CA675B8</string>
 		</dict>
-		<key>C2700686-9288-483F-BE12-154F3E43EBF3</key>
+		<key>7A17D9CC-DECD-4162-AB78-001474766511</key>
 		<dict>
 			<key>className</key>
 			<string>IDECommandLineBuildLog</string>
@@ -225,7 +99,7 @@
 			<key>domainType</key>
 			<string>Xcode.IDEActivityLogDomainType.BuildLog</string>
 			<key>fileName</key>
-			<string>C2700686-9288-483F-BE12-154F3E43EBF3.xcactivitylog</string>
+			<string>7A17D9CC-DECD-4162-AB78-001474766511.xcactivitylog</string>
 			<key>hasPrimaryLog</key>
 			<true/>
 			<key>primaryObservable</key>
@@ -250,13 +124,97 @@
 			<key>signature</key>
 			<string>Building project Pixapper with scheme Pixapper and configuration Debug</string>
 			<key>timeStartedRecording</key>
-			<real>787306385.32164097</real>
+			<real>787307679.94128203</real>
 			<key>timeStoppedRecording</key>
-			<real>787306391.84098101</real>
+			<real>787307686.54360104</real>
 			<key>title</key>
 			<string>Building project Pixapper with scheme Pixapper and configuration Debug</string>
 			<key>uniqueIdentifier</key>
-			<string>C2700686-9288-483F-BE12-154F3E43EBF3</string>
+			<string>7A17D9CC-DECD-4162-AB78-001474766511</string>
+		</dict>
+		<key>899A4194-F2B2-411B-9041-341D4BE4A3E1</key>
+		<dict>
+			<key>className</key>
+			<string>IDECommandLineBuildLog</string>
+			<key>documentTypeString</key>
+			<string>&lt;nil&gt;</string>
+			<key>domainType</key>
+			<string>Xcode.IDEActivityLogDomainType.BuildLog</string>
+			<key>fileName</key>
+			<string>899A4194-F2B2-411B-9041-341D4BE4A3E1.xcactivitylog</string>
+			<key>hasPrimaryLog</key>
+			<true/>
+			<key>primaryObservable</key>
+			<dict>
+				<key>highLevelStatus</key>
+				<string>W</string>
+				<key>totalNumberOfAnalyzerIssues</key>
+				<integer>0</integer>
+				<key>totalNumberOfErrors</key>
+				<integer>0</integer>
+				<key>totalNumberOfTestFailures</key>
+				<integer>0</integer>
+				<key>totalNumberOfWarnings</key>
+				<integer>6</integer>
+			</dict>
+			<key>schemeIdentifier-containerName</key>
+			<string>Pixapper project</string>
+			<key>schemeIdentifier-schemeName</key>
+			<string>Pixapper</string>
+			<key>schemeIdentifier-sharedScheme</key>
+			<integer>1</integer>
+			<key>signature</key>
+			<string>Building project Pixapper with scheme Pixapper and configuration Debug</string>
+			<key>timeStartedRecording</key>
+			<real>787307111.27162898</real>
+			<key>timeStoppedRecording</key>
+			<real>787307117.21595597</real>
+			<key>title</key>
+			<string>Building project Pixapper with scheme Pixapper and configuration Debug</string>
+			<key>uniqueIdentifier</key>
+			<string>899A4194-F2B2-411B-9041-341D4BE4A3E1</string>
+		</dict>
+		<key>F18252F9-D0D1-4CFD-8233-10E984247425</key>
+		<dict>
+			<key>className</key>
+			<string>IDECommandLineBuildLog</string>
+			<key>documentTypeString</key>
+			<string>&lt;nil&gt;</string>
+			<key>domainType</key>
+			<string>Xcode.IDEActivityLogDomainType.BuildLog</string>
+			<key>fileName</key>
+			<string>F18252F9-D0D1-4CFD-8233-10E984247425.xcactivitylog</string>
+			<key>hasPrimaryLog</key>
+			<true/>
+			<key>primaryObservable</key>
+			<dict>
+				<key>highLevelStatus</key>
+				<string>W</string>
+				<key>totalNumberOfAnalyzerIssues</key>
+				<integer>0</integer>
+				<key>totalNumberOfErrors</key>
+				<integer>0</integer>
+				<key>totalNumberOfTestFailures</key>
+				<integer>0</integer>
+				<key>totalNumberOfWarnings</key>
+				<integer>6</integer>
+			</dict>
+			<key>schemeIdentifier-containerName</key>
+			<string>Pixapper project</string>
+			<key>schemeIdentifier-schemeName</key>
+			<string>Pixapper</string>
+			<key>schemeIdentifier-sharedScheme</key>
+			<integer>1</integer>
+			<key>signature</key>
+			<string>Building project Pixapper with scheme Pixapper and configuration Debug</string>
+			<key>timeStartedRecording</key>
+			<real>787307497.79471898</real>
+			<key>timeStoppedRecording</key>
+			<real>787307505.43506002</real>
+			<key>title</key>
+			<string>Building project Pixapper with scheme Pixapper and configuration Debug</string>
+			<key>uniqueIdentifier</key>
+			<string>F18252F9-D0D1-4CFD-8233-10E984247425</string>
 		</dict>
 	</dict>
 </dict>

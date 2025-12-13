@@ -9,8 +9,9 @@ import SwiftUI
 import Combine
 
 /// 선택 도구
+/// - Note: 선택 상태는 CanvasViewModel에 저장되며, 이 클래스는 상태를 수정하는 로직만 담당합니다.
 @MainActor
-class SelectionTool: CanvasTool, ObservableObject {
+class SelectionTool: CanvasTool {
     // MARK: - Dependencies
     private weak var canvasViewModel: CanvasViewModel?
     private let layerViewModel: LayerViewModel
@@ -18,17 +19,7 @@ class SelectionTool: CanvasTool, ObservableObject {
     private let toolSettingsManager: ToolSettingsManager
     private weak var timelineViewModel: TimelineViewModel?
 
-    // MARK: - Published Properties (CanvasViewModel에서 관찰)
-    @Published var selectionRect: CGRect?
-    @Published var selectionPixels: [[Color?]]?
-    @Published var selectionOffset: CGPoint = .zero
-    @Published var isFloatingSelection: Bool = false
-    @Published var originalPixels: [[Color?]]?
-    @Published var originalRect: CGRect?
-    @Published var selectionMode: SelectionMode = .idle
-    @Published var hoveredHandle: ResizeHandle?
-
-    // MARK: - Selection State
+    // MARK: - Selection State (Enums)
     enum SelectionMode: Equatable {
         case idle
         case moving
@@ -42,7 +33,7 @@ class SelectionTool: CanvasTool, ObservableObject {
         case rotate
     }
 
-    // MARK: - Private State
+    // MARK: - Private State (도구 내부 상태만)
     private var shapeStartPoint: (x: Int, y: Int)?
     private var lastDrawPoint: (x: Int, y: Int)?
     private var resizeStartRect: CGRect?
@@ -54,7 +45,47 @@ class SelectionTool: CanvasTool, ObservableObject {
     private var clipboard: SelectionClipboard?
     private var shiftPressed: Bool = false
 
-    // MARK: - Computed Properties
+    // MARK: - State Accessors (CanvasViewModel의 상태에 접근)
+    private var selectionRect: CGRect? {
+        get { canvasViewModel?.selectionRect }
+        set { canvasViewModel?.selectionRect = newValue }
+    }
+
+    private var selectionPixels: [[Color?]]? {
+        get { canvasViewModel?.selectionPixels }
+        set { canvasViewModel?.selectionPixels = newValue }
+    }
+
+    private var selectionOffset: CGPoint {
+        get { canvasViewModel?.selectionOffset ?? .zero }
+        set { canvasViewModel?.selectionOffset = newValue }
+    }
+
+    private var isFloatingSelection: Bool {
+        get { canvasViewModel?.isFloatingSelection ?? false }
+        set { canvasViewModel?.isFloatingSelection = newValue }
+    }
+
+    private var originalPixels: [[Color?]]? {
+        get { canvasViewModel?.originalPixels }
+        set { canvasViewModel?.originalPixels = newValue }
+    }
+
+    private var originalRect: CGRect? {
+        get { canvasViewModel?.originalRect }
+        set { canvasViewModel?.originalRect = newValue }
+    }
+
+    private var selectionMode: SelectionMode {
+        get { canvasViewModel?.selectionMode ?? .idle }
+        set { canvasViewModel?.selectionMode = newValue }
+    }
+
+    private var hoveredHandle: ResizeHandle? {
+        get { canvasViewModel?.hoveredHandle }
+        set { canvasViewModel?.hoveredHandle = newValue }
+    }
+
     var isMovingSelection: Bool {
         if case .moving = selectionMode {
             return true

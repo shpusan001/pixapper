@@ -4,10 +4,6 @@
 <dict>
 	<key>files</key>
 	<dict>
-		<key>Resources/CanvasViewModel.swift.backup</key>
-		<data>
-		NGaNTD6VmL37bdJU0w8RrJc49Bo=
-		</data>
 		<key>Resources/claude.md</key>
 		<data>
 		bEW4BaV9pL1PT/VCKgRgoZEK95U=
@@ -19,7 +15,7 @@
 		<dict>
 			<key>cdhash</key>
 			<data>
-			cQBkQBYwQPZHYuq7PR9BGPCcFPQ=
+			aq6XqTcep+EdLz933Lnf6FTSIBU=
 			</data>
 			<key>requirement</key>
 			<string>identifier "Pixapper.debug" and anchor apple generic and certificate leaf[subject.CN] = "Apple Development: Sanghun Lee (ZJY4QFMXQW)" and certificate 1[field.1.2.840.113635.100.6.2.1] /* exists */</string>
@@ -32,13 +28,6 @@
 			</data>
 			<key>requirement</key>
 			<string>identifier "__preview" and anchor apple generic and certificate leaf[subject.CN] = "Apple Development: Sanghun Lee (ZJY4QFMXQW)" and certificate 1[field.1.2.840.113635.100.6.2.1] /* exists */</string>
-		</dict>
-		<key>Resources/CanvasViewModel.swift.backup</key>
-		<dict>
-			<key>hash2</key>
-			<data>
-			t+Ut5qaTxNxtK3zKGKlXfj14ifNJixhAMopZw2+StZA=
-			</data>
 		</dict>
 		<key>Resources/claude.md</key>
 		<dict>
