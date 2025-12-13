@@ -440,8 +440,7 @@ struct TimelinePanel: View {
         .contentShape(Rectangle())
         .opacity(isOutOfRange ? 0.4 : 1.0)
         .onTapGesture {
-            viewModel.selectFrame(at: frameIndex)
-            viewModel.layerViewModel.selectedLayerIndex = layerIndex
+            handleFrameClick(frameIndex: frameIndex, layerIndex: layerIndex)
         }
         .contextMenu {
             if !isOutOfRange {
@@ -454,6 +453,24 @@ struct TimelinePanel: View {
 
     @ViewBuilder
     private func contextMenuContent(layer: Layer, frameIndex: Int, spanPosition: TimelineViewModel.FrameSpanPosition) -> some View {
+        // Copy/Cut/Paste operations
+        Button("Copy") {
+            viewModel.copyFrames(frameIndices: viewModel.selectedFrameIndices, layerId: layer.id)
+        }
+        .disabled(viewModel.selectedFrameIndices.isEmpty)
+
+        Button("Cut") {
+            viewModel.cutFrames(frameIndices: viewModel.selectedFrameIndices, layerId: layer.id)
+        }
+        .disabled(viewModel.selectedFrameIndices.isEmpty)
+
+        Button("Paste") {
+            viewModel.pasteFrames(at: frameIndex, layerId: layer.id)
+        }
+        .disabled(!viewModel.hasFrameClipboard)
+
+        Divider()
+
         // Convert to Keyframe (F6)
         Button("Convert to Keyframe") {
             viewModel.toggleKeyframe(frameIndex: frameIndex, layerId: layer.id)
@@ -581,6 +598,44 @@ struct TimelinePanel: View {
     }
 
     // MARK: - Helper Functions
+
+    /// 프레임 클릭 처리 (단일/복수 선택 지원)
+    private func handleFrameClick(frameIndex: Int, layerIndex: Int) {
+        let flags = NSEvent.modifierFlags
+
+        if flags.contains(.command) {
+            // Cmd+Click: 개별 선택/해제 (토글)
+            if viewModel.selectedFrameIndices.contains(frameIndex) {
+                viewModel.selectedFrameIndices.remove(frameIndex)
+            } else {
+                viewModel.selectedFrameIndices.insert(frameIndex)
+            }
+            // 선택 앵커 업데이트
+            if !viewModel.selectedFrameIndices.isEmpty {
+                viewModel.selectionAnchor = frameIndex
+            } else {
+                viewModel.selectionAnchor = nil
+            }
+        } else if flags.contains(.shift) {
+            // Shift+Click: 범위 선택
+            if let anchor = viewModel.selectionAnchor {
+                let range = min(anchor, frameIndex)...max(anchor, frameIndex)
+                viewModel.selectedFrameIndices = Set(range.filter { $0 < viewModel.totalFrames })
+            } else {
+                // 앵커가 없으면 단일 선택
+                viewModel.selectedFrameIndices = [frameIndex]
+                viewModel.selectionAnchor = frameIndex
+            }
+        } else {
+            // 일반 클릭: 단일 선택
+            viewModel.selectFrame(at: frameIndex)
+            viewModel.selectedFrameIndices = [frameIndex]
+            viewModel.selectionAnchor = frameIndex
+        }
+
+        // 레이어 선택
+        viewModel.layerViewModel.selectedLayerIndex = layerIndex
+    }
 
     private func makeTooltipText(layer: Layer, frameIndex: Int, spanPosition: TimelineViewModel.FrameSpanPosition, isOutOfRange: Bool) -> String {
         if isOutOfRange {
@@ -783,6 +838,70 @@ struct TimelinePanel: View {
                 .buttonStyle(.bordered)
                 .controlSize(.small)
                 .help("Remove Frame")
+            }
+
+            Divider()
+                .frame(height: 14)
+
+            // Edit operations (Copy/Cut/Paste)
+            HStack(spacing: 3) {
+                Text("Edit")
+                    .font(.system(size: 9, weight: .medium))
+                    .foregroundColor(.secondary)
+
+                Button(action: {
+                    let layerId = viewModel.layerViewModel.layers[viewModel.layerViewModel.selectedLayerIndex].id
+                    viewModel.copyFrames(frameIndices: viewModel.selectedFrameIndices, layerId: layerId)
+                }) {
+                    HStack(spacing: 3) {
+                        Image(systemName: "doc.on.doc")
+                            .font(.system(size: 11))
+                        Text("Copy")
+                            .font(.system(size: 10))
+                    }
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 3)
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+                .disabled(viewModel.selectedFrameIndices.isEmpty)
+                .help("Copy Selected Frames (⌘C)")
+
+                Button(action: {
+                    let layerId = viewModel.layerViewModel.layers[viewModel.layerViewModel.selectedLayerIndex].id
+                    viewModel.cutFrames(frameIndices: viewModel.selectedFrameIndices, layerId: layerId)
+                }) {
+                    HStack(spacing: 3) {
+                        Image(systemName: "scissors")
+                            .font(.system(size: 11))
+                        Text("Cut")
+                            .font(.system(size: 10))
+                    }
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 3)
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+                .disabled(viewModel.selectedFrameIndices.isEmpty)
+                .help("Cut Selected Frames (⌘X)")
+
+                Button(action: {
+                    let layerId = viewModel.layerViewModel.layers[viewModel.layerViewModel.selectedLayerIndex].id
+                    viewModel.pasteFrames(at: viewModel.currentFrameIndex, layerId: layerId)
+                }) {
+                    HStack(spacing: 3) {
+                        Image(systemName: "doc.on.clipboard")
+                            .font(.system(size: 11))
+                        Text("Paste")
+                            .font(.system(size: 10))
+                    }
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 3)
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+                .disabled(!viewModel.hasFrameClipboard)
+                .help("Paste Frames (⌘V)")
             }
 
             Spacer()

@@ -51,6 +51,9 @@ class TimelineViewModel: ObservableObject {
     @Published var selectedFrameIndices: Set<Int> = []  // 선택된 프레임들
     @Published var selectionAnchor: Int?  // 드래그/범위 선택 시작점
 
+    // 프레임 클립보드 (복사/붙여넣기)
+    @Published var frameClipboard: FrameClipboard = .empty
+
     var playbackTimer: Timer?  // fileprivate for extension access
     var canvasWidth: Int
     var canvasHeight: Int
@@ -681,6 +684,110 @@ class TimelineViewModel: ObservableObject {
         }
 
         return result
+    }
+
+    // MARK: - Frame Clipboard Operations
+
+    /// 선택된 프레임들을 클립보드에 복사
+    /// - Parameters:
+    ///   - frameIndices: 복사할 프레임 인덱스들
+    ///   - layerId: 복사할 레이어 ID
+    func copyFrames(frameIndices: Set<Int>, layerId: UUID) {
+        guard !frameIndices.isEmpty,
+              let layer = layerViewModel.layers.first(where: { $0.id == layerId }) else {
+            return
+        }
+
+        // 프레임 인덱스를 정렬
+        let sortedIndices = frameIndices.sorted()
+        let firstIndex = sortedIndices.first!
+        let frameCount = sortedIndices.count
+
+        // 키프레임 데이터를 상대 인덱스로 저장
+        var keyframes: [Int: [[Color?]]] = [:]
+
+        for frameIndex in sortedIndices {
+            if layer.timeline.isKeyframe(at: frameIndex),
+               let pixels = layer.timeline.getKeyframe(at: frameIndex) {
+                let relativeIndex = frameIndex - firstIndex
+                keyframes[relativeIndex] = pixels
+            }
+        }
+
+        // 클립보드에 저장
+        frameClipboard = FrameClipboard(
+            frameCount: frameCount,
+            keyframes: keyframes,
+            sourceLayerId: layerId
+        )
+    }
+
+    /// 선택된 프레임들을 잘라내기 (복사 + 삭제)
+    /// - Parameters:
+    ///   - frameIndices: 잘라낼 프레임 인덱스들
+    ///   - layerId: 잘라낼 레이어 ID
+    func cutFrames(frameIndices: Set<Int>, layerId: UUID) {
+        // 먼저 복사
+        copyFrames(frameIndices: frameIndices, layerId: layerId)
+
+        // 선택된 프레임들을 삭제 (역순으로 삭제해야 인덱스가 안 꼬임)
+        let sortedIndices = frameIndices.sorted(by: >)
+
+        guard let layerIndex = layerViewModel.layers.firstIndex(where: { $0.id == layerId }) else {
+            return
+        }
+
+        for frameIndex in sortedIndices {
+            // 키프레임이면 삭제
+            if layerViewModel.layers[layerIndex].timeline.isKeyframe(at: frameIndex) {
+                layerViewModel.layers[layerIndex].timeline.removeKeyframe(at: frameIndex)
+            }
+        }
+
+        // 프레임 삭제 후 키프레임 재정렬
+        // 삭제된 프레임 개수만큼 뒤의 키프레임들을 앞으로 이동
+        let firstDeletedIndex = sortedIndices.last!
+        let deletedCount = sortedIndices.count
+
+        // firstDeletedIndex 이후의 키프레임들을 -deletedCount만큼 이동
+        layerViewModel.layers[layerIndex].timeline.shiftKeyframes(after: firstDeletedIndex - 1, by: -deletedCount)
+
+        // span 끝도 축소
+        layerViewModel.layers[layerIndex].timeline.shrinkSpanEnd(by: deletedCount)
+
+        updateTotalFrames()
+        loadFrame(at: currentFrameIndex)
+    }
+
+    /// 클립보드의 프레임들을 현재 선택된 레이어에 붙여넣기
+    /// - Parameter startIndex: 붙여넣을 시작 인덱스
+    func pasteFrames(at startIndex: Int, layerId: UUID) {
+        guard !frameClipboard.isEmpty,
+              let layerIndex = layerViewModel.layers.firstIndex(where: { $0.id == layerId }) else {
+            return
+        }
+
+        let frameCount = frameClipboard.frameCount
+
+        // startIndex 이후의 키프레임들을 frameCount만큼 뒤로 이동
+        layerViewModel.layers[layerIndex].timeline.shiftKeyframes(after: startIndex - 1, by: frameCount)
+
+        // 클립보드의 키프레임들을 붙여넣기
+        for (relativeIndex, pixels) in frameClipboard.keyframes {
+            let targetIndex = startIndex + relativeIndex
+            layerViewModel.layers[layerIndex].timeline.setKeyframe(at: targetIndex, pixels: pixels)
+        }
+
+        updateTotalFrames()
+
+        // 붙여넣은 첫 번째 프레임으로 이동
+        currentFrameIndex = startIndex
+        loadFrame(at: startIndex)
+    }
+
+    /// 클립보드가 비어있지 않은지 확인
+    var hasFrameClipboard: Bool {
+        return !frameClipboard.isEmpty
     }
 
     deinit {
