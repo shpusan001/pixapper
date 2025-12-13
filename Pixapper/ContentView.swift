@@ -21,8 +21,19 @@ struct ContentView: View {
     private var layerViewModel: LayerViewModel { appViewModel.layerViewModel }
     private var commandManager: CommandManager { appViewModel.commandManager }
     private var toolSettingsManager: ToolSettingsManager { appViewModel.toolSettingsManager }
-    private var canvasViewModel: CanvasViewModel { appViewModel.canvasViewModel }
     private var timelineViewModel: TimelineViewModel { appViewModel.timelineViewModel }
+
+    // Direct observation for immediate UI updates
+    @ObservedObject private var canvasViewModel: CanvasViewModel
+
+    init() {
+        let app = AppViewModel(
+            width: Constants.Canvas.defaultWidth,
+            height: Constants.Canvas.defaultHeight
+        )
+        _appViewModel = StateObject(wrappedValue: app)
+        _canvasViewModel = ObservedObject(wrappedValue: app.canvasViewModel)
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -33,8 +44,9 @@ struct ContentView: View {
                     .font(.system(size: 13, weight: .medium))
                     .foregroundColor(.secondary)
                     .padding(.leading, 16)
+                    .padding(.trailing, 12)
 
-                Spacer()
+                ToolbarDivider()
 
                 // File operations: New/Open/Save
                 HStack(spacing: 4) {
@@ -62,11 +74,11 @@ struct ContentView: View {
                         action: { appViewModel.saveProject() }
                     )
                 }
-                .padding(.trailing, 8)
+                .padding(.horizontal, 8)
 
                 ToolbarDivider()
 
-                // Left group: Undo/Redo
+                // Edit operations: Undo/Redo
                 HStack(spacing: 4) {
                     ToolbarIconButton(
                         icon: "arrow.uturn.backward",
@@ -82,11 +94,11 @@ struct ContentView: View {
                         action: { commandManager.redo() }
                     )
                 }
-                .padding(.trailing, 8)
+                .padding(.horizontal, 8)
 
                 ToolbarDivider()
 
-                // Center group: Zoom controls
+                // View: Zoom controls
                 HStack(spacing: 8) {
                     Image(systemName: "magnifyingglass")
                         .font(.system(size: 11))
@@ -111,29 +123,72 @@ struct ContentView: View {
 
                 ToolbarDivider()
 
-                // Right group: Canvas size & Export
-                HStack(spacing: 4) {
-                    ToolbarIconButton(
-                        icon: "aspectratio",
-                        tooltip: "Resize Canvas",
-                        action: { showingCanvasSizeSheet = true }
-                    )
-
-                    Button(action: { showingCanvasSizeSheet = true }) {
+                // Canvas: Size & Resize (통합)
+                Button(action: { showingCanvasSizeSheet = true }) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "square.resize")
+                            .font(.system(size: 12))
                         Text("\(canvasViewModel.canvas.width)×\(canvasViewModel.canvas.height)")
                             .font(.system(size: 11, design: .monospaced))
-                            .foregroundColor(.secondary)
+                    }
+                    .foregroundColor(.secondary)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                }
+                .buttonStyle(.plain)
+                .help("Resize Canvas (⌘R)")
+                .background(
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(Color.clear)
+                )
+                .contentShape(Rectangle())
+                .padding(.horizontal, 8)
+
+                ToolbarDivider()
+
+                // Canvas View Options: Background & Grid
+                HStack(spacing: 4) {
+                    // Background toggle
+                    Button(action: {
+                        canvasViewModel.backgroundMode = canvasViewModel.backgroundMode == .checkerboard ? .white : .checkerboard
+                    }) {
+                        Image(systemName: canvasViewModel.backgroundMode == .checkerboard ? "checkerboard.rectangle" : "rectangle.fill")
+                            .font(.system(size: 13))
+                            .frame(width: 28, height: 28)
+                            .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
-                    .help("Resize Canvas")
+                    .foregroundColor(.secondary)
+                    .help(canvasViewModel.backgroundMode == .checkerboard ? "White Background (⌘B)" : "Checkerboard (⌘B)")
 
+                    // Grid toggle
+                    Button(action: {
+                        canvasViewModel.showGrid.toggle()
+                    }) {
+                        Image(systemName: canvasViewModel.showGrid ? "grid" : "grid.circle")
+                            .font(.system(size: 13))
+                            .frame(width: 28, height: 28)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundColor(canvasViewModel.showGrid ? .secondary : .secondary.opacity(0.5))
+                    .help(canvasViewModel.showGrid ? "Hide Grid (⌘G)" : "Show Grid (⌘G)")
+                }
+                .padding(.horizontal, 8)
+
+                ToolbarDivider()
+
+                // Output: Export
+                HStack(spacing: 4) {
                     ToolbarIconButton(
                         icon: "square.and.arrow.up",
-                        tooltip: "Export",
+                        tooltip: "Export (PNG, GIF, Sprite Sheet)",
                         action: { showingExportSheet = true }
                     )
                 }
                 .padding(.trailing, 16)
+
+                Spacer()
             }
             .frame(height: 40)
             .background(Color(nsColor: .controlBackgroundColor).opacity(0.95))
@@ -208,6 +263,21 @@ struct ContentView: View {
             // Save (Cmd+S)
             else if keyPress.characters == "s" && keyPress.modifiers.contains(.command) {
                 appViewModel.saveProject()
+                return .handled
+            }
+            // Resize Canvas (Cmd+R)
+            else if keyPress.characters == "r" && keyPress.modifiers.contains(.command) {
+                showingCanvasSizeSheet = true
+                return .handled
+            }
+            // Toggle Background (Cmd+B)
+            else if keyPress.characters == "b" && keyPress.modifiers.contains(.command) {
+                canvasViewModel.backgroundMode = canvasViewModel.backgroundMode == .checkerboard ? .white : .checkerboard
+                return .handled
+            }
+            // Toggle Grid (Cmd+G)
+            else if keyPress.characters == "g" && keyPress.modifiers.contains(.command) {
+                canvasViewModel.showGrid.toggle()
                 return .handled
             }
             // Undo (Cmd+Z)

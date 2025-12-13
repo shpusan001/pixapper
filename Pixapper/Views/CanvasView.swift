@@ -51,14 +51,22 @@ struct CanvasView: View {
                         // 전체 배경
                         Color(nsColor: .controlBackgroundColor)
 
-                        // 체커보드 (캔버스 영역)
-                        CheckerboardView(
-                            width: viewModel.canvas.width,
-                            height: viewModel.canvas.height,
-                            pixelSize: pixelSize,
-                            marginX: marginX,
-                            marginY: marginY
-                        )
+                        // 캔버스 배경 (체커보드 또는 흰색)
+                        if viewModel.backgroundMode == .checkerboard {
+                            CheckerboardView(
+                                width: viewModel.canvas.width,
+                                height: viewModel.canvas.height,
+                                pixelSize: pixelSize,
+                                marginX: marginX,
+                                marginY: marginY
+                            )
+                        } else {
+                            // 흰색 배경
+                            Rectangle()
+                                .fill(Color.white)
+                                .frame(width: canvasWidth, height: canvasHeight)
+                                .offset(x: marginX, y: marginY)
+                        }
 
                         // 어니언 스킨
                         renderOnionSkinLayers(marginX: marginX, marginY: marginY)
@@ -66,14 +74,16 @@ struct CanvasView: View {
                         // 현재 레이어
                         renderCurrentLayers(marginX: marginX, marginY: marginY)
 
-                        // 격자선
-                        GridLinesView(
-                            width: viewModel.canvas.width,
-                            height: viewModel.canvas.height,
-                            pixelSize: pixelSize,
-                            marginX: marginX,
-                            marginY: marginY
-                        )
+                        // 격자선 (조건부)
+                        if viewModel.showGrid {
+                            GridLinesView(
+                                width: viewModel.canvas.width,
+                                height: viewModel.canvas.height,
+                                pixelSize: pixelSize,
+                                marginX: marginX,
+                                marginY: marginY
+                            )
+                        }
 
                         // 도형 프리뷰 (전체 영역)
                         renderShapePreview(marginX: marginX, marginY: marginY)

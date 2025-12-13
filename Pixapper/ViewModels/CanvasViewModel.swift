@@ -8,10 +8,18 @@
 import SwiftUI
 import Combine
 
+/// 캔버스 배경 모드
+enum CanvasBackgroundMode: String, CaseIterable {
+    case checkerboard = "Checkerboard"
+    case white = "White"
+}
+
 @MainActor
 class CanvasViewModel: ObservableObject {
     @Published var canvas: PixelCanvas
     @Published var zoomLevel: Double = 400.0
+    @Published var backgroundMode: CanvasBackgroundMode = .checkerboard  // 배경 모드
+    @Published var showGrid: Bool = true  // 격자 보기
     @Published var shapePreview: [(x: Int, y: Int, color: Color)] = []
     @Published var selectionRect: CGRect?  // 선택 영역
     @Published var selectionPixels: [[Color?]]?  // 선택된 픽셀 데이터
@@ -82,6 +90,24 @@ class CanvasViewModel: ObservableObject {
                 self?.canvas.layers = layers
             }
             .store(in: &cancellables)
+
+        // 도구 변경 시 선택 영역 처리
+        toolSettingsManager.$selectedTool
+            .dropFirst()  // 초기값 무시
+            .sink { [weak self] newTool in
+                guard let self = self else { return }
+
+                // 선택 도구가 아닌 다른 도구로 전환 시
+                if newTool != .selection {
+                    // 부유 선택 영역이 있으면 커밋, 없으면 해제
+                    if self.isFloatingSelection {
+                        self.commitSelection()
+                    } else if self.selectionRect != nil {
+                        self.clearSelection()
+                    }
+                }
+            }
+            .store(in: &cancellables)
     }
 
     var currentLayerIndex: Int {
@@ -89,6 +115,15 @@ class CanvasViewModel: ObservableObject {
     }
 
     func handleToolDown(x: Int, y: Int, altPressed: Bool = false) {
+        // 선택 도구가 아닌 경우, 선택 영역이 있으면 먼저 처리
+        if toolSettingsManager.selectedTool != .selection {
+            if isFloatingSelection {
+                commitSelection()
+            } else if selectionRect != nil {
+                clearSelection()
+            }
+        }
+
         switch toolSettingsManager.selectedTool {
         case .pencil, .eraser:
             lastDrawPoint = (x, y)
