@@ -16,6 +16,9 @@ struct TimelinePanel: View {
     @State private var editingLayerName: String = ""
     @State private var draggingLayerIndex: Int?
     @State private var dragStartFrameIndex: Int?  // 드래그 선택 시작점
+    @State private var editingOpacityLayerIndex: Int?  // Opacity 편집 중인 레이어
+    @State private var opacityBeforeDrag: Double?  // Opacity 드래그 전 값
+    @State private var currentOpacity: Double = 1.0  // 현재 드래그 중인 opacity 값
 
     private let layerColumnWidth: CGFloat = Constants.Layout.Timeline.layerColumnWidth
     private let cellSize: CGFloat = Constants.Layout.Timeline.cellSize
@@ -272,34 +275,90 @@ struct TimelinePanel: View {
             }
             .buttonStyle(.plain)
 
-            // Layer name (editable)
-            if editingLayerIndex == layerIndex {
-                TextField("Name", text: $editingLayerName, onCommit: {
-                    if !editingLayerName.isEmpty {
-                        let oldName = layer.name
-                        let command = RenameLayerCommand(layerViewModel: viewModel.layerViewModel, index: layerIndex, oldName: oldName, newName: editingLayerName)
-                        commandManager.performCommand(command)
-                    }
-                    editingLayerIndex = nil
-                })
-                .textFieldStyle(.plain)
-                .font(.callout)
-                .frame(maxWidth: .infinity)
-            } else {
-                Text(layer.name)
+            // Layer name and opacity
+            VStack(alignment: .leading, spacing: 2) {
+                // Layer name (editable)
+                if editingLayerIndex == layerIndex {
+                    TextField("Name", text: $editingLayerName, onCommit: {
+                        if !editingLayerName.isEmpty {
+                            let oldName = layer.name
+                            let command = RenameLayerCommand(layerViewModel: viewModel.layerViewModel, index: layerIndex, oldName: oldName, newName: editingLayerName)
+                            commandManager.performCommand(command)
+                        }
+                        editingLayerIndex = nil
+                    })
+                    .textFieldStyle(.plain)
                     .font(.callout)
-                    .lineLimit(1)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .onTapGesture(count: 2) {
-                        editingLayerIndex = layerIndex
-                        editingLayerName = layer.name
-                    }
-            }
+                } else {
+                    Text(layer.name)
+                        .font(.callout)
+                        .lineLimit(1)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .onTapGesture(count: 2) {
+                            editingLayerIndex = layerIndex
+                            editingLayerName = layer.name
+                        }
+                }
 
-            Text("\(Int(layer.opacity * 100))%")
-                .font(.caption2)
-                .foregroundColor(.secondary)
-                .frame(width: 30, alignment: .trailing)
+                // Opacity control
+                HStack(spacing: 4) {
+                    if editingOpacityLayerIndex == layerIndex {
+                        // Editing mode: Show slider
+                        Slider(
+                            value: $currentOpacity,
+                            in: 0...1,
+                            onEditingChanged: { isEditing in
+                                if isEditing {
+                                    opacityBeforeDrag = viewModel.layerViewModel.layers[layerIndex].opacity
+                                    currentOpacity = viewModel.layerViewModel.layers[layerIndex].opacity
+                                } else {
+                                    if let oldOpacity = opacityBeforeDrag {
+                                        if abs(oldOpacity - currentOpacity) > 0.001 {
+                                            let command = SetLayerOpacityCommand(
+                                                layerViewModel: viewModel.layerViewModel,
+                                                index: layerIndex,
+                                                oldOpacity: oldOpacity,
+                                                newOpacity: currentOpacity
+                                            )
+                                            commandManager.addExecutedCommand(command)
+                                        }
+                                        opacityBeforeDrag = nil
+                                    }
+                                    editingOpacityLayerIndex = nil
+                                }
+                            }
+                        )
+                        .controlSize(.mini)
+                        .onChange(of: currentOpacity) { newValue in
+                            viewModel.layerViewModel.setOpacity(at: layerIndex, opacity: newValue)
+                        }
+                    }
+
+                    // Percentage display (always visible, clickable)
+                    Text("\(Int((editingOpacityLayerIndex == layerIndex ? currentOpacity : viewModel.layerViewModel.layers[layerIndex].opacity) * 100))%")
+                        .font(.caption2)
+                        .foregroundColor(editingOpacityLayerIndex == layerIndex ? .primary : .secondary)
+                        .underline(editingOpacityLayerIndex != layerIndex, color: .secondary.opacity(0.3))
+                        .frame(width: 30, alignment: .trailing)
+                        .contentShape(Rectangle())
+                        .onHover { hovering in
+                            if hovering && editingOpacityLayerIndex != layerIndex {
+                                NSCursor.pointingHand.push()
+                            } else {
+                                NSCursor.pop()
+                            }
+                        }
+                        .onTapGesture {
+                            if editingOpacityLayerIndex == layerIndex {
+                                editingOpacityLayerIndex = nil
+                            } else {
+                                currentOpacity = viewModel.layerViewModel.layers[layerIndex].opacity
+                                editingOpacityLayerIndex = layerIndex
+                            }
+                        }
+                }
+            }
+            .frame(maxWidth: .infinity)
         }
         .padding(.horizontal, 6)
         .frame(width: layerColumnWidth, height: cellSize)

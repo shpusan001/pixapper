@@ -7,7 +7,8 @@
 
 import SwiftUI
 
-/// 붙여넣기 작업을 캡슐화하는 Command (선택 상태 복원 지원)
+/// 붙여넣기 작업을 캡슐화하는 Command
+/// - 붙여넣기 시 바로 레이어에 픽셀을 적용하여 Undo/Redo 지원
 class PasteCommand: LayerPixelApplicable {
     private weak var canvasViewModel: CanvasViewModel?
     weak var layerViewModel: LayerViewModel?
@@ -20,13 +21,17 @@ class PasteCommand: LayerPixelApplicable {
     private let previousOriginalRect: CGRect?
     private let previousIsFloating: Bool
 
-    // 붙여넣은 선택 상태 (redo 시 복원)
+    // 붙여넣은 선택 상태
     private let pastedSelectionRect: CGRect
     private let pastedSelectionPixels: [[Color?]]
 
-    // 이전 선택을 커밋할 때의 픽셀 변경 정보 (커밋 전 레이어 상태 → 커밋 후)
-    private var oldLayerPixels: [PixelChange] = []  // 커밋 전 레이어 픽셀
-    private var newLayerPixels: [PixelChange] = []  // 커밋 후 레이어 픽셀 (이전 선택 적용)
+    // 이전 선택을 커밋할 때의 픽셀 변경 정보
+    private var oldCommitPixels: [PixelChange] = []
+    private var newCommitPixels: [PixelChange] = []
+
+    // 붙여넣기로 인한 픽셀 변경 정보
+    private var oldPastePixels: [PixelChange] = []
+    private var newPastePixels: [PixelChange] = []
 
     var description: String {
         return "Paste Selection"
@@ -67,34 +72,55 @@ class PasteCommand: LayerPixelApplicable {
                 to: rect,
                 layerIndex: layerIndex
             )
-            oldLayerPixels = changes.old
-            newLayerPixels = changes.new
+            oldCommitPixels = changes.old
+            newCommitPixels = changes.new
         }
+
+        // 붙여넣기로 인한 픽셀 변경 정보 계산
+        let pasteChanges = canvasViewModel.calculatePixelChanges(
+            pixels: pastedSelectionPixels,
+            origPixels: pastedSelectionPixels,
+            from: pastedSelectionRect,
+            to: pastedSelectionRect,
+            layerIndex: layerIndex
+        )
+        oldPastePixels = pasteChanges.old
+        newPastePixels = pasteChanges.new
     }
 
     func execute() {
-        // 이전 선택이 floating이었다면, 레이어에 커밋
-        if previousIsFloating, !newLayerPixels.isEmpty {
-            applyPixelChanges(newLayerPixels)
+        // 1. 이전 floating selection이 있었다면, 레이어에 커밋
+        if previousIsFloating, !newCommitPixels.isEmpty {
+            applyPixelChanges(newCommitPixels)
         }
 
-        // 붙여넣은 선택 상태 복원
-        canvasViewModel?.restoreSelectionState(
-            rect: pastedSelectionRect,
-            pixels: pastedSelectionPixels,
-            originalPixels: pastedSelectionPixels,
-            originalRect: pastedSelectionRect,
-            isFloating: true
-        )
+        // 2. 붙여넣기 픽셀을 레이어에 바로 적용
+        applyPixelChanges(newPastePixels)
+
+        // 3. TimelineViewModel에 동기화 (타임라인 모드에서만)
+        if let timeline = canvasViewModel?.timelineViewModel {
+            timeline.syncCurrentLayerToKeyframe()
+        }
+
+        // 4. 선택 영역 클리어 (붙여넣기 후 floating selection을 만들지 않음)
+        canvasViewModel?.clearSelection()
     }
 
     func undo() {
-        // 이전 선택이 floating이었고 커밋되었다면, 커밋 전 레이어 상태로 복원
-        if previousIsFloating, !oldLayerPixels.isEmpty {
-            applyPixelChanges(oldLayerPixels)
+        // 1. 붙여넣기 픽셀을 레이어에서 제거
+        applyPixelChanges(oldPastePixels)
+
+        // 2. 이전 floating selection이 있었고 커밋되었다면, 커밋 전 레이어 상태로 복원
+        if previousIsFloating, !oldCommitPixels.isEmpty {
+            applyPixelChanges(oldCommitPixels)
         }
 
-        // 이전 선택 상태 복원
+        // 3. TimelineViewModel에 동기화 (타임라인 모드에서만)
+        if let timeline = canvasViewModel?.timelineViewModel {
+            timeline.syncCurrentLayerToKeyframe()
+        }
+
+        // 4. 이전 선택 상태 복원
         canvasViewModel?.restoreSelectionState(
             rect: previousSelectionRect,
             pixels: previousSelectionPixels,

@@ -12,6 +12,7 @@ struct LayerPanel: View {
     @ObservedObject var commandManager: CommandManager
     @State private var editingLayerIndex: Int?
     @State private var editingName: String = ""
+    @State private var opacityBeforeDrag: Double?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -92,7 +93,28 @@ struct LayerPanel: View {
                                     viewModel.setOpacity(at: viewModel.selectedLayerIndex, opacity: newValue)
                                 }
                             ),
-                            in: 0...1
+                            in: 0...1,
+                            onEditingChanged: { isEditing in
+                                if isEditing {
+                                    // 드래그 시작: 이전 opacity 저장
+                                    opacityBeforeDrag = viewModel.layers[viewModel.selectedLayerIndex].opacity
+                                } else {
+                                    // 드래그 종료: Command 생성
+                                    if let oldOpacity = opacityBeforeDrag {
+                                        let newOpacity = viewModel.layers[viewModel.selectedLayerIndex].opacity
+                                        if abs(oldOpacity - newOpacity) > 0.001 {
+                                            let command = SetLayerOpacityCommand(
+                                                layerViewModel: viewModel,
+                                                index: viewModel.selectedLayerIndex,
+                                                oldOpacity: oldOpacity,
+                                                newOpacity: newOpacity
+                                            )
+                                            commandManager.addExecutedCommand(command)
+                                        }
+                                        opacityBeforeDrag = nil
+                                    }
+                                }
+                            }
                         )
                     }
                 }

@@ -7,6 +7,18 @@
 
 import SwiftUI
 
+// MARK: - FocusedValues for menu commands
+struct CanvasViewModelKey: FocusedValueKey {
+    typealias Value = CanvasViewModel
+}
+
+extension FocusedValues {
+    var canvasViewModel: CanvasViewModel? {
+        get { self[CanvasViewModelKey.self] }
+        set { self[CanvasViewModelKey.self] = newValue }
+    }
+}
+
 struct ContentView: View {
     @StateObject private var appViewModel = AppViewModel(
         width: Constants.Canvas.defaultWidth,
@@ -294,26 +306,6 @@ struct ContentView: View {
                 }
                 return .handled
             }
-            // Copy (Cmd+C)
-            else if keyPress.characters == "c" && keyPress.modifiers.contains(.command) {
-                canvasViewModel.copySelection()
-                return .handled
-            }
-            // Cut (Cmd+X)
-            else if keyPress.characters == "x" && keyPress.modifiers.contains(.command) {
-                canvasViewModel.cutSelection()
-                return .handled
-            }
-            // Paste (Cmd+V)
-            else if keyPress.characters == "v" && keyPress.modifiers.contains(.command) {
-                canvasViewModel.pasteSelection()
-                return .handled
-            }
-            // Delete selection (Delete/Backspace)
-            else if keyPress.key == .delete || keyPress.key == .deleteForward {
-                canvasViewModel.deleteSelection()
-                return .handled
-            }
             // Commit selection (Enter/Return)
             else if keyPress.key == .return {
                 if canvasViewModel.isFloatingSelection {
@@ -344,6 +336,7 @@ struct ContentView: View {
             }
             return .ignored
         }
+        .focusedValue(\.canvasViewModel, canvasViewModel)
     }
 }
 
