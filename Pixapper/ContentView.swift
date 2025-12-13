@@ -8,62 +8,21 @@
 import SwiftUI
 
 struct ContentView: View {
-    @StateObject private var layerViewModel = LayerViewModel(
+    @StateObject private var appViewModel = AppViewModel(
         width: Constants.Canvas.defaultWidth,
         height: Constants.Canvas.defaultHeight
     )
-    @StateObject private var commandManager = CommandManager()
-    @StateObject private var toolSettingsManager = ToolSettingsManager()
-    @StateObject private var canvasViewModel: CanvasViewModel
-    @StateObject private var timelineViewModel: TimelineViewModel
     @FocusState private var isFocused: Bool
     @State private var showingExportSheet = false
     @State private var showingCanvasSizeSheet = false
+    @State private var showingNewProjectAlert = false
 
-    init() {
-        // 의존성 그래프 (Dependency Graph):
-        // LayerViewModel (공유) ← CanvasViewModel, TimelineViewModel
-        // CommandManager (공유) ← CanvasViewModel, TimelinePanel
-        // ToolSettingsManager ← CanvasViewModel
-        // TimelineViewModel → CanvasViewModel (weak 참조로 역방향 통신)
-
-        let layerVM = LayerViewModel(
-            width: Constants.Canvas.defaultWidth,
-            height: Constants.Canvas.defaultHeight
-        )
-        let cmdManager = CommandManager()
-        let toolManager = ToolSettingsManager()
-
-        // CanvasViewModel: 그리기 작업과 레이어 픽셀 관리
-        let canvasVM = CanvasViewModel(
-            width: Constants.Canvas.defaultWidth,
-            height: Constants.Canvas.defaultHeight,
-            layerViewModel: layerVM,
-            commandManager: cmdManager,
-            toolSettingsManager: toolManager
-        )
-
-        // TimelineViewModel: 프레임/키프레임 관리
-        let timelineVM = TimelineViewModel(
-            width: Constants.Canvas.defaultWidth,
-            height: Constants.Canvas.defaultHeight,
-            layerViewModel: layerVM
-        )
-
-        // SwiftUI @StateObject 래핑
-        _layerViewModel = StateObject(wrappedValue: layerVM)
-        _commandManager = StateObject(wrappedValue: cmdManager)
-        _toolSettingsManager = StateObject(wrappedValue: toolManager)
-        _canvasViewModel = StateObject(wrappedValue: canvasVM)
-        _timelineViewModel = StateObject(wrappedValue: timelineVM)
-
-        // Canvas → Timeline 역방향 통신 연결 (weak 참조로 순환 참조 방지)
-        // 그리기 작업 완료 시 Timeline에 동기화하기 위함
-        canvasVM.timelineViewModel = timelineVM
-
-        // 초기 프레임 로드 (Frame 0의 키프레임 데이터를 각 레이어에 로드)
-        timelineVM.loadFrame(at: 0)
-    }
+    // Convenience accessors
+    private var layerViewModel: LayerViewModel { appViewModel.layerViewModel }
+    private var commandManager: CommandManager { appViewModel.commandManager }
+    private var toolSettingsManager: ToolSettingsManager { appViewModel.toolSettingsManager }
+    private var canvasViewModel: CanvasViewModel { appViewModel.canvasViewModel }
+    private var timelineViewModel: TimelineViewModel { appViewModel.timelineViewModel }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -76,6 +35,36 @@ struct ContentView: View {
                     .padding(.leading, 16)
 
                 Spacer()
+
+                // File operations: New/Open/Save
+                HStack(spacing: 4) {
+                    ToolbarIconButton(
+                        icon: "doc.badge.plus",
+                        tooltip: "New Project (⌘N)",
+                        action: {
+                            if appViewModel.isDirty {
+                                showingNewProjectAlert = true
+                            } else {
+                                appViewModel.newProject()
+                            }
+                        }
+                    )
+
+                    ToolbarIconButton(
+                        icon: "folder",
+                        tooltip: "Open (⌘O)",
+                        action: { appViewModel.loadProject() }
+                    )
+
+                    ToolbarIconButton(
+                        icon: "square.and.arrow.down",
+                        tooltip: "Save (⌘S)",
+                        action: { appViewModel.saveProject() }
+                    )
+                }
+                .padding(.trailing, 8)
+
+                ToolbarDivider()
 
                 // Left group: Undo/Redo
                 HStack(spacing: 4) {
@@ -103,7 +92,14 @@ struct ContentView: View {
                         .font(.system(size: 11))
                         .foregroundColor(.secondary)
 
-                    Slider(value: $canvasViewModel.zoomLevel, in: 100...1600, step: 100)
+                    Slider(
+                        value: Binding(
+                            get: { appViewModel.canvasViewModel.zoomLevel },
+                            set: { appViewModel.canvasViewModel.zoomLevel = $0 }
+                        ),
+                        in: 100...1600,
+                        step: 100
+                    )
                         .frame(width: 100)
 
                     Text("\(Int(canvasViewModel.zoomLevel))%")
@@ -181,9 +177,41 @@ struct ContentView: View {
         .onAppear {
             isFocused = true
         }
+        .alert("Unsaved Changes", isPresented: $showingNewProjectAlert) {
+            Button("Cancel", role: .cancel) {}
+            Button("Discard", role: .destructive) {
+                appViewModel.newProject()
+            }
+            Button("Save") {
+                if appViewModel.saveProject() {
+                    appViewModel.newProject()
+                }
+            }
+        } message: {
+            Text("You have unsaved changes. Do you want to save before creating a new project?")
+        }
         .onKeyPress { keyPress in
+            // New Project (Cmd+N)
+            if keyPress.characters == "n" && keyPress.modifiers.contains(.command) {
+                if appViewModel.isDirty {
+                    showingNewProjectAlert = true
+                } else {
+                    appViewModel.newProject()
+                }
+                return .handled
+            }
+            // Open (Cmd+O)
+            else if keyPress.characters == "o" && keyPress.modifiers.contains(.command) {
+                appViewModel.loadProject()
+                return .handled
+            }
+            // Save (Cmd+S)
+            else if keyPress.characters == "s" && keyPress.modifiers.contains(.command) {
+                appViewModel.saveProject()
+                return .handled
+            }
             // Undo (Cmd+Z)
-            if keyPress.characters == "z" && keyPress.modifiers.contains(.command) && !keyPress.modifiers.contains(.shift) {
+            else if keyPress.characters == "z" && keyPress.modifiers.contains(.command) && !keyPress.modifiers.contains(.shift) {
                 if commandManager.canUndo {
                     commandManager.undo()
                 }
