@@ -68,37 +68,30 @@ struct PencilPropertiesView: View {
         VStack(alignment: .leading, spacing: 0) {
             PropertySectionHeader(title: "Pencil")
 
-            Divider()
-                .padding(.vertical, 12)
+            PropertyDivider()
 
             // Brush Size
-            VStack(alignment: .leading, spacing: 8) {
-                HStack {
-                    Text("Brush Size")
-                        .font(.callout)
-                        .foregroundColor(.primary)
-                    Spacer()
-                    Text("\(settings.brushSize)px")
-                        .font(.callout)
-                        .foregroundColor(.secondary)
-                }
+            PropertyRow(label: "Size") {
+                HStack(spacing: 8) {
+                    Slider(value: Binding(
+                        get: { Double(settings.brushSize) },
+                        set: { settings.brushSize = Int($0) }
+                    ), in: 1...10, step: 1)
 
-                Slider(value: Binding(
-                    get: { Double(settings.brushSize) },
-                    set: { settings.brushSize = Int($0) }
-                ), in: 1...10, step: 1)
+                    Text("\(settings.brushSize)")
+                        .font(.system(.caption, design: .monospaced))
+                        .foregroundColor(.secondary)
+                        .frame(width: 24, alignment: .trailing)
+                }
             }
-            .padding(.bottom, 16)
+
+            PropertyDivider()
 
             // Color
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Color")
-                    .font(.callout)
-                    .foregroundColor(.primary)
-
+            PropertyRow(label: "Color") {
                 ColorPicker("", selection: $settings.color, supportsOpacity: false)
                     .labelsHidden()
-                    .frame(height: 32)
+                    .frame(width: 40, height: 28)
             }
         }
     }
@@ -112,25 +105,21 @@ struct EraserPropertiesView: View {
         VStack(alignment: .leading, spacing: 0) {
             PropertySectionHeader(title: "Eraser")
 
-            Divider()
-                .padding(.vertical, 12)
+            PropertyDivider()
 
             // Brush Size
-            VStack(alignment: .leading, spacing: 8) {
-                HStack {
-                    Text("Brush Size")
-                        .font(.callout)
-                        .foregroundColor(.primary)
-                    Spacer()
-                    Text("\(settings.brushSize)px")
-                        .font(.callout)
-                        .foregroundColor(.secondary)
-                }
+            PropertyRow(label: "Size") {
+                HStack(spacing: 8) {
+                    Slider(value: Binding(
+                        get: { Double(settings.brushSize) },
+                        set: { settings.brushSize = Int($0) }
+                    ), in: 1...10, step: 1)
 
-                Slider(value: Binding(
-                    get: { Double(settings.brushSize) },
-                    set: { settings.brushSize = Int($0) }
-                ), in: 1...10, step: 1)
+                    Text("\(settings.brushSize)")
+                        .font(.system(.caption, design: .monospaced))
+                        .foregroundColor(.secondary)
+                        .frame(width: 24, alignment: .trailing)
+                }
             }
         }
     }
@@ -144,39 +133,27 @@ struct FillPropertiesView: View {
         VStack(alignment: .leading, spacing: 0) {
             PropertySectionHeader(title: "Fill")
 
-            Divider()
-                .padding(.vertical, 12)
+            PropertyDivider()
 
             // Color
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Color")
-                    .font(.callout)
-                    .foregroundColor(.primary)
-
+            PropertyRow(label: "Color") {
                 ColorPicker("", selection: $settings.color, supportsOpacity: false)
                     .labelsHidden()
-                    .frame(height: 32)
+                    .frame(width: 40, height: 28)
             }
-            .padding(.bottom, 16)
+
+            PropertyDivider()
 
             // Tolerance
-            VStack(alignment: .leading, spacing: 8) {
-                HStack {
-                    Text("Tolerance")
-                        .font(.callout)
-                        .foregroundColor(.primary)
-                    Spacer()
-                    Text(String(format: "%.0f%%", settings.tolerance * 100))
-                        .font(.callout)
+            PropertyRow(label: "Tolerance") {
+                HStack(spacing: 8) {
+                    Slider(value: $settings.tolerance, in: 0...1, step: 0.01)
+
+                    Text(String(format: "%.0f", settings.tolerance * 100))
+                        .font(.system(.caption, design: .monospaced))
                         .foregroundColor(.secondary)
+                        .frame(width: 24, alignment: .trailing)
                 }
-
-                Slider(value: $settings.tolerance, in: 0...1, step: 0.01)
-
-                Text("How similar colors must be to fill")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                    .padding(.top, 4)
             }
         }
     }
@@ -192,65 +169,58 @@ struct ShapePropertiesView: View {
         VStack(alignment: .leading, spacing: 0) {
             PropertySectionHeader(title: toolName)
 
-            Divider()
-                .padding(.vertical, 12)
+            PropertyDivider()
 
             // Stroke Color
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Stroke Color")
-                    .font(.callout)
-                    .foregroundColor(.primary)
-
+            PropertyRow(label: "Stroke") {
                 ColorPicker("", selection: $settings.strokeColor, supportsOpacity: false)
                     .labelsHidden()
-                    .frame(height: 32)
+                    .frame(width: 40, height: 28)
             }
-            .padding(.bottom, 16)
+
+            PropertyDivider()
 
             // Stroke Width
-            VStack(alignment: .leading, spacing: 8) {
-                HStack {
-                    Text("Stroke Width")
-                        .font(.callout)
-                        .foregroundColor(.primary)
-                    Spacer()
-                    Text("\(settings.strokeWidth)px")
-                        .font(.callout)
+            PropertyRow(label: "Width") {
+                HStack(spacing: 8) {
+                    Slider(value: Binding(
+                        get: { Double(settings.strokeWidth) },
+                        set: { settings.strokeWidth = Int($0) }
+                    ), in: 1...10, step: 1)
+
+                    Text("\(settings.strokeWidth)")
+                        .font(.system(.caption, design: .monospaced))
                         .foregroundColor(.secondary)
+                        .frame(width: 24, alignment: .trailing)
                 }
-
-                Slider(value: Binding(
-                    get: { Double(settings.strokeWidth) },
-                    set: { settings.strokeWidth = Int($0) }
-                ), in: 1...10, step: 1)
             }
-            .padding(.bottom, 16)
 
-            // Fill Color Toggle
-            Toggle("Fill Shape", isOn: $hasFill)
-                .font(.callout)
-                .onChange(of: hasFill) { newValue in
-                    if newValue {
-                        settings.fillColor = settings.strokeColor
-                    } else {
-                        settings.fillColor = nil
+            PropertyDivider()
+
+            // Fill Toggle
+            PropertyRow(label: "Fill") {
+                Toggle("", isOn: $hasFill)
+                    .labelsHidden()
+                    .onChange(of: hasFill) { _, newValue in
+                        if newValue {
+                            settings.fillColor = settings.strokeColor
+                        } else {
+                            settings.fillColor = nil
+                        }
                     }
-                }
-                .padding(.bottom, hasFill ? 16 : 0)
+            }
 
             // Fill Color Picker (only when enabled)
             if hasFill {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Fill Color")
-                        .font(.callout)
-                        .foregroundColor(.primary)
+                PropertyDivider()
 
+                PropertyRow(label: "Fill Color") {
                     ColorPicker("", selection: Binding(
                         get: { settings.fillColor ?? .clear },
                         set: { settings.fillColor = $0 }
                     ), supportsOpacity: false)
                         .labelsHidden()
-                        .frame(height: 32)
+                        .frame(width: 40, height: 28)
                 }
             }
         }
@@ -266,12 +236,13 @@ struct EyedropperPropertiesView: View {
         VStack(alignment: .leading, spacing: 0) {
             PropertySectionHeader(title: "Eyedropper")
 
-            Divider()
-                .padding(.vertical, 12)
+            PropertyDivider()
 
-            Text("Click on the canvas to pick a color from any pixel.")
-                .font(.callout)
+            Text("Click on canvas to pick a color")
+                .font(.caption)
                 .foregroundColor(.secondary)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
                 .fixedSize(horizontal: false, vertical: true)
         }
     }
@@ -285,92 +256,123 @@ struct SelectionPropertiesView: View {
         VStack(alignment: .leading, spacing: 0) {
             PropertySectionHeader(title: "Selection")
 
-            Divider()
-                .padding(.vertical, 12)
+            PropertyDivider()
 
             if let rect = viewModel.selectionRect, viewModel.selectionPixels != nil {
                 // 선택 정보
-                VStack(alignment: .leading, spacing: 8) {
-                    InfoRow(label: "Size", value: "\(Int(rect.width)) × \(Int(rect.height))")
-                    InfoRow(label: "Position", value: "(\(Int(rect.minX)), \(Int(rect.minY)))")
+                PropertyRow(label: "Size") {
+                    Text("\(Int(rect.width)) × \(Int(rect.height))")
+                        .font(.system(.caption, design: .monospaced))
+                        .foregroundColor(.secondary)
                 }
-                .padding(.bottom, 16)
 
-                Divider()
+                PropertyDivider()
 
-                // Transform 버튼들
-                VStack(alignment: .leading, spacing: 12) {
+                PropertyRow(label: "Position") {
+                    Text("(\(Int(rect.minX)), \(Int(rect.minY)))")
+                        .font(.system(.caption, design: .monospaced))
+                        .foregroundColor(.secondary)
+                }
+
+                PropertyDivider()
+
+                // Transform 섹션
+                VStack(alignment: .leading, spacing: 8) {
                     Text("Transform")
-                        .font(.callout)
+                        .font(.caption)
                         .fontWeight(.medium)
                         .foregroundColor(.secondary)
-                        .padding(.top, 12)
+                        .padding(.horizontal, 12)
+                        .padding(.top, 8)
 
                     // Rotate
-                    HStack(spacing: 8) {
-                        QuickButton(icon: "rotate.left", action: viewModel.rotateSelectionCCW)
-                        QuickButton(icon: "rotate.right", action: viewModel.rotateSelectionCW)
-                        QuickButton(icon: "arrow.triangle.2.circlepath", action: viewModel.rotateSelection180)
+                    HStack(spacing: 6) {
+                        TransformButton(icon: "rotate.left", tooltip: "Rotate CCW", action: viewModel.rotateSelectionCCW)
+                        TransformButton(icon: "rotate.right", tooltip: "Rotate CW", action: viewModel.rotateSelectionCW)
+                        TransformButton(icon: "arrow.triangle.2.circlepath", tooltip: "Rotate 180°", action: viewModel.rotateSelection180)
                     }
+                    .padding(.horizontal, 12)
 
                     // Flip
-                    HStack(spacing: 8) {
-                        QuickButton(icon: "arrow.left.and.right", action: viewModel.flipSelectionHorizontal)
-                        QuickButton(icon: "arrow.up.and.down", action: viewModel.flipSelectionVertical)
+                    HStack(spacing: 6) {
+                        TransformButton(icon: "arrow.left.and.right", tooltip: "Flip Horizontal", action: viewModel.flipSelectionHorizontal)
+                        TransformButton(icon: "arrow.up.and.down", tooltip: "Flip Vertical", action: viewModel.flipSelectionVertical)
+                        Spacer()
                     }
+                    .padding(.horizontal, 12)
+                    .padding(.bottom, 8)
                 }
             } else {
-                Text("Select an area to see properties")
-                    .font(.callout)
+                Text("Select area to see properties")
+                    .font(.caption)
                     .foregroundColor(.secondary)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
             }
         }
     }
 }
 
-struct InfoRow: View {
-    let label: String
-    let value: String
-
-    var body: some View {
-        HStack {
-            Text(label)
-                .font(.callout)
-                .foregroundColor(.secondary)
-            Spacer()
-            Text(value)
-                .font(.callout)
-                .foregroundColor(.primary)
-                .monospacedDigit()
-        }
-    }
-}
-
-struct QuickButton: View {
-    let icon: String
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            Image(systemName: icon)
-                .font(.system(size: 16))
-                .frame(maxWidth: .infinity)
-                .frame(height: 32)
-                .background(Color(nsColor: .controlColor))
-                .cornerRadius(6)
-        }
-        .buttonStyle(.plain)
-    }
-}
-
 // MARK: - Helper Views
+
 struct PropertySectionHeader: View {
     let title: String
 
     var body: some View {
         Text(title)
-            .font(.headline)
+            .font(.caption)
             .fontWeight(.semibold)
             .foregroundColor(.primary)
+            .textCase(.uppercase)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+    }
+}
+
+struct PropertyDivider: View {
+    var body: some View {
+        Divider()
+            .padding(.horizontal, 12)
+    }
+}
+
+struct PropertyRow<Content: View>: View {
+    let label: String
+    let content: Content
+
+    init(label: String, @ViewBuilder content: () -> Content) {
+        self.label = label
+        self.content = content()
+    }
+
+    var body: some View {
+        HStack(alignment: .center, spacing: 12) {
+            Text(label)
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .frame(width: 60, alignment: .leading)
+
+            content
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+    }
+}
+
+struct TransformButton: View {
+    let icon: String
+    let tooltip: String
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: icon)
+                .font(.system(size: 14))
+                .frame(width: 32, height: 32)
+                .background(Color(nsColor: .controlColor))
+                .cornerRadius(4)
+        }
+        .buttonStyle(.plain)
+        .help(tooltip)
     }
 }

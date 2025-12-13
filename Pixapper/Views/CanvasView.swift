@@ -12,108 +12,116 @@ struct CanvasView: View {
     var timelineViewModel: TimelineViewModel?
     @State private var isDragging = false
     @State private var eventMonitor: Any?
+    @State private var dragMonitor: Any?
+    @State private var canvasGlobalFrame: CGRect = .zero
+    @State private var currentMarginX: CGFloat = 0
+    @State private var currentMarginY: CGFloat = 0
+    @State private var scrollPosition: CGPoint = .zero
+
+    // MARK: - Computed Properties
+
+    private var pixelSize: CGFloat {
+        viewModel.zoomLevel / 100.0
+    }
+
+    private var canvasWidth: CGFloat {
+        CGFloat(viewModel.canvas.width) * pixelSize
+    }
+
+    private var canvasHeight: CGFloat {
+        CGFloat(viewModel.canvas.height) * pixelSize
+    }
+
+    // MARK: - Body
 
     var body: some View {
-        canvasContent
-            .background(Color(nsColor: .controlBackgroundColor))
-            .onAppear {
-                // Shift 키 모니터링
-                eventMonitor = NSEvent.addLocalMonitorForEvents(matching: .flagsChanged) { event in
-                    viewModel.shiftPressed = event.modifierFlags.contains(.shift)
-                    return event
-                }
-            }
-            .onDisappear {
-                if let monitor = eventMonitor {
-                    NSEvent.removeMonitor(monitor)
-                }
-            }
-    }
+        GeometryReader { geometry in
+            let viewportWidth = geometry.size.width
+            let viewportHeight = geometry.size.height
 
-    private var canvasContent: some View {
-        let pixelSize = viewModel.zoomLevel / 100.0
-        let canvasWidth = CGFloat(viewModel.canvas.width) * pixelSize
-        let canvasHeight = CGFloat(viewModel.canvas.height) * pixelSize
+            // 뷰포트 크기에 따라 동적 마진 (최소한으로)
+            let marginX = max(200, (viewportWidth - canvasWidth) / 2)
+            let marginY = max(200, (viewportHeight - canvasHeight) / 2)
+            let totalWidth = canvasWidth + marginX * 2
+            let totalHeight = canvasHeight + marginY * 2
 
-        // 확장된 전체 영역 (전부 캔버스)
-        let margin = max(canvasWidth, canvasHeight)
-        let totalWidth = canvasWidth + margin * 2
-        let totalHeight = canvasHeight + margin * 2
+            ScrollViewReader { scrollProxy in
+                ScrollView([.horizontal, .vertical], showsIndicators: true) {
+                    ZStack(alignment: .topLeading) {
+                        // 전체 배경
+                        Color(nsColor: .controlBackgroundColor)
 
-        // 실제 그림이 보이는 영역의 시작점 (픽셀 좌표)
-        let visibleStartX = Int(margin / pixelSize)
-        let visibleStartY = Int(margin / pixelSize)
+                        // 체커보드 (캔버스 영역)
+                        CheckerboardView(
+                            width: viewModel.canvas.width,
+                            height: viewModel.canvas.height,
+                            pixelSize: pixelSize,
+                            marginX: marginX,
+                            marginY: marginY
+                        )
 
-        return ScrollView([.horizontal, .vertical]) {
-            // 전체가 하나의 큰 캔버스
-            ZStack(alignment: .topLeading) {
-                // 배경 (전체 영역)
-                Color.clear
+                        // 어니언 스킨
+                        renderOnionSkinLayers(marginX: marginX, marginY: marginY)
+
+                        // 현재 레이어
+                        renderCurrentLayers(marginX: marginX, marginY: marginY)
+
+                        // 격자선
+                        GridLinesView(
+                            width: viewModel.canvas.width,
+                            height: viewModel.canvas.height,
+                            pixelSize: pixelSize,
+                            marginX: marginX,
+                            marginY: marginY
+                        )
+
+                        // 도형 프리뷰 (전체 영역)
+                        renderShapePreview(marginX: marginX, marginY: marginY)
+
+                        // 선택 영역 (전체 영역)
+                        renderSelection(marginX: marginX, marginY: marginY)
+                    }
                     .frame(width: totalWidth, height: totalHeight)
-
-                // 실제 그림 영역 (중앙)
-                canvasLayers(pixelSize: pixelSize)
-                    .frame(width: canvasWidth, height: canvasHeight)
-                    .offset(x: margin, y: margin)
-
-                // Selection overlay (같은 좌표계, 실제 캔버스 기준점에서 offset)
-                if let selectionRect = viewModel.selectionRect {
-                    SelectionRectView(
-                        rect: selectionRect,
-                        offset: viewModel.selectionOffset,
-                        pixelSize: pixelSize,
-                        selectionPixels: viewModel.selectionPixels,
-                        isMoving: viewModel.isMovingSelection,
-                        originalPixels: viewModel.originalPixels,
-                        originalRect: viewModel.originalRect,
-                        selectionMode: viewModel.selectionMode,
-                        hoveredHandle: viewModel.hoveredHandle
+                    .background(
+                        GeometryReader { geo in
+                            Color.clear.onAppear {
+                                canvasGlobalFrame = geo.frame(in: .global)
+                                currentMarginX = marginX
+                                currentMarginY = marginY
+                            }
+                            .onChange(of: geo.frame(in: .global)) { _, newFrame in
+                                canvasGlobalFrame = newFrame
+                                currentMarginX = marginX
+                                currentMarginY = marginY
+                            }
+                        }
                     )
-                    .offset(x: margin, y: margin)
+                    .contentShape(Rectangle())
+                    .gesture(dragGesture(marginX: marginX, marginY: marginY))
+                    .onContinuousHover { phase in
+                        handleHover(phase: phase, marginX: marginX, marginY: marginY)
+                    }
+                    .id("canvasContent")
+                }
+                .onAppear {
+                    // 초기에 중앙으로 스크롤
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                        scrollProxy.scrollTo("canvasContent", anchor: .center)
+                    }
                 }
             }
-            .gesture(canvasDragGesture(pixelSize: pixelSize))
-            .onContinuousHover { phase in
-                handleHover(phase: phase, pixelSize: pixelSize)
-            }
+        }
+        .onAppear(perform: setupEventMonitor)
+        .onDisappear {
+            cleanupEventMonitor()
+            stopDragMonitor()
         }
     }
 
-    @ViewBuilder
-    private func canvasLayers(pixelSize: CGFloat) -> some View {
-        ZStack {
-            // Checkerboard background
-            CheckerboardView(
-                width: viewModel.canvas.width,
-                height: viewModel.canvas.height,
-                pixelSize: pixelSize
-            )
-
-            // Render onion skin frames
-            onionSkinLayers(pixelSize: pixelSize)
-
-            // Render all visible layers (current frame)
-            currentFrameLayers(pixelSize: pixelSize)
-
-            // Grid lines
-            GridLinesView(
-                width: viewModel.canvas.width,
-                height: viewModel.canvas.height,
-                pixelSize: pixelSize
-            )
-
-            // Shape preview overlay
-            if !viewModel.shapePreview.isEmpty {
-                ShapePreviewView(
-                    preview: viewModel.shapePreview,
-                    pixelSize: pixelSize
-                )
-            }
-        }
-    }
+    // MARK: - Layer Rendering
 
     @ViewBuilder
-    private func onionSkinLayers(pixelSize: CGFloat) -> some View {
+    private func renderOnionSkinLayers(marginX: CGFloat, marginY: CGFloat) -> some View {
         if let timeline = timelineViewModel {
             ForEach(timeline.getOnionSkinFrames(), id: \.frameIndex) { onionFrame in
                 ForEach(timeline.layerViewModel.layers.indices.reversed(), id: \.self) { layerIndex in
@@ -124,7 +132,9 @@ struct CanvasView: View {
                             layer: Layer(name: layer.name, pixels: pixels),
                             pixelSize: pixelSize,
                             tint: onionFrame.tint,
-                            opacity: onionFrame.opacity
+                            opacity: onionFrame.opacity,
+                            marginX: marginX,
+                            marginY: marginY
                         )
                     }
                 }
@@ -133,177 +143,245 @@ struct CanvasView: View {
     }
 
     @ViewBuilder
-    private func currentFrameLayers(pixelSize: CGFloat) -> some View {
-        ForEach(viewModel.canvas.layers.indices.reversed(), id: \.self) { layerIndex in
-            let layer = viewModel.canvas.layers[layerIndex]
+    private func renderCurrentLayers(marginX: CGFloat, marginY: CGFloat) -> some View {
+        ForEach(viewModel.canvas.layers.indices.reversed(), id: \.self) { index in
+            let layer = viewModel.canvas.layers[index]
             if layer.isVisible {
-                PixelGridView(
-                    layer: layer,
-                    pixelSize: pixelSize
-                )
-                .opacity(layer.opacity)
+                PixelGridView(layer: layer, pixelSize: pixelSize, marginX: marginX, marginY: marginY)
+                    .opacity(layer.opacity)
             }
         }
     }
 
-    private func canvasDragGesture(pixelSize: CGFloat) -> some Gesture {
+    @ViewBuilder
+    private func renderShapePreview(marginX: CGFloat, marginY: CGFloat) -> some View {
+        if !viewModel.shapePreview.isEmpty {
+            ShapePreviewView(preview: viewModel.shapePreview, pixelSize: pixelSize, marginX: marginX, marginY: marginY)
+        }
+    }
+
+    @ViewBuilder
+    private func renderSelection(marginX: CGFloat, marginY: CGFloat) -> some View {
+        if let selectionRect = viewModel.selectionRect {
+            SelectionRectView(
+                rect: selectionRect,
+                offset: viewModel.selectionOffset,
+                pixelSize: pixelSize,
+                selectionPixels: viewModel.selectionPixels,
+                isMoving: viewModel.isMovingSelection,
+                originalPixels: viewModel.originalPixels,
+                originalRect: viewModel.originalRect,
+                selectionMode: viewModel.selectionMode,
+                hoveredHandle: viewModel.hoveredHandle,
+                marginX: marginX,
+                marginY: marginY
+            )
+        }
+    }
+
+    // MARK: - Gestures
+
+    private func dragGesture(marginX: CGFloat, marginY: CGFloat) -> some Gesture {
         DragGesture(minimumDistance: 0)
             .onChanged { value in
                 if !isDragging {
-                    let isAltPressed = NSEvent.modifierFlags.contains(.option)
-                    handleDown(at: value.startLocation, pixelSize: pixelSize, altPressed: isAltPressed)
+                    handleToolEvent(at: value.startLocation, type: .down, marginX: marginX, marginY: marginY)
                     isDragging = true
+                    startDragMonitor()
                 }
-                handleDrag(at: value.location, pixelSize: pixelSize)
+                handleToolEvent(at: value.location, type: .drag, marginX: marginX, marginY: marginY)
             }
             .onEnded { value in
-                handleUp(at: value.location, pixelSize: pixelSize)
+                handleToolEvent(at: value.location, type: .up, marginX: marginX, marginY: marginY)
                 isDragging = false
+                stopDragMonitor()
             }
     }
 
-    private func handleDown(at location: CGPoint, pixelSize: CGFloat, altPressed: Bool = false) {
-        // 단일 좌표계: 화면 좌표 → 픽셀 좌표 (margin 고려)
-        let canvasWidth = CGFloat(viewModel.canvas.width) * pixelSize
-        let canvasHeight = CGFloat(viewModel.canvas.height) * pixelSize
-        let margin = max(canvasWidth, canvasHeight)
+    private func startDragMonitor() {
+        // 드래그 중 마우스가 뷰 밖으로 나가도 추적
+        dragMonitor = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDragged, .leftMouseUp]) { event in
+            guard self.isDragging else { return event }
 
-        let x = Int((location.x - margin) / pixelSize)
-        let y = Int((location.y - margin) / pixelSize)
+            if event.type == .leftMouseDragged {
+                // Global 좌표를 local 좌표로 변환
+                let globalPoint = NSEvent.mouseLocation
+                let localX = globalPoint.x - self.canvasGlobalFrame.minX
+                // NSEvent는 Y 좌표가 반대이므로 변환 필요
+                let screenHeight = NSScreen.main?.frame.height ?? 0
+                let flippedY = screenHeight - globalPoint.y
+                let localY = flippedY - self.canvasGlobalFrame.minY
 
-        // 선택 도구이고 핸들 위에 있으면 캔버스 밖에서도 동작
+                let localPoint = CGPoint(x: localX, y: localY)
+
+                // 뷰 안에 있을 때는 DragGesture에 맡기고, 뷰 밖에서만 처리
+                if localX < 0 || localX > self.canvasGlobalFrame.width || localY < 0 || localY > self.canvasGlobalFrame.height {
+                    self.handleToolEvent(at: localPoint, type: .drag, marginX: self.currentMarginX, marginY: self.currentMarginY)
+                }
+            } else if event.type == .leftMouseUp {
+                // 마우스를 놓으면 드래그 종료
+                let globalPoint = NSEvent.mouseLocation
+                let localX = globalPoint.x - self.canvasGlobalFrame.minX
+                let screenHeight = NSScreen.main?.frame.height ?? 0
+                let flippedY = screenHeight - globalPoint.y
+                let localY = flippedY - self.canvasGlobalFrame.minY
+
+                let localPoint = CGPoint(x: localX, y: localY)
+
+                // 뷰 밖에서 마우스를 놓았을 때만 처리
+                if localX < 0 || localX > self.canvasGlobalFrame.width || localY < 0 || localY > self.canvasGlobalFrame.height {
+                    self.handleToolEvent(at: localPoint, type: .up, marginX: self.currentMarginX, marginY: self.currentMarginY)
+                    self.isDragging = false
+                    self.stopDragMonitor()
+                }
+            }
+
+            return event
+        }
+    }
+
+    private func stopDragMonitor() {
+        if let monitor = dragMonitor {
+            NSEvent.removeMonitor(monitor)
+            dragMonitor = nil
+        }
+    }
+
+    private enum ToolEventType {
+        case down, drag, up
+    }
+
+    private func handleToolEvent(at location: CGPoint, type: ToolEventType, marginX: CGFloat, marginY: CGFloat) {
+        let pixelCoord = screenToPixel(location, marginX: marginX, marginY: marginY)
+        let isAltPressed = type == .down && NSEvent.modifierFlags.contains(.option)
+
         if viewModel.toolSettingsManager.selectedTool == .selection {
-            viewModel.updateHover(x: x, y: y)
-            if viewModel.hoveredHandle != nil || viewModel.checkInsideSelection(x: x, y: y) {
-                viewModel.handleToolDown(x: x, y: y, altPressed: altPressed)
+            if type == .down {
+                viewModel.updateHover(x: pixelCoord.x, y: pixelCoord.y)
+                if viewModel.hoveredHandle != nil || viewModel.checkInsideSelection(x: pixelCoord.x, y: pixelCoord.y) {
+                    viewModel.handleToolDown(x: pixelCoord.x, y: pixelCoord.y, altPressed: isAltPressed)
+                    return
+                }
+            } else if viewModel.selectionMode != .idle {
+                handleToolAction(coord: pixelCoord, type: type)
                 return
             }
         }
 
-        if x >= 0 && x < viewModel.canvas.width && y >= 0 && y < viewModel.canvas.height {
-            viewModel.handleToolDown(x: x, y: y, altPressed: altPressed)
-        } else {
-            // 캔버스 바깥 클릭 시 선택 취소
-            viewModel.handleOutsideClick()
-        }
-    }
-
-    private func handleDrag(at location: CGPoint, pixelSize: CGFloat) {
-        let canvasWidth = CGFloat(viewModel.canvas.width) * pixelSize
-        let canvasHeight = CGFloat(viewModel.canvas.height) * pixelSize
-        let margin = max(canvasWidth, canvasHeight)
-
-        let x = Int((location.x - margin) / pixelSize)
-        let y = Int((location.y - margin) / pixelSize)
-
-        // 선택 도구이고 선택 모드가 활성화되어 있으면 캔버스 밖에서도 동작
-        if viewModel.toolSettingsManager.selectedTool == .selection && viewModel.selectionMode != .idle {
-            viewModel.handleToolDrag(x: x, y: y)
+        guard isInsideCanvas(pixelCoord) else {
+            if type == .down {
+                viewModel.handleOutsideClick()
+            }
             return
         }
 
-        // 캔버스 범위로 clamp (밖으로 나가도 계속 동작)
-        let clampedX = max(0, min(x, viewModel.canvas.width - 1))
-        let clampedY = max(0, min(y, viewModel.canvas.height - 1))
-
-        viewModel.handleToolDrag(x: clampedX, y: clampedY)
+        let clampedCoord = clampToCanvas(pixelCoord)
+        handleToolAction(coord: clampedCoord, type: type)
     }
 
-    private func handleUp(at location: CGPoint, pixelSize: CGFloat) {
-        let canvasWidth = CGFloat(viewModel.canvas.width) * pixelSize
-        let canvasHeight = CGFloat(viewModel.canvas.height) * pixelSize
-        let margin = max(canvasWidth, canvasHeight)
-
-        let x = Int((location.x - margin) / pixelSize)
-        let y = Int((location.y - margin) / pixelSize)
-
-        // 선택 도구이고 선택 모드가 활성화되어 있으면 캔버스 밖에서도 동작
-        if viewModel.toolSettingsManager.selectedTool == .selection && viewModel.selectionMode != .idle {
-            viewModel.handleToolUp(x: x, y: y)
-            return
+    private func handleToolAction(coord: (x: Int, y: Int), type: ToolEventType) {
+        switch type {
+        case .down:
+            viewModel.handleToolDown(x: coord.x, y: coord.y, altPressed: NSEvent.modifierFlags.contains(.option))
+        case .drag:
+            viewModel.handleToolDrag(x: coord.x, y: coord.y)
+        case .up:
+            viewModel.handleToolUp(x: coord.x, y: coord.y)
         }
-
-        // 캔버스 범위로 clamp (밖에서 놓아도 계속 동작)
-        let clampedX = max(0, min(x, viewModel.canvas.width - 1))
-        let clampedY = max(0, min(y, viewModel.canvas.height - 1))
-
-        viewModel.handleToolUp(x: clampedX, y: clampedY)
     }
 
-    private func handleHover(phase: HoverPhase, pixelSize: CGFloat) {
+    // MARK: - Hover & Cursor
+
+    private func handleHover(phase: HoverPhase, marginX: CGFloat, marginY: CGFloat) {
         switch phase {
         case .active(let location):
-            let canvasWidth = CGFloat(viewModel.canvas.width) * pixelSize
-            let canvasHeight = CGFloat(viewModel.canvas.height) * pixelSize
-            let margin = max(canvasWidth, canvasHeight)
+            let pixelCoord = screenToPixel(location, marginX: marginX, marginY: marginY)
 
-            let x = Int((location.x - margin) / pixelSize)
-            let y = Int((location.y - margin) / pixelSize)
-
-            // 선택 도구일 때는 캔버스 밖에서도 호버 업데이트
             if viewModel.toolSettingsManager.selectedTool == .selection {
-                viewModel.updateHover(x: x, y: y)
-                updateCursor(x: x, y: y)
-            } else if x >= 0 && x < viewModel.canvas.width && y >= 0 && y < viewModel.canvas.height {
-                // 다른 도구는 캔버스 안에서만
-                viewModel.updateHover(x: x, y: y)
-                updateCursor(x: x, y: y)
+                viewModel.updateHover(x: pixelCoord.x, y: pixelCoord.y)
+                updateCursor(for: pixelCoord)
+            } else if isInsideCanvas(pixelCoord) {
+                viewModel.updateHover(x: pixelCoord.x, y: pixelCoord.y)
+                NSCursor.crosshair.set()
             }
         case .ended:
-            // 마우스가 캔버스를 벗어나면 호버 제거
             viewModel.clearHover()
             NSCursor.arrow.set()
         }
     }
 
-    private func updateCursor(x: Int, y: Int) {
-        // 선택 도구가 아니면 crosshair
-        guard viewModel.toolSettingsManager.selectedTool == .selection else {
-            NSCursor.crosshair.set()
-            return
-        }
-
-        // 핸들 위에 있으면 resize cursor
+    private func updateCursor(for coord: (x: Int, y: Int)) {
         if let handle = viewModel.hoveredHandle {
-            switch handle {
-            case .topLeft, .bottomRight:
-                // 대각선 커서는 crosshair로 대체
-                NSCursor.crosshair.set()
-            case .topRight, .bottomLeft:
-                // 대각선 커서는 crosshair로 대체
-                NSCursor.crosshair.set()
-            case .top, .bottom:
-                NSCursor.resizeUpDown.set()
-            case .left, .right:
-                NSCursor.resizeLeftRight.set()
-            case .rotate:
-                // 회전 커서 (SF Symbol 사용)
-                if let image = NSImage(systemSymbolName: "arrow.clockwise", accessibilityDescription: "Rotate"),
-                   let tinted = image.withSymbolConfiguration(.init(pointSize: 16, weight: .regular)) {
-                    let cursor = NSCursor(image: tinted, hotSpot: NSPoint(x: 8, y: 8))
-                    cursor.set()
-                } else {
-                    NSCursor.crosshair.set()
-                }
-            }
-            return
-        }
-
-        // 선택 영역 내부면 move cursor
-        if viewModel.checkInsideSelection(x: x, y: y) {
+            setCursor(for: handle)
+        } else if viewModel.checkInsideSelection(x: coord.x, y: coord.y) {
             NSCursor.openHand.set()
-            return
+        } else {
+            NSCursor.crosshair.set()
         }
+    }
 
-        // 일반 영역은 crosshair
-        NSCursor.crosshair.set()
+    private func setCursor(for handle: CanvasViewModel.ResizeHandle) {
+        switch handle {
+        case .top, .bottom:
+            NSCursor.resizeUpDown.set()
+        case .left, .right:
+            NSCursor.resizeLeftRight.set()
+        case .rotate:
+            if let image = NSImage(systemSymbolName: "arrow.clockwise", accessibilityDescription: "Rotate"),
+               let tinted = image.withSymbolConfiguration(.init(pointSize: 16, weight: .regular)) {
+                NSCursor(image: tinted, hotSpot: NSPoint(x: 8, y: 8)).set()
+            } else {
+                NSCursor.crosshair.set()
+            }
+        default:
+            NSCursor.crosshair.set()
+        }
+    }
+
+    // MARK: - Coordinate Helpers
+
+    private func screenToPixel(_ point: CGPoint, marginX: CGFloat, marginY: CGFloat) -> (x: Int, y: Int) {
+        (
+            x: Int((point.x - marginX) / pixelSize),
+            y: Int((point.y - marginY) / pixelSize)
+        )
+    }
+
+    private func isInsideCanvas(_ coord: (x: Int, y: Int)) -> Bool {
+        coord.x >= 0 && coord.x < viewModel.canvas.width && coord.y >= 0 && coord.y < viewModel.canvas.height
+    }
+
+    private func clampToCanvas(_ coord: (x: Int, y: Int)) -> (x: Int, y: Int) {
+        (
+            x: max(0, min(coord.x, viewModel.canvas.width - 1)),
+            y: max(0, min(coord.y, viewModel.canvas.height - 1))
+        )
+    }
+
+    // MARK: - Event Monitor
+
+    private func setupEventMonitor() {
+        eventMonitor = NSEvent.addLocalMonitorForEvents(matching: .flagsChanged) { event in
+            viewModel.shiftPressed = event.modifierFlags.contains(.shift)
+            return event
+        }
+    }
+
+    private func cleanupEventMonitor() {
+        if let monitor = eventMonitor {
+            NSEvent.removeMonitor(monitor)
+        }
     }
 }
+
+// MARK: - Helper Views
 
 struct CheckerboardView: View {
     let width: Int
     let height: Int
     let pixelSize: CGFloat
+    let marginX: CGFloat
+    let marginY: CGFloat
 
     var body: some View {
         Canvas { context, size in
@@ -314,15 +392,12 @@ struct CheckerboardView: View {
                 for x in 0..<width {
                     let isEven = (x + y) % 2 == 0
                     let rect = CGRect(
-                        x: CGFloat(x) * pixelSize,
-                        y: CGFloat(y) * pixelSize,
+                        x: marginX + CGFloat(x) * pixelSize,
+                        y: marginY + CGFloat(y) * pixelSize,
                         width: pixelSize,
                         height: pixelSize
                     )
-                    context.fill(
-                        Path(rect),
-                        with: .color(isEven ? lightGray : darkGray)
-                    )
+                    context.fill(Path(rect), with: .color(isEven ? lightGray : darkGray))
                 }
             }
         }
@@ -332,6 +407,8 @@ struct CheckerboardView: View {
 struct PixelGridView: View {
     let layer: Layer
     let pixelSize: CGFloat
+    let marginX: CGFloat
+    let marginY: CGFloat
 
     var body: some View {
         Canvas { context, size in
@@ -339,8 +416,8 @@ struct PixelGridView: View {
                 for x in 0..<layer.pixels[y].count {
                     if let color = layer.pixels[y][x] {
                         let rect = CGRect(
-                            x: CGFloat(x) * pixelSize,
-                            y: CGFloat(y) * pixelSize,
+                            x: marginX + CGFloat(x) * pixelSize,
+                            y: marginY + CGFloat(y) * pixelSize,
                             width: pixelSize,
                             height: pixelSize
                         )
@@ -356,24 +433,24 @@ struct GridLinesView: View {
     let width: Int
     let height: Int
     let pixelSize: CGFloat
+    let marginX: CGFloat
+    let marginY: CGFloat
 
     var body: some View {
         Canvas { context, size in
             let gridColor = Color(white: 0.6, opacity: 0.3)
             var path = Path()
 
-            // Vertical lines
             for x in 0...width {
-                let xPos = CGFloat(x) * pixelSize
-                path.move(to: CGPoint(x: xPos, y: 0))
-                path.addLine(to: CGPoint(x: xPos, y: CGFloat(height) * pixelSize))
+                let xPos = marginX + CGFloat(x) * pixelSize
+                path.move(to: CGPoint(x: xPos, y: marginY))
+                path.addLine(to: CGPoint(x: xPos, y: marginY + CGFloat(height) * pixelSize))
             }
 
-            // Horizontal lines
             for y in 0...height {
-                let yPos = CGFloat(y) * pixelSize
-                path.move(to: CGPoint(x: 0, y: yPos))
-                path.addLine(to: CGPoint(x: CGFloat(width) * pixelSize, y: yPos))
+                let yPos = marginY + CGFloat(y) * pixelSize
+                path.move(to: CGPoint(x: marginX, y: yPos))
+                path.addLine(to: CGPoint(x: marginX + CGFloat(width) * pixelSize, y: yPos))
             }
 
             context.stroke(path, with: .color(gridColor), lineWidth: 1)
@@ -384,13 +461,15 @@ struct GridLinesView: View {
 struct ShapePreviewView: View {
     let preview: [(x: Int, y: Int, color: Color)]
     let pixelSize: CGFloat
+    let marginX: CGFloat
+    let marginY: CGFloat
 
     var body: some View {
         Canvas { context, size in
             for pixel in preview {
                 let rect = CGRect(
-                    x: CGFloat(pixel.x) * pixelSize,
-                    y: CGFloat(pixel.y) * pixelSize,
+                    x: marginX + CGFloat(pixel.x) * pixelSize,
+                    y: marginY + CGFloat(pixel.y) * pixelSize,
                     width: pixelSize,
                     height: pixelSize
                 )
@@ -405,6 +484,8 @@ struct OnionSkinLayerView: View {
     let pixelSize: CGFloat
     let tint: Color
     let opacity: Double
+    let marginX: CGFloat
+    let marginY: CGFloat
 
     var body: some View {
         Canvas { context, size in
@@ -412,15 +493,13 @@ struct OnionSkinLayerView: View {
                 for x in 0..<layer.pixels[y].count {
                     if let color = layer.pixels[y][x] {
                         let rect = CGRect(
-                            x: CGFloat(x) * pixelSize,
-                            y: CGFloat(y) * pixelSize,
+                            x: marginX + CGFloat(x) * pixelSize,
+                            y: marginY + CGFloat(y) * pixelSize,
                             width: pixelSize,
                             height: pixelSize
                         )
-                        // Apply tint by blending with the tint color
                         let tintedColor = color.opacity(opacity)
                         context.fill(Path(rect), with: .color(tintedColor))
-                        // Add tint overlay
                         context.fill(Path(rect), with: .color(tint.opacity(opacity * 0.3)))
                     }
                 }
@@ -439,6 +518,8 @@ struct SelectionRectView: View {
     let originalRect: CGRect?
     let selectionMode: CanvasViewModel.SelectionMode
     let hoveredHandle: CanvasViewModel.ResizeHandle?
+    let marginX: CGFloat
+    let marginY: CGFloat
 
     var body: some View {
         Canvas { context, size in
@@ -449,153 +530,124 @@ struct SelectionRectView: View {
                 height: rect.height
             )
 
-            // 이동 중이거나 크기 조절 중이면 원본 잔상 표시
-            var showGhost = isMoving
-            if case .resizing = selectionMode {
-                showGhost = true
+            if shouldShowGhost, let origPixels = originalPixels, let origRect = originalRect {
+                drawPixels(context: context, pixels: origPixels, rect: origRect, opacity: 0.3)
             }
 
-            if showGhost,
-               let origPixels = originalPixels,
-               let origRect = originalRect {
-                for y in 0..<origPixels.count {
-                    for x in 0..<origPixels[y].count {
-                        if let color = origPixels[y][x] {
-                            let pixelRect = CGRect(
-                                x: (origRect.minX + CGFloat(x)) * pixelSize,
-                                y: (origRect.minY + CGFloat(y)) * pixelSize,
-                                width: pixelSize,
-                                height: pixelSize
-                            )
-                            // 원본은 반투명하게 (30%)
-                            context.fill(Path(pixelRect), with: .color(color.opacity(0.3)))
-                        }
-                    }
-                }
-            }
-
-            // Draw the selected pixels at current position
             if let pixels = selectionPixels {
-                for y in 0..<pixels.count {
-                    for x in 0..<pixels[y].count {
-                        if let color = pixels[y][x] {
-                            let pixelRect = CGRect(
-                                x: (effectiveRect.minX + CGFloat(x)) * pixelSize,
-                                y: (effectiveRect.minY + CGFloat(y)) * pixelSize,
-                                width: pixelSize,
-                                height: pixelSize
-                            )
-                            // 이동/크기조절 중일 때는 연하게 (미리보기 효과)
-                            var opacity = 1.0
-                            if isMoving {
-                                opacity = 0.6
-                            } else if case .resizing = selectionMode {
-                                opacity = 0.6
-                            }
-                            context.fill(Path(pixelRect), with: .color(color.opacity(opacity)))
-                        }
-                    }
-                }
+                let opacity = (isMoving || isResizing) ? 0.6 : 1.0
+                drawPixels(context: context, pixels: pixels, rect: effectiveRect, opacity: opacity)
             }
 
-            // Draw selection rectangle border
-            let borderRect = CGRect(
-                x: effectiveRect.minX * pixelSize,
-                y: effectiveRect.minY * pixelSize,
-                width: effectiveRect.width * pixelSize,
-                height: effectiveRect.height * pixelSize
-            )
+            drawSelectionBorder(context: context, rect: effectiveRect)
+            drawResizeHandles(context: context, rect: effectiveRect)
+        }
+    }
 
-            // Draw dashed border (더 선명하고 진하게)
-            var path = Path()
-            path.addRect(borderRect)
-            context.stroke(
-                path,
-                with: .color(Color(red: 0.0, green: 0.5, blue: 1.0)),  // 밝은 파란색
-                style: StrokeStyle(lineWidth: 2.5, dash: [6, 4])
-            )
+    private var shouldShowGhost: Bool {
+        isMoving || isResizing
+    }
 
-            // Draw resize handles (9 handles including rotate) - 크기 증가 및 시각적 개선
-            let baseHandleSize: CGFloat = 11
-            let handleTypes: [CanvasViewModel.ResizeHandle] = [
-                .topLeft, .topRight, .bottomLeft, .bottomRight,
-                .top, .bottom, .left, .right, .rotate
-            ]
-            let handlePositions: [(x: CGFloat, y: CGFloat)] = [
-                // Corners
-                (borderRect.minX, borderRect.minY),        // top-left
-                (borderRect.maxX, borderRect.minY),        // top-right
-                (borderRect.minX, borderRect.maxY),        // bottom-left
-                (borderRect.maxX, borderRect.maxY),        // bottom-right
-                // Edges
-                (borderRect.midX, borderRect.minY),        // top
-                (borderRect.midX, borderRect.maxY),        // bottom
-                (borderRect.minX, borderRect.midY),        // left
-                (borderRect.maxX, borderRect.midY),        // right
-                // Rotate handle (위쪽 중앙에서 3픽셀 위)
-                (borderRect.midX, borderRect.minY - 3 * pixelSize)
-            ]
+    private var isResizing: Bool {
+        if case .resizing = selectionMode { return true }
+        return false
+    }
 
-            for (index, position) in handlePositions.enumerated() {
-                let handleType = handleTypes[index]
-                let isHovered = hoveredHandle == handleType
-
-                // 호버 시 핸들 크기 증가
-                let handleSize = isHovered ? baseHandleSize * 1.3 : baseHandleSize
-
-                // 회전 핸들은 원형으로 표시
-                if handleType == .rotate {
-                    let circleRect = CGRect(
-                        x: position.x - handleSize / 2,
-                        y: position.y - handleSize / 2,
-                        width: handleSize,
-                        height: handleSize
+    private func drawPixels(context: GraphicsContext, pixels: [[Color?]], rect: CGRect, opacity: Double) {
+        for y in 0..<pixels.count {
+            for x in 0..<pixels[y].count {
+                if let color = pixels[y][x] {
+                    let pixelRect = CGRect(
+                        x: marginX + (rect.minX + CGFloat(x)) * pixelSize,
+                        y: marginY + (rect.minY + CGFloat(y)) * pixelSize,
+                        width: pixelSize,
+                        height: pixelSize
                     )
-
-                    // 선으로 연결 (위쪽 중앙과 회전 핸들)
-                    var linePath = Path()
-                    linePath.move(to: CGPoint(x: borderRect.midX, y: borderRect.minY))
-                    linePath.addLine(to: CGPoint(x: position.x, y: position.y))
-                    context.stroke(
-                        linePath,
-                        with: .color(Color(red: 0.0, green: 0.5, blue: 1.0).opacity(0.5)),
-                        lineWidth: 1.5
-                    )
-
-                    // 원형 핸들
-                    let circlePath = Path(ellipseIn: circleRect)
-                    let fillColor: Color = isHovered ? Color(red: 0.4, green: 0.7, blue: 1.0, opacity: 0.7) : Color(red: 0.0, green: 0.5, blue: 1.0, opacity: 0.9)
-                    let borderColor: Color = .white
-                    let borderWidth: CGFloat = 2
-
-                    context.fill(circlePath, with: .color(fillColor))
-                    context.stroke(circlePath, with: .color(borderColor), lineWidth: borderWidth)
-                } else {
-                    // 일반 핸들은 사각형
-                    let handleRect = CGRect(
-                        x: position.x - handleSize / 2,
-                        y: position.y - handleSize / 2,
-                        width: handleSize,
-                        height: handleSize
-                    )
-
-                    // 그림자 효과 (깊이감 추가)
-                    let shadowPath = Path(handleRect)
-                    context.fill(
-                        shadowPath,
-                        with: .color(.black.opacity(0.15))
-                    )
-
-                    // Fill color: white or bright blue if hovered
-                    let fillColor: Color = isHovered ? Color(red: 0.4, green: 0.7, blue: 1.0, opacity: 0.5) : .white
-                    // Border color: bright blue
-                    let borderColor: Color = isHovered ? Color(red: 0.0, green: 0.5, blue: 1.0) : Color(red: 0.0, green: 0.45, blue: 0.9)
-                    let borderWidth: CGFloat = isHovered ? 2.5 : 2
-
-                    context.fill(Path(handleRect), with: .color(fillColor))
-                    context.stroke(Path(handleRect), with: .color(borderColor), lineWidth: borderWidth)
+                    context.fill(Path(pixelRect), with: .color(color.opacity(opacity)))
                 }
             }
         }
+    }
+
+    private func drawSelectionBorder(context: GraphicsContext, rect: CGRect) {
+        let borderRect = CGRect(
+            x: marginX + rect.minX * pixelSize,
+            y: marginY + rect.minY * pixelSize,
+            width: rect.width * pixelSize,
+            height: rect.height * pixelSize
+        )
+
+        var path = Path()
+        path.addRect(borderRect)
+        context.stroke(
+            path,
+            with: .color(Color(red: 0.0, green: 0.5, blue: 1.0)),
+            style: StrokeStyle(lineWidth: 2.5, dash: [6, 4])
+        )
+    }
+
+    private func drawResizeHandles(context: GraphicsContext, rect: CGRect) {
+        let borderRect = CGRect(
+            x: marginX + rect.minX * pixelSize,
+            y: marginY + rect.minY * pixelSize,
+            width: rect.width * pixelSize,
+            height: rect.height * pixelSize
+        )
+
+        let baseHandleSize: CGFloat = 11
+        let handleTypes: [CanvasViewModel.ResizeHandle] = [
+            .topLeft, .topRight, .bottomLeft, .bottomRight,
+            .top, .bottom, .left, .right, .rotate
+        ]
+        let handlePositions: [(x: CGFloat, y: CGFloat)] = [
+            (borderRect.minX, borderRect.minY),
+            (borderRect.maxX, borderRect.minY),
+            (borderRect.minX, borderRect.maxY),
+            (borderRect.maxX, borderRect.maxY),
+            (borderRect.midX, borderRect.minY),
+            (borderRect.midX, borderRect.maxY),
+            (borderRect.minX, borderRect.midY),
+            (borderRect.maxX, borderRect.midY),
+            (borderRect.midX, borderRect.minY - 3 * pixelSize)
+        ]
+
+        for (index, position) in handlePositions.enumerated() {
+            let handleType = handleTypes[index]
+            let isHovered = hoveredHandle == handleType
+            let handleSize = isHovered ? baseHandleSize * 1.3 : baseHandleSize
+
+            if handleType == .rotate {
+                drawRotateHandle(context: context, position: position, size: handleSize, isHovered: isHovered, borderRect: borderRect)
+            } else {
+                drawResizeHandle(context: context, position: position, size: handleSize, isHovered: isHovered)
+            }
+        }
+    }
+
+    private func drawRotateHandle(context: GraphicsContext, position: (x: CGFloat, y: CGFloat), size: CGFloat, isHovered: Bool, borderRect: CGRect) {
+        let circleRect = CGRect(x: position.x - size / 2, y: position.y - size / 2, width: size, height: size)
+
+        var linePath = Path()
+        linePath.move(to: CGPoint(x: borderRect.midX, y: borderRect.minY))
+        linePath.addLine(to: CGPoint(x: position.x, y: position.y))
+        context.stroke(linePath, with: .color(Color(red: 0.0, green: 0.5, blue: 1.0).opacity(0.5)), lineWidth: 1.5)
+
+        let circlePath = Path(ellipseIn: circleRect)
+        let fillColor = isHovered ? Color(red: 0.4, green: 0.7, blue: 1.0, opacity: 0.7) : Color(red: 0.0, green: 0.5, blue: 1.0, opacity: 0.9)
+        context.fill(circlePath, with: .color(fillColor))
+        context.stroke(circlePath, with: .color(.white), lineWidth: 2)
+    }
+
+    private func drawResizeHandle(context: GraphicsContext, position: (x: CGFloat, y: CGFloat), size: CGFloat, isHovered: Bool) {
+        let handleRect = CGRect(x: position.x - size / 2, y: position.y - size / 2, width: size, height: size)
+
+        context.fill(Path(handleRect), with: .color(.black.opacity(0.15)))
+
+        let fillColor = isHovered ? Color(red: 0.4, green: 0.7, blue: 1.0, opacity: 0.5) : .white
+        let borderColor = isHovered ? Color(red: 0.0, green: 0.5, blue: 1.0) : Color(red: 0.0, green: 0.45, blue: 0.9)
+        let borderWidth: CGFloat = isHovered ? 2.5 : 2
+
+        context.fill(Path(handleRect), with: .color(fillColor))
+        context.stroke(Path(handleRect), with: .color(borderColor), lineWidth: borderWidth)
     }
 }

@@ -68,4 +68,21 @@ struct Layer: Identifiable {
     func duplicate(newName: String) -> Layer {
         return Layer(name: newName, pixels: self.pixels, timeline: self.timeline)
     }
+
+    /// 캔버스 크기를 변경합니다 (기존 픽셀 데이터는 왼쪽 위부터 유지)
+    mutating func resizeCanvas(width: Int, height: Int) {
+        let oldHeight = pixels.count
+        let oldWidth = pixels.isEmpty ? 0 : pixels[0].count
+
+        var newPixels = Layer.createEmptyPixels(width: width, height: height)
+
+        // 기존 픽셀 복사 (범위 내에서만)
+        for y in 0..<min(oldHeight, height) {
+            for x in 0..<min(oldWidth, width) {
+                newPixels[y][x] = pixels[y][x]
+            }
+        }
+
+        pixels = newPixels
+    }
 }

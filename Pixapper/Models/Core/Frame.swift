@@ -165,6 +165,11 @@ struct LayerTimeline {
         // 정렬된 인덱스 업데이트
         updateSortedIndices()
     }
+
+    /// 특정 프레임의 키프레임 픽셀 데이터 반환 (키프레임이 아니면 nil)
+    func getKeyframe(at frameIndex: Int) -> [[Color?]]? {
+        return keyframes[frameIndex]
+    }
 }
 
 /// 각 레이어의 셀 데이터 (픽셀만 포함) - 호환성을 위해 유지

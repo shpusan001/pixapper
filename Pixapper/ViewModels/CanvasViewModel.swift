@@ -1614,6 +1614,35 @@ class CanvasViewModel: ObservableObject {
         return clipboard != nil
     }
 
+    // MARK: - Canvas Resize
+
+    /// 캔버스 크기를 변경합니다
+    func resizeCanvas(width: Int, height: Int) {
+        // 선택 영역이 있으면 커밋
+        if isFloatingSelection {
+            commitSelection()
+        } else {
+            clearSelection()
+        }
+
+        // 새 캔버스 크기로 업데이트
+        canvas.width = width
+        canvas.height = height
+
+        // 모든 레이어 크기 조정
+        for index in layerViewModel.layers.indices {
+            layerViewModel.layers[index].resizeCanvas(width: width, height: height)
+        }
+
+        // Timeline의 모든 프레임/키프레임 크기 조정
+        timelineViewModel?.resizeAllFrames(width: width, height: height)
+
+        // 현재 프레임 다시 로드
+        if let timeline = timelineViewModel {
+            timeline.loadFrame(at: timeline.currentFrameIndex)
+        }
+    }
+
     // MARK: - Compositor Methods
 
     /// Compositor를 통해 합성된 픽셀 배열 반환

@@ -20,8 +20,8 @@ class TimelineViewModel: ObservableObject {
     @Published var selectionAnchor: Int?  // 드래그/범위 선택 시작점
 
     var playbackTimer: Timer?  // fileprivate for extension access
-    let canvasWidth: Int
-    let canvasHeight: Int
+    var canvasWidth: Int
+    var canvasHeight: Int
 
     var layerViewModel: LayerViewModel
 
@@ -254,6 +254,38 @@ class TimelineViewModel: ObservableObject {
         }
 
         loadFrame(at: currentFrameIndex)
+    }
+
+    /// 모든 레이어의 모든 프레임 크기를 변경합니다
+    func resizeAllFrames(width: Int, height: Int) {
+        canvasWidth = width
+        canvasHeight = height
+
+        // 모든 레이어의 모든 키프레임 크기 조정
+        for layerIndex in layerViewModel.layers.indices {
+            let keyframeIndices = layerViewModel.layers[layerIndex].timeline.getAllKeyframeIndices()
+
+            for frameIndex in keyframeIndices {
+                if let pixels = layerViewModel.layers[layerIndex].timeline.getKeyframe(at: frameIndex) {
+                    // 기존 픽셀 크기
+                    let oldHeight = pixels.count
+                    let oldWidth = pixels.isEmpty ? 0 : pixels[0].count
+
+                    // 새 크기로 픽셀 배열 생성
+                    var newPixels = Layer.createEmptyPixels(width: width, height: height)
+
+                    // 기존 픽셀 복사 (범위 내에서만)
+                    for y in 0..<min(oldHeight, height) {
+                        for x in 0..<min(oldWidth, width) {
+                            newPixels[y][x] = pixels[y][x]
+                        }
+                    }
+
+                    // 키프레임 업데이트
+                    layerViewModel.layers[layerIndex].timeline.setKeyframe(at: frameIndex, pixels: newPixels)
+                }
+            }
+        }
     }
 
     // MARK: - Frame Selection

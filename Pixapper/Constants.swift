@@ -20,6 +20,8 @@ enum Constants {
         static let checkerboardLightGray: CGFloat = 0.9
         /// 체커보드 패턴 어두운 회색
         static let checkerboardDarkGray: CGFloat = 0.8
+        /// 캔버스 주변 최소 마진 (pt) - 선택 영역이 여유롭게 나갈 수 있도록
+        static let minMargin: CGFloat = 500
     }
 
     /// 색상 관련 설정
