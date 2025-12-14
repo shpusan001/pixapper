@@ -162,7 +162,7 @@ struct ContentView: View {
                 HStack(spacing: 4) {
                     // Background toggle
                     Button(action: {
-                        canvasViewModel.backgroundMode = canvasViewModel.backgroundMode == .checkerboard ? .white : .checkerboard
+                        canvasViewModel.toggleBackground()
                     }) {
                         Image(systemName: canvasViewModel.backgroundMode == .checkerboard ? "checkerboard.rectangle" : "rectangle.fill")
                             .font(.system(size: 13))
@@ -175,7 +175,7 @@ struct ContentView: View {
 
                     // Grid toggle
                     Button(action: {
-                        canvasViewModel.showGrid.toggle()
+                        canvasViewModel.toggleGrid()
                     }) {
                         Image(systemName: canvasViewModel.showGrid ? "grid" : "grid.circle")
                             .font(.system(size: 13))
@@ -284,12 +284,12 @@ struct ContentView: View {
             }
             // Toggle Background (Cmd+B)
             else if keyPress.characters == "b" && keyPress.modifiers.contains(.command) {
-                canvasViewModel.backgroundMode = canvasViewModel.backgroundMode == .checkerboard ? .white : .checkerboard
+                canvasViewModel.toggleBackground()
                 return .handled
             }
             // Toggle Grid (Cmd+G)
             else if keyPress.characters == "g" && keyPress.modifiers.contains(.command) {
-                canvasViewModel.showGrid.toggle()
+                canvasViewModel.toggleGrid()
                 return .handled
             }
             // Undo (Cmd+Z)

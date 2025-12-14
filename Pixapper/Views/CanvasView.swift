@@ -458,8 +458,8 @@ struct CheckerboardView: View {
                     let rect = CGRect(
                         x: marginX + CGFloat(x) * pixelSize,
                         y: marginY + CGFloat(y) * pixelSize,
-                        width: pixelSize,
-                        height: pixelSize
+                        width: pixelSize + 1,
+                        height: pixelSize + 1
                     )
                     context.fill(Path(rect), with: .color(isEven ? lightGray : darkGray))
                 }
@@ -506,7 +506,7 @@ struct GridLinesView: View {
 
     var body: some View {
         Canvas { context, size in
-            let gridColor = Color(white: 0.6, opacity: 0.2)
+            let gridColor = Color(white: 0.5, opacity: 0.4)
             var path = Path()
 
             for x in 0...width {
@@ -521,7 +521,7 @@ struct GridLinesView: View {
                 path.addLine(to: CGPoint(x: marginX + CGFloat(width) * pixelSize, y: yPos))
             }
 
-            context.stroke(path, with: .color(gridColor), lineWidth: 0.5)
+            context.stroke(path, with: .color(gridColor), lineWidth: 1.0)
         }
     }
 }

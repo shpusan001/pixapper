@@ -29,6 +29,18 @@ class CanvasViewModel: ObservableObject {
         }
     }
 
+    // MARK: - View Toggle Methods
+
+    func toggleGrid() {
+        objectWillChange.send()
+        showGrid.toggle()
+    }
+
+    func toggleBackground() {
+        objectWillChange.send()
+        backgroundMode = backgroundMode == .checkerboard ? .white : .checkerboard
+    }
+
     // MARK: - Dependencies
     var layerViewModel: LayerViewModel
     var commandManager: CommandManager
