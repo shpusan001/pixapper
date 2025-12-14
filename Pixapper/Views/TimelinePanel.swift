@@ -27,17 +27,23 @@ struct TimelinePanel: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            Divider()
+            Rectangle()
+                .fill(Constants.Theme.divider)
+                .frame(height: 1)
 
             // Playback controls
             playbackControls
 
-            Divider()
+            Rectangle()
+                .fill(Constants.Theme.divider)
+                .frame(height: 1)
 
             // Operations toolbar
             operationsToolbar
 
-            Divider()
+            Rectangle()
+                .fill(Constants.Theme.divider)
+                .frame(height: 1)
 
             // 2D Grid: Layers × Frames
             GeometryReader { geometry in
@@ -58,7 +64,7 @@ struct TimelinePanel: View {
                         GeometryReader { contentGeometry in
                             let lineX = layerColumnWidth + CGFloat(viewModel.currentFrameIndex) * cellSize
                             Rectangle()
-                                .fill(Color.red)
+                                .fill(Constants.Theme.playheadRed)
                                 .frame(width: 2)
                                 .offset(x: lineX, y: Constants.Layout.Timeline.frameHeaderHeight)
                         }
@@ -66,51 +72,45 @@ struct TimelinePanel: View {
                 }
             }
         }
-        .background(Color(nsColor: .controlBackgroundColor))
+        .background(Constants.Theme.panelBackground)
     }
 
     // MARK: - Playback Controls
 
     private var playbackControls: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 8) {
             // Left: Playback & Navigation
-            HStack(spacing: 6) {
-                Button(action: { viewModel.togglePlayback() }) {
-                    Image(systemName: viewModel.isPlaying ? "pause.fill" : "play.fill")
-                        .font(.system(size: 13))
-                        .frame(width: 28, height: 28)
+            HStack(spacing: 2) {
+                TimelineButton(icon: viewModel.isPlaying ? "pause.fill" : "play.fill", size: 24, tooltip: "Play/Pause (Space)") {
+                    viewModel.togglePlayback()
                 }
-                .buttonStyle(.borderless)
-                .help("Play/Pause (Space)")
 
-                Divider()
-                    .frame(height: 18)
+                Rectangle()
+                    .fill(Constants.Theme.divider)
+                    .frame(width: 1, height: 16)
+                    .padding(.horizontal, 4)
 
-                Button(action: { viewModel.previousFrame() }) {
-                    Image(systemName: "chevron.left")
-                        .font(.system(size: 11))
+                TimelineButton(icon: "chevron.left", size: 20, tooltip: "Previous Frame (,)") {
+                    viewModel.previousFrame()
                 }
-                .buttonStyle(.borderless)
-                .help("Previous Frame (,)")
 
                 Text("\(viewModel.currentFrameIndex + 1)/\(viewModel.totalFrames)")
-                    .font(.system(size: 11, design: .monospaced))
-                    .foregroundColor(.primary)
-                    .frame(minWidth: 50)
+                    .font(.system(size: 10, design: .monospaced))
+                    .foregroundColor(Constants.Theme.textPrimary)
+                    .frame(minWidth: 45)
 
-                Button(action: { viewModel.nextFrame() }) {
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 11))
+                TimelineButton(icon: "chevron.right", size: 20, tooltip: "Next Frame (.)") {
+                    viewModel.nextFrame()
                 }
-                .buttonStyle(.borderless)
-                .help("Next Frame (.)")
             }
 
-            Divider()
-                .frame(height: 18)
+            Rectangle()
+                .fill(Constants.Theme.divider)
+                .frame(width: 1, height: 16)
+                .padding(.horizontal, 4)
 
             // Center: FPS & Speed
-            HStack(spacing: 8) {
+            HStack(spacing: 6) {
                 Picker("", selection: Binding(
                     get: { viewModel.settings.fps },
                     set: { viewModel.setFPS($0) }
@@ -123,11 +123,12 @@ struct TimelinePanel: View {
                     Text("60").tag(60)
                 }
                 .labelsHidden()
-                .frame(width: 55)
+                .frame(width: 50)
+                .pickerStyle(.menu)
 
-                Text("fps")
-                    .font(.system(size: 10))
-                    .foregroundColor(.secondary)
+                Text("FPS")
+                    .font(.system(size: 9, weight: .medium))
+                    .foregroundColor(Constants.Theme.textSecondary)
             }
 
             Picker("", selection: Binding(
@@ -141,46 +142,35 @@ struct TimelinePanel: View {
                 Text("4×").tag(4.0)
             }
             .labelsHidden()
-            .frame(width: 60)
+            .frame(width: 55)
+            .pickerStyle(.menu)
 
             Spacer()
 
             // Right: Options
             HStack(spacing: 4) {
-                Button(action: { viewModel.toggleLoop() }) {
-                    HStack(spacing: 3) {
-                        Image(systemName: "repeat")
-                            .font(.system(size: 11))
-                        Text("Loop")
-                            .font(.system(size: 10))
-                    }
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 3)
-                    .foregroundColor(viewModel.settings.isLooping ? .accentColor : .primary)
+                TimelineToggleButton(
+                    icon: "repeat",
+                    text: "Loop",
+                    isOn: viewModel.settings.isLooping,
+                    tooltip: "Loop"
+                ) {
+                    viewModel.toggleLoop()
                 }
-                .buttonStyle(.bordered)
-                .controlSize(.small)
-                .help("Loop")
 
-                Button(action: { viewModel.toggleOnionSkin() }) {
-                    HStack(spacing: 3) {
-                        Image(systemName: "circle.lefthalf.filled")
-                            .font(.system(size: 11))
-                        Text("Onion")
-                            .font(.system(size: 10))
-                    }
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 3)
-                    .foregroundColor(viewModel.settings.onionSkinEnabled ? .accentColor : .primary)
+                TimelineToggleButton(
+                    icon: "circle.lefthalf.filled",
+                    text: "Onion",
+                    isOn: viewModel.settings.onionSkinEnabled,
+                    tooltip: "Onion Skin (O)"
+                ) {
+                    viewModel.toggleOnionSkin()
                 }
-                .buttonStyle(.bordered)
-                .controlSize(.small)
-                .help("Onion Skin (O)")
             }
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .background(Color(nsColor: .controlBackgroundColor))
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(Constants.Theme.sectionBackground)
     }
 
     // MARK: - Frame Header Row
@@ -189,27 +179,28 @@ struct TimelinePanel: View {
         HStack(spacing: 0) {
             // Layer column header
             Text("LAYERS")
-                .font(.system(size: 10, weight: .semibold))
-                .foregroundColor(.secondary)
+                .font(.system(size: 9, weight: .bold))
+                .foregroundColor(Constants.Theme.textSecondary)
                 .frame(width: layerColumnWidth, height: 26)
-                .background(Color(nsColor: .controlBackgroundColor))
+                .background(Constants.Theme.sectionBackground)
 
             // Frame numbers with drag selection support
             ForEach(viewModel.frames) { frame in
                 frameHeaderCell(frameIndex: frame.index)
             }
         }
-        .background(Color(nsColor: .controlBackgroundColor))
+        .background(Constants.Theme.sectionBackground)
     }
 
     private func frameHeaderCell(frameIndex: Int) -> some View {
         let isCurrent = frameIndex == viewModel.currentFrameIndex
 
         return Text("\(frameIndex + 1)")
-            .font(.system(size: 10, design: .monospaced))
-            .fontWeight(isCurrent ? .semibold : .regular)
-            .foregroundColor(.secondary)
+            .font(.system(size: 9, design: .monospaced))
+            .fontWeight(isCurrent ? .bold : .regular)
+            .foregroundColor(isCurrent ? Constants.Theme.textPrimary : Constants.Theme.textSecondary)
             .frame(width: cellSize, height: 26)
+            .background(isCurrent ? Constants.Theme.hoverBackground : Constants.Theme.sectionBackground)
             .contentShape(Rectangle())
             .gesture(
                 DragGesture(minimumDistance: 5)
@@ -268,18 +259,18 @@ struct TimelinePanel: View {
         HStack(spacing: 4) {
             // Drag handle
             Image(systemName: "line.3.horizontal")
-                .font(.system(size: 10))
-                .foregroundColor(.secondary)
+                .font(.system(size: 9))
+                .foregroundColor(Constants.Theme.textSecondary)
                 .frame(width: 14)
 
             // Visibility toggle
             Button(action: {
                 viewModel.layerViewModel.toggleVisibility(at: layerIndex)
             }) {
-                Image(systemName: layer.isVisible ? "eye" : "eye.slash")
-                    .font(.system(size: 11))
+                Image(systemName: layer.isVisible ? "eye.fill" : "eye.slash")
+                    .font(.system(size: 10))
                     .frame(width: 18, height: 18)
-                    .foregroundColor(layer.isVisible ? .primary : .secondary)
+                    .foregroundColor(layer.isVisible ? Constants.Theme.textPrimary : Constants.Theme.textDisabled)
             }
             .buttonStyle(.plain)
 
@@ -296,10 +287,12 @@ struct TimelinePanel: View {
                         editingLayerIndex = nil
                     })
                     .textFieldStyle(.plain)
-                    .font(.callout)
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundColor(Constants.Theme.textPrimary)
                 } else {
                     Text(layer.name)
-                        .font(.callout)
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundColor(Constants.Theme.textPrimary)
                         .lineLimit(1)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .onTapGesture(count: 2) {
@@ -344,9 +337,9 @@ struct TimelinePanel: View {
 
                     // Percentage display (always visible, clickable)
                     Text("\(Int((editingOpacityLayerIndex == layerIndex ? currentOpacity : viewModel.layerViewModel.layers[layerIndex].opacity) * 100))%")
-                        .font(.caption2)
-                        .foregroundColor(editingOpacityLayerIndex == layerIndex ? .primary : .secondary)
-                        .underline(editingOpacityLayerIndex != layerIndex, color: .secondary.opacity(0.3))
+                        .font(.system(size: 9, design: .monospaced))
+                        .foregroundColor(editingOpacityLayerIndex == layerIndex ? Constants.Theme.accentBlue : Constants.Theme.textSecondary)
+                        .underline(editingOpacityLayerIndex != layerIndex, color: Constants.Theme.textSecondary.opacity(0.3))
                         .frame(width: 30, alignment: .trailing)
                         .contentShape(Rectangle())
                         .onHover { hovering in
@@ -373,11 +366,11 @@ struct TimelinePanel: View {
         .background(
             Group {
                 if layerIndex == viewModel.layerViewModel.selectedLayerIndex {
-                    Color.accentColor.opacity(0.15)
+                    Constants.Theme.accentBlue.opacity(0.2)
                 } else if draggingLayerIndex == layerIndex {
-                    Color.accentColor.opacity(0.25)
+                    Constants.Theme.accentBlue.opacity(0.3)
                 } else {
-                    Color(nsColor: .controlBackgroundColor)
+                    Constants.Theme.panelBackground
                 }
             }
         )
@@ -873,8 +866,9 @@ struct TimelinePanel: View {
                 }
             }
 
-            Divider()
-                .frame(height: 20)
+            Rectangle()
+                .fill(Constants.Theme.divider)
+                .frame(width: 1, height: 16)
 
             // KEYFRAME
             toolbarSection(title: "KEYFRAME") {
@@ -903,8 +897,9 @@ struct TimelinePanel: View {
                 }
             }
 
-            Divider()
-                .frame(height: 20)
+            Rectangle()
+                .fill(Constants.Theme.divider)
+                .frame(width: 1, height: 16)
 
             // FRAME
             toolbarSection(title: "FRAME") {
@@ -931,9 +926,9 @@ struct TimelinePanel: View {
 
             Spacer()
         }
-        .padding(.horizontal, 12)
+        .padding(.horizontal, 10)
         .padding(.vertical, 6)
-        .background(Color(nsColor: .controlBackgroundColor))
+        .background(Constants.Theme.sectionBackground)
     }
 
     // MARK: - Toolbar Helpers
@@ -944,11 +939,11 @@ struct TimelinePanel: View {
     ) -> some View {
         HStack(spacing: 4) {
             Text(title)
-                .font(.system(size: 9, weight: .semibold))
-                .foregroundColor(.secondary)
-                .frame(width: 60, alignment: .leading)
+                .font(.system(size: 9, weight: .bold))
+                .foregroundColor(Constants.Theme.textSecondary)
+                .frame(width: 55, alignment: .leading)
 
-            HStack(spacing: 3) {
+            HStack(spacing: 2) {
                 content()
             }
         }
@@ -962,19 +957,90 @@ struct TimelinePanel: View {
         action: @escaping () -> Void
     ) -> some View {
         Button(action: action) {
-            HStack(spacing: 3) {
+            HStack(spacing: 2) {
                 Image(systemName: icon)
-                    .font(.system(size: 11))
-                Text(text)
                     .font(.system(size: 10))
+                Text(text)
+                    .font(.system(size: 9, weight: .medium))
             }
             .padding(.horizontal, 6)
-            .padding(.vertical, 3)
+            .padding(.vertical, 4)
+            .foregroundColor(disabled ? Constants.Theme.textDisabled : Constants.Theme.textPrimary)
         }
-        .buttonStyle(.bordered)
-        .controlSize(.small)
+        .buttonStyle(.plain)
+        .background(
+            RoundedRectangle(cornerRadius: 2)
+                .fill(disabled ? Constants.Theme.panelBackground : Constants.Theme.hoverBackground)
+        )
         .disabled(disabled)
         .help(tooltip)
+    }
+}
+
+// MARK: - Timeline UI Components
+
+struct TimelineButton: View {
+    let icon: String
+    let size: CGFloat
+    let tooltip: String
+    let action: () -> Void
+
+    @State private var isHovered = false
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: icon)
+                .font(.system(size: size))
+                .frame(width: 28, height: 24)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .foregroundColor(Constants.Theme.textPrimary)
+        .background(
+            RoundedRectangle(cornerRadius: 2)
+                .fill(isHovered ? Constants.Theme.hoverBackground : Color.clear)
+        )
+        .help(tooltip)
+        .onHover { hovering in
+            isHovered = hovering
+        }
+    }
+}
+
+struct TimelineToggleButton: View {
+    let icon: String
+    let text: String
+    let isOn: Bool
+    let tooltip: String
+    let action: () -> Void
+
+    @State private var isHovered = false
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 3) {
+                Image(systemName: icon)
+                    .font(.system(size: 10))
+                Text(text)
+                    .font(.system(size: 9, weight: .medium))
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .foregroundColor(isOn ? Constants.Theme.accentBlue : Constants.Theme.textSecondary)
+        }
+        .buttonStyle(.plain)
+        .background(
+            RoundedRectangle(cornerRadius: 2)
+                .fill(isOn ? Constants.Theme.accentBlue.opacity(0.15) : (isHovered ? Constants.Theme.hoverBackground : Constants.Theme.panelBackground))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 2)
+                .strokeBorder(isOn ? Constants.Theme.accentBlue.opacity(0.5) : Color.clear, lineWidth: 1)
+        )
+        .help(tooltip)
+        .onHover { hovering in
+            isHovered = hovering
+        }
     }
 }
 

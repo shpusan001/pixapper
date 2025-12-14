@@ -49,19 +49,10 @@ struct ContentView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // Toolbar
+            // Toolbar - Adobe style with better grouping
             HStack(spacing: 0) {
-                // App title
-                Text("Pixapper")
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundColor(.secondary)
-                    .padding(.leading, 16)
-                    .padding(.trailing, 12)
-
-                ToolbarDivider()
-
-                // File operations: New/Open/Save
-                HStack(spacing: 4) {
+                // Left: File operations group
+                HStack(spacing: 8) {
                     ToolbarIconButton(
                         icon: "doc.badge.plus",
                         tooltip: "New Project (⌘N)",
@@ -85,13 +76,72 @@ struct ContentView: View {
                         tooltip: "Save (⌘S)",
                         action: { appViewModel.saveProject() }
                     )
+
+                    ToolbarDivider()
+
+                    ToolbarIconButton(
+                        icon: "square.and.arrow.up",
+                        tooltip: "Export (PNG, GIF, Sprite Sheet)",
+                        action: { showingExportSheet = true }
+                    )
                 }
-                .padding(.horizontal, 8)
+                .padding(.leading, 12)
 
-                ToolbarDivider()
+                Spacer()
 
-                // Edit operations: Undo/Redo
-                HStack(spacing: 4) {
+                // Center: Canvas info and controls
+                HStack(spacing: 12) {
+                    // Canvas size indicator (clickable)
+                    Button(action: { showingCanvasSizeSheet = true }) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "square.resize")
+                                .font(.system(size: 10))
+                            Text("\(canvasViewModel.canvas.width)×\(canvasViewModel.canvas.height)")
+                                .font(.system(size: 10, design: .monospaced))
+                        }
+                        .foregroundColor(Constants.Theme.textSecondary)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(
+                            RoundedRectangle(cornerRadius: 2)
+                                .fill(Constants.Theme.sectionBackground)
+                        )
+                    }
+                    .buttonStyle(.plain)
+                    .help("Resize Canvas (⌘R)")
+
+                    // Zoom control
+                    HStack(spacing: 6) {
+                        Image(systemName: "magnifyingglass")
+                            .font(.system(size: 10))
+                            .foregroundColor(Constants.Theme.textSecondary)
+
+                        Slider(
+                            value: Binding(
+                                get: { appViewModel.canvasViewModel.zoomLevel },
+                                set: { appViewModel.canvasViewModel.zoomLevel = $0 }
+                            ),
+                            in: 100...1600,
+                            step: 100
+                        )
+                        .frame(width: 100)
+                        .tint(Constants.Theme.accentBlue)
+
+                        Text("\(Int(canvasViewModel.zoomLevel))%")
+                            .font(.system(size: 10, design: .monospaced))
+                            .foregroundColor(Constants.Theme.textPrimary)
+                            .frame(width: 42, alignment: .center)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Constants.Theme.sectionBackground)
+                            .cornerRadius(2)
+                    }
+                }
+
+                Spacer()
+
+                // Right: View and Edit controls
+                HStack(spacing: 8) {
                     ToolbarIconButton(
                         icon: "arrow.uturn.backward",
                         tooltip: "Undo (⌘Z)",
@@ -105,130 +155,55 @@ struct ContentView: View {
                         isDisabled: !commandManager.canRedo,
                         action: { commandManager.redo() }
                     )
-                }
-                .padding(.horizontal, 8)
 
-                ToolbarDivider()
+                    ToolbarDivider()
 
-                // View: Zoom controls
-                HStack(spacing: 8) {
-                    Image(systemName: "magnifyingglass")
-                        .font(.system(size: 11))
-                        .foregroundColor(.secondary)
-
-                    Slider(
-                        value: Binding(
-                            get: { appViewModel.canvasViewModel.zoomLevel },
-                            set: { appViewModel.canvasViewModel.zoomLevel = $0 }
-                        ),
-                        in: 100...1600,
-                        step: 100
-                    )
-                        .frame(width: 100)
-
-                    Text("\(Int(canvasViewModel.zoomLevel))%")
-                        .font(.system(size: 11, design: .monospaced))
-                        .foregroundColor(.secondary)
-                        .frame(width: 45, alignment: .trailing)
-                }
-                .padding(.horizontal, 8)
-
-                ToolbarDivider()
-
-                // Canvas: Size & Resize (통합)
-                Button(action: { showingCanvasSizeSheet = true }) {
-                    HStack(spacing: 6) {
-                        Image(systemName: "square.resize")
-                            .font(.system(size: 12))
-                        Text("\(canvasViewModel.canvas.width)×\(canvasViewModel.canvas.height)")
-                            .font(.system(size: 11, design: .monospaced))
-                    }
-                    .foregroundColor(.secondary)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                }
-                .buttonStyle(.plain)
-                .help("Resize Canvas (⌘R)")
-                .background(
-                    RoundedRectangle(cornerRadius: 4)
-                        .fill(Color.clear)
-                )
-                .contentShape(Rectangle())
-                .padding(.horizontal, 8)
-
-                ToolbarDivider()
-
-                // Canvas View Options: Background & Grid
-                HStack(spacing: 4) {
-                    // Background toggle
-                    Button(action: {
-                        canvasViewModel.toggleBackground()
-                    }) {
-                        Image(systemName: canvasViewModel.backgroundMode == .checkerboard ? "checkerboard.rectangle" : "rectangle.fill")
-                            .font(.system(size: 13))
-                            .frame(width: 28, height: 28)
-                            .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-                    .foregroundColor(.secondary)
-                    .help(canvasViewModel.backgroundMode == .checkerboard ? "White Background (⌘B)" : "Checkerboard (⌘B)")
-
-                    // Grid toggle
-                    Button(action: {
-                        canvasViewModel.toggleGrid()
-                    }) {
-                        Image(systemName: canvasViewModel.showGrid ? "grid" : "grid.circle")
-                            .font(.system(size: 13))
-                            .frame(width: 28, height: 28)
-                            .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-                    .foregroundColor(canvasViewModel.showGrid ? .secondary : .secondary.opacity(0.5))
-                    .help(canvasViewModel.showGrid ? "Hide Grid (⌘G)" : "Show Grid (⌘G)")
-                }
-                .padding(.horizontal, 8)
-
-                ToolbarDivider()
-
-                // Output: Export
-                HStack(spacing: 4) {
                     ToolbarIconButton(
-                        icon: "square.and.arrow.up",
-                        tooltip: "Export (PNG, GIF, Sprite Sheet)",
-                        action: { showingExportSheet = true }
+                        icon: canvasViewModel.backgroundMode == .checkerboard ? "checkerboard.rectangle" : "rectangle.fill",
+                        tooltip: canvasViewModel.backgroundMode == .checkerboard ? "White Background (⌘B)" : "Checkerboard (⌘B)",
+                        action: { canvasViewModel.toggleBackground() }
+                    )
+
+                    ToolbarToggleButton(
+                        icon: "grid",
+                        tooltip: "Toggle Grid (⌘G)",
+                        isOn: canvasViewModel.showGrid,
+                        action: { canvasViewModel.toggleGrid() }
                     )
                 }
-                .padding(.trailing, 16)
-
-                Spacer()
+                .padding(.trailing, 12)
             }
-            .frame(height: 40)
-            .background(Color(nsColor: .controlBackgroundColor).opacity(0.95))
+            .frame(height: 36)
+            .background(Constants.Theme.panelBackground)
 
-            Divider()
+            Rectangle()
+                .fill(Constants.Theme.divider)
+                .frame(height: 1)
 
             VSplitView {
                 // Top section: Tool + Canvas + Properties
                 HSplitView {
-                    // Tool panel on the left
+                    // Tool panel on the left (fixed width)
                     ToolPanel(viewModel: canvasViewModel, toolSettingsManager: toolSettingsManager)
-                        .frame(minWidth: 52, idealWidth: 52, maxWidth: 80)
+                        .frame(width: 50)
 
                     // Canvas in the center
                     CanvasView(viewModel: canvasViewModel, timelineViewModel: timelineViewModel)
                         .frame(minWidth: 400)
+                        .background(Constants.Theme.backgroundDark)
 
                     // Properties panel on the right
                     PropertiesPanel(toolSettingsManager: toolSettingsManager, viewModel: canvasViewModel)
-                        .frame(minWidth: 200, idealWidth: 200, maxWidth: 320)
+                        .frame(minWidth: 200, idealWidth: 240, maxWidth: 300)
                 }
 
                 // Timeline panel at the bottom
                 TimelinePanel(viewModel: timelineViewModel, commandManager: commandManager)
-                    .frame(minHeight: 150, idealHeight: 280, maxHeight: 600)
+                    .frame(minHeight: 150, idealHeight: 250, maxHeight: 500)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Constants.Theme.backgroundDark)
         .sheet(isPresented: $showingExportSheet) {
             ExportView(
                 timelineViewModel: timelineViewModel,
@@ -348,34 +323,67 @@ struct ToolbarIconButton: View {
     var isDisabled: Bool = false
     let action: () -> Void
 
+    @State private var isHovered = false
+
     var body: some View {
         Button(action: action) {
             Image(systemName: icon)
-                .font(.system(size: 13))
-                .frame(width: 28, height: 28)
+                .font(.system(size: 11))
+                .frame(width: 24, height: 24)
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .foregroundColor(isDisabled ? .secondary.opacity(0.5) : .secondary)
+        .foregroundColor(isDisabled ? Constants.Theme.textDisabled : Constants.Theme.textSecondary)
         .disabled(isDisabled)
         .help(tooltip)
         .background(
-            RoundedRectangle(cornerRadius: 4)
-                .fill(Color.clear)
+            RoundedRectangle(cornerRadius: 2)
+                .fill(isHovered && !isDisabled ? Constants.Theme.hoverBackground : Color.clear)
         )
-        .overlay(
-            RoundedRectangle(cornerRadius: 4)
-                .strokeBorder(Color.clear, lineWidth: 0)
-        )
+        .onHover { hovering in
+            isHovered = hovering
+        }
     }
 }
 
 struct ToolbarDivider: View {
     var body: some View {
         Rectangle()
-            .fill(Color.secondary.opacity(0.2))
-            .frame(width: 1, height: 20)
-            .padding(.horizontal, 8)
+            .fill(Constants.Theme.divider)
+            .frame(width: 1, height: 18)
+            .padding(.horizontal, 6)
+    }
+}
+
+struct ToolbarToggleButton: View {
+    let icon: String
+    let tooltip: String
+    let isOn: Bool
+    let action: () -> Void
+
+    @State private var isHovered = false
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: icon)
+                .font(.system(size: 11))
+                .frame(width: 24, height: 24)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .foregroundColor(isOn ? Constants.Theme.accentBlue : Constants.Theme.textSecondary)
+        .background(
+            RoundedRectangle(cornerRadius: 2)
+                .fill(isOn ? Constants.Theme.accentBlue.opacity(0.15) : (isHovered ? Constants.Theme.hoverBackground : Color.clear))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 2)
+                .strokeBorder(isOn ? Constants.Theme.accentBlue.opacity(0.5) : Color.clear, lineWidth: 1)
+        )
+        .help(tooltip)
+        .onHover { hovering in
+            isHovered = hovering
+        }
     }
 }
 

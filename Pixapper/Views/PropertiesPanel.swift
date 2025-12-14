@@ -16,11 +16,11 @@ struct PropertiesPanel: View {
             VStack(alignment: .leading, spacing: 0) {
                 toolPropertiesView
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color(nsColor: .controlBackgroundColor).opacity(0.95))
+        .background(Constants.Theme.panelBackground)
     }
 
     @ViewBuilder
@@ -65,36 +65,31 @@ struct MirrorPropertiesView: View {
         VStack(alignment: .leading, spacing: 0) {
             PropertySectionHeader(title: "Mirror Tool")
 
-            PropertyRow(label: "Size") {
-                HStack(spacing: 8) {
-                    Slider(value: Binding(
-                        get: { Double(settings.brushSize) },
-                        set: { settings.brushSize = Int($0) }
-                    ), in: 1...10, step: 1)
-                    Text("\(settings.brushSize)")
-                        .font(.system(size: 11, design: .monospaced))
-                        .foregroundColor(.secondary)
-                        .frame(width: 20, alignment: .trailing)
+            VStack(alignment: .leading, spacing: 8) {
+                PropertyRow(label: "Size") {
+                    LabeledSlider(value: $settings.brushSize, range: 1...10, step: 1)
                 }
-            }
 
-            PropertyDivider()
+                PropertyDivider()
 
-            PropertyRow(label: "Color") {
-                ColorPicker("", selection: $settings.color)
-                    .labelsHidden()
-            }
+                PropertyRow(label: "Color") {
+                    CompactColorPicker(selection: $settings.color)
+                }
 
-            PropertyDivider()
+                PropertyDivider()
 
-            PropertyRow(label: "Mode") {
-                Picker("", selection: $settings.mode) {
-                    ForEach(MirrorMode.allCases) { mode in
-                        Text(mode.displayName).tag(mode)
+                PropertyRow(label: "Mode") {
+                    Picker("", selection: $settings.mode) {
+                        ForEach(MirrorMode.allCases) { mode in
+                            Text(mode.displayName).tag(mode)
+                        }
                     }
+                    .labelsHidden()
+                    .pickerStyle(.menu)
                 }
-                .labelsHidden()
             }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 10)
         }
     }
 }
@@ -107,80 +102,75 @@ struct DitheringPropertiesView: View {
         VStack(alignment: .leading, spacing: 0) {
             PropertySectionHeader(title: "Dithering Tool")
 
-            PropertyRow(label: "Size") {
-                HStack(spacing: 8) {
-                    Slider(value: Binding(
-                        get: { Double(settings.brushSize) },
-                        set: { settings.brushSize = Int($0) }
-                    ), in: 1...10, step: 1)
-                    Text("\(settings.brushSize)")
-                        .font(.system(size: 11, design: .monospaced))
-                        .foregroundColor(.secondary)
-                        .frame(width: 20, alignment: .trailing)
+            VStack(alignment: .leading, spacing: 8) {
+                PropertyRow(label: "Size") {
+                    LabeledSlider(value: $settings.brushSize, range: 1...10, step: 1)
                 }
-            }
 
-            PropertyDivider()
-
-            PropertyRow(label: "Color 1") {
-                ColorPicker("", selection: $settings.color)
-                    .labelsHidden()
-            }
-
-            PropertyDivider()
-
-            PropertyRow(label: "Color 2") {
-                ColorPicker("", selection: $settings.secondaryColor)
-                    .labelsHidden()
-            }
-
-            PropertyDivider()
-
-            PropertyRow(label: "Pattern") {
-                Picker("", selection: $settings.pattern) {
-                    ForEach(DitheringPattern.allCases) { pattern in
-                        Text(pattern.displayName).tag(pattern)
-                    }
-                }
-                .labelsHidden()
-            }
-
-            // Custom Pattern Editor
-            if settings.pattern == .custom {
                 PropertyDivider()
 
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack {
-                        Text("Grid Size")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-
-                        Spacer()
-
-                        Picker("", selection: Binding(
-                            get: { settings.customPatternSize },
-                            set: { newSize in
-                                settings.resizeCustomPattern(newSize: newSize)
-                            }
-                        )) {
-                            Text("2×2").tag(2)
-                            Text("4×4").tag(4)
-                            Text("8×8").tag(8)
-                            Text("16×16").tag(16)
-                        }
-                        .labelsHidden()
-                        .frame(width: 80)
-                    }
-
-                    CustomPatternEditor(
-                        pattern: $settings.customPattern,
-                        size: settings.customPatternSize,
-                        color1: settings.color,
-                        color2: settings.secondaryColor
-                    )
+                PropertyRow(label: "Color 1") {
+                    CompactColorPicker(selection: $settings.color)
                 }
-                .padding(.vertical, 4)
+
+                PropertyDivider()
+
+                PropertyRow(label: "Color 2") {
+                    CompactColorPicker(selection: $settings.secondaryColor)
+                }
+
+                PropertyDivider()
+
+                PropertyRow(label: "Pattern") {
+                    Picker("", selection: $settings.pattern) {
+                        ForEach(DitheringPattern.allCases) { pattern in
+                            Text(pattern.displayName).tag(pattern)
+                        }
+                    }
+                    .labelsHidden()
+                    .pickerStyle(.menu)
+                }
+
+                // Custom Pattern Editor
+                if settings.pattern == .custom {
+                    PropertyDivider()
+
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack {
+                            Text("Grid Size")
+                                .font(.system(size: 10, weight: .medium))
+                                .foregroundColor(Constants.Theme.textSecondary)
+
+                            Spacer()
+
+                            Picker("", selection: Binding(
+                                get: { settings.customPatternSize },
+                                set: { newSize in
+                                    settings.resizeCustomPattern(newSize: newSize)
+                                }
+                            )) {
+                                Text("2×2").tag(2)
+                                Text("4×4").tag(4)
+                                Text("8×8").tag(8)
+                                Text("16×16").tag(16)
+                            }
+                            .labelsHidden()
+                            .pickerStyle(.menu)
+                            .frame(width: 80)
+                        }
+
+                        CustomPatternEditor(
+                            pattern: $settings.customPattern,
+                            size: settings.customPatternSize,
+                            color1: settings.color,
+                            color2: settings.secondaryColor
+                        )
+                    }
+                    .padding(.vertical, 4)
+                }
             }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 10)
         }
     }
 }
@@ -240,29 +230,21 @@ struct PencilPropertiesView: View {
         VStack(alignment: .leading, spacing: 0) {
             PropertySectionHeader(title: "Pencil")
 
-            // Brush Size
-            PropertyRow(label: "Size") {
-                HStack(spacing: 8) {
-                    Slider(value: Binding(
-                        get: { Double(settings.brushSize) },
-                        set: { settings.brushSize = Int($0) }
-                    ), in: 1...10, step: 1)
+            VStack(alignment: .leading, spacing: 8) {
+                PropertyRow(label: "Size") {
+                    LabeledSlider(value: $settings.brushSize, range: 1...10, step: 1)
+                }
 
-                    Text("\(settings.brushSize)")
-                        .font(.system(size: 11, design: .monospaced))
-                        .foregroundColor(.secondary)
-                        .frame(width: 20, alignment: .trailing)
+                PropertyDivider()
+
+                PropertyRow(label: "Color") {
+                    ColorPicker("", selection: $settings.color, supportsOpacity: true)
+                        .labelsHidden()
+                        .frame(height: 24)
                 }
             }
-
-            PropertyDivider()
-
-            // Color
-            PropertyRow(label: "Color") {
-                ColorPicker("", selection: $settings.color, supportsOpacity: true)
-                    .labelsHidden()
-                    .frame(width: 44, height: 32)
-            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 10)
         }
     }
 }
@@ -275,20 +257,13 @@ struct EraserPropertiesView: View {
         VStack(alignment: .leading, spacing: 0) {
             PropertySectionHeader(title: "Eraser")
 
-            // Brush Size
-            PropertyRow(label: "Size") {
-                HStack(spacing: 8) {
-                    Slider(value: Binding(
-                        get: { Double(settings.brushSize) },
-                        set: { settings.brushSize = Int($0) }
-                    ), in: 1...10, step: 1)
-
-                    Text("\(settings.brushSize)")
-                        .font(.system(size: 11, design: .monospaced))
-                        .foregroundColor(.secondary)
-                        .frame(width: 20, alignment: .trailing)
+            VStack(alignment: .leading, spacing: 8) {
+                PropertyRow(label: "Size") {
+                    LabeledSlider(value: $settings.brushSize, range: 1...10, step: 1)
                 }
             }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 10)
         }
     }
 }
@@ -301,26 +276,33 @@ struct FillPropertiesView: View {
         VStack(alignment: .leading, spacing: 0) {
             PropertySectionHeader(title: "Fill")
 
-            // Color
-            PropertyRow(label: "Color") {
-                ColorPicker("", selection: $settings.color, supportsOpacity: true)
-                    .labelsHidden()
-                    .frame(width: 44, height: 32)
-            }
+            VStack(alignment: .leading, spacing: 8) {
+                PropertyRow(label: "Color") {
+                    ColorPicker("", selection: $settings.color, supportsOpacity: true)
+                        .labelsHidden()
+                        .frame(height: 24)
+                }
 
-            PropertyDivider()
+                PropertyDivider()
 
-            // Tolerance
-            PropertyRow(label: "Tolerance") {
-                HStack(spacing: 8) {
-                    Slider(value: $settings.tolerance, in: 0...1, step: 0.01)
+                PropertyRow(label: "Tolerance") {
+                    HStack(spacing: 6) {
+                        Slider(value: $settings.tolerance, in: 0...1, step: 0.01)
+                            .tint(Constants.Theme.accentBlue)
 
-                    Text(String(format: "%.0f%%", settings.tolerance * 100))
-                        .font(.system(size: 11, design: .monospaced))
-                        .foregroundColor(.secondary)
-                        .frame(width: 32, alignment: .trailing)
+                        Text(String(format: "%.0f%%", settings.tolerance * 100))
+                            .font(.system(size: 10, design: .monospaced))
+                            .foregroundColor(Constants.Theme.textPrimary)
+                            .frame(width: 36, alignment: .trailing)
+                            .padding(.horizontal, 4)
+                            .padding(.vertical, 2)
+                            .background(Constants.Theme.sectionBackground)
+                            .cornerRadius(2)
+                    }
                 }
             }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 10)
         }
     }
 }
@@ -335,58 +317,49 @@ struct ShapePropertiesView: View {
         VStack(alignment: .leading, spacing: 0) {
             PropertySectionHeader(title: toolName)
 
-            // Stroke Color
-            PropertyRow(label: "Stroke") {
-                ColorPicker("", selection: $settings.strokeColor, supportsOpacity: true)
-                    .labelsHidden()
-                    .frame(width: 44, height: 32)
-            }
-
-            PropertyDivider()
-
-            // Stroke Width
-            PropertyRow(label: "Width") {
-                HStack(spacing: 8) {
-                    Slider(value: Binding(
-                        get: { Double(settings.strokeWidth) },
-                        set: { settings.strokeWidth = Int($0) }
-                    ), in: 1...10, step: 1)
-
-                    Text("\(settings.strokeWidth)")
-                        .font(.system(size: 11, design: .monospaced))
-                        .foregroundColor(.secondary)
-                        .frame(width: 20, alignment: .trailing)
+            VStack(alignment: .leading, spacing: 8) {
+                PropertyRow(label: "Stroke") {
+                    ColorPicker("", selection: $settings.strokeColor, supportsOpacity: true)
+                        .labelsHidden()
+                        .frame(height: 24)
                 }
-            }
 
-            PropertyDivider()
-
-            // Fill Toggle
-            PropertyRow(label: "Fill") {
-                Toggle("", isOn: $hasFill)
-                    .labelsHidden()
-                    .onChange(of: hasFill) { _, newValue in
-                        if newValue {
-                            settings.fillColor = settings.strokeColor
-                        } else {
-                            settings.fillColor = nil
-                        }
-                    }
-            }
-
-            // Fill Color Picker (only when enabled)
-            if hasFill {
                 PropertyDivider()
 
-                PropertyRow(label: "Fill Color") {
-                    ColorPicker("", selection: Binding(
-                        get: { settings.fillColor ?? .clear },
-                        set: { settings.fillColor = $0 }
-                    ), supportsOpacity: true)
+                PropertyRow(label: "Width") {
+                    LabeledSlider(value: $settings.strokeWidth, range: 1...10, step: 1)
+                }
+
+                PropertyDivider()
+
+                PropertyRow(label: "Fill") {
+                    Toggle("", isOn: $hasFill)
                         .labelsHidden()
-                        .frame(width: 44, height: 32)
+                        .toggleStyle(.switch)
+                        .onChange(of: hasFill) { _, newValue in
+                            if newValue {
+                                settings.fillColor = settings.strokeColor
+                            } else {
+                                settings.fillColor = nil
+                            }
+                        }
+                }
+
+                if hasFill {
+                    PropertyDivider()
+
+                    PropertyRow(label: "Fill Color") {
+                        ColorPicker("", selection: Binding(
+                            get: { settings.fillColor ?? .clear },
+                            set: { settings.fillColor = $0 }
+                        ), supportsOpacity: true)
+                            .labelsHidden()
+                            .frame(height: 24)
+                    }
                 }
             }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 10)
         }
         .onAppear {
             hasFill = settings.fillColor != nil
@@ -403,77 +376,74 @@ struct SelectionPropertiesView: View {
             PropertySectionHeader(title: "Selection")
 
             if let rect = viewModel.selectionRect, viewModel.selectionPixels != nil {
-                // 선택 정보
-                PropertyRow(label: "Size") {
-                    Text("\(Int(rect.width)) × \(Int(rect.height))")
-                        .font(.system(size: 11, design: .monospaced))
-                        .foregroundColor(.primary)
-                }
-
-                PropertyDivider()
-
-                PropertyRow(label: "Position") {
-                    Text("(\(Int(rect.minX)), \(Int(rect.minY)))")
-                        .font(.system(size: 11, design: .monospaced))
-                        .foregroundColor(.primary)
-                }
-
-                PropertyDivider()
-
-                // Transform
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("Transform")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                        .padding(.top, 4)
-                        .padding(.bottom, 6)
-
-                    // Rotate
-                    HStack(spacing: 6) {
-                        TransformButton(icon: "rotate.left", tooltip: "Rotate CCW", action: viewModel.rotateSelectionCCW)
-                        TransformButton(icon: "rotate.right", tooltip: "Rotate CW", action: viewModel.rotateSelectionCW)
-                        TransformButton(icon: "arrow.triangle.2.circlepath", tooltip: "Rotate 180°", action: viewModel.rotateSelection180)
+                    PropertyRow(label: "Size") {
+                        Text("\(Int(rect.width)) × \(Int(rect.height))")
+                            .font(.system(size: 10, design: .monospaced))
+                            .foregroundColor(Constants.Theme.textPrimary)
                     }
 
-                    // Flip
-                    HStack(spacing: 6) {
-                        TransformButton(icon: "arrow.left.and.right", tooltip: "Flip Horizontal", action: viewModel.flipSelectionHorizontal)
-                        TransformButton(icon: "arrow.up.and.down", tooltip: "Flip Vertical", action: viewModel.flipSelectionVertical)
-                        Spacer()
+                    PropertyDivider()
+
+                    PropertyRow(label: "Position") {
+                        Text("(\(Int(rect.minX)), \(Int(rect.minY)))")
+                            .font(.system(size: 10, design: .monospaced))
+                            .foregroundColor(Constants.Theme.textPrimary)
                     }
-                }
+
+                    PropertyDivider()
+
+                    // Transform
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Transform")
+                            .font(.system(size: 10, weight: .medium))
+                            .foregroundColor(Constants.Theme.textSecondary)
+
+                        // Rotate
+                        HStack(spacing: 6) {
+                            TransformButton(icon: "rotate.left", tooltip: "Rotate CCW", action: viewModel.rotateSelectionCCW)
+                            TransformButton(icon: "rotate.right", tooltip: "Rotate CW", action: viewModel.rotateSelectionCW)
+                            TransformButton(icon: "arrow.triangle.2.circlepath", tooltip: "Rotate 180°", action: viewModel.rotateSelection180)
+                        }
+
+                        // Flip
+                        HStack(spacing: 6) {
+                            TransformButton(icon: "arrow.left.and.right", tooltip: "Flip Horizontal", action: viewModel.flipSelectionHorizontal)
+                            TransformButton(icon: "arrow.up.and.down", tooltip: "Flip Vertical", action: viewModel.flipSelectionVertical)
+                            Spacer()
+                        }
+                    }
 
                 PropertyDivider()
 
                 // Actions
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Actions")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                        .padding(.bottom, 6)
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundColor(Constants.Theme.textSecondary)
 
-                    VStack(spacing: 8) {
+                    VStack(spacing: 6) {
                         // 확정 버튼
                         Button(action: {
                             viewModel.commitSelection()
                         }) {
                             HStack(spacing: 6) {
                                 Image(systemName: "checkmark")
-                                    .font(.system(size: 12))
+                                    .font(.system(size: 10))
                                 Text("Commit")
-                                    .font(.system(size: 11))
+                                    .font(.system(size: 10, weight: .medium))
                                 Spacer()
                             }
-                            .padding(.horizontal, 12)
-                            .frame(height: 32)
+                            .padding(.horizontal, 10)
+                            .frame(height: 28)
                             .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
                         .background(
-                            RoundedRectangle(cornerRadius: 4)
-                                .fill(Color.accentColor.opacity(0.15))
+                            RoundedRectangle(cornerRadius: 2)
+                                .fill(Constants.Theme.accentBlue.opacity(0.15))
                         )
-                        .foregroundColor(.accentColor)
+                        .foregroundColor(Constants.Theme.accentBlue)
                         .help("Commit Selection (⏎)")
                         .disabled(!viewModel.isFloatingSelection)
 
@@ -483,28 +453,33 @@ struct SelectionPropertiesView: View {
                         }) {
                             HStack(spacing: 6) {
                                 Image(systemName: "trash")
-                                    .font(.system(size: 12))
+                                    .font(.system(size: 10))
                                 Text("Delete")
-                                    .font(.system(size: 11))
+                                    .font(.system(size: 10, weight: .medium))
                                 Spacer()
                             }
-                            .padding(.horizontal, 12)
-                            .frame(height: 32)
+                            .padding(.horizontal, 10)
+                            .frame(height: 28)
                             .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
                         .background(
-                            RoundedRectangle(cornerRadius: 4)
-                                .fill(Color.red.opacity(0.15))
+                            RoundedRectangle(cornerRadius: 2)
+                                .fill(Color.red.opacity(0.1))
                         )
                         .foregroundColor(.red)
                         .help("Delete Selection (⌫)")
                     }
                 }
+                }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 10)
             } else {
                 Text("Select area to see properties")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+                    .font(.system(size: 10))
+                    .foregroundColor(Constants.Theme.textSecondary)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 10)
             }
         }
     }
@@ -516,18 +491,26 @@ struct PropertySectionHeader: View {
     let title: String
 
     var body: some View {
-        Text(title)
-            .font(.callout)
-            .fontWeight(.medium)
-            .foregroundColor(.primary)
-            .padding(.bottom, 12)
+        HStack {
+            Text(title.uppercased())
+                .font(.system(size: 10, weight: .bold))
+                .foregroundColor(Constants.Theme.textSecondary)
+                .tracking(0.5)
+
+            Spacer()
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 8)
+        .background(Constants.Theme.sectionBackground)
     }
 }
 
 struct PropertyDivider: View {
     var body: some View {
-        Divider()
-            .padding(.vertical, 8)
+        Rectangle()
+            .fill(Constants.Theme.divider)
+            .frame(height: 1)
+            .padding(.vertical, 6)
     }
 }
 
@@ -543,12 +526,12 @@ struct PropertyRow<Content: View>: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(label)
-                .font(.caption)
-                .foregroundColor(.secondary)
+                .font(.system(size: 10, weight: .medium))
+                .foregroundColor(Constants.Theme.textSecondary)
 
             content
         }
-        .padding(.vertical, 4)
+        .padding(.vertical, 3)
     }
 }
 
@@ -557,19 +540,63 @@ struct TransformButton: View {
     let tooltip: String
     let action: () -> Void
 
+    @State private var isHovered = false
+
     var body: some View {
         Button(action: action) {
             Image(systemName: icon)
-                .font(.system(size: 13))
-                .frame(width: 36, height: 36)
+                .font(.system(size: 11))
+                .frame(width: 32, height: 32)
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .background(
-            RoundedRectangle(cornerRadius: 4)
-                .fill(Color(nsColor: .controlColor))
+            RoundedRectangle(cornerRadius: 2)
+                .fill(isHovered ? Constants.Theme.hoverBackground : Constants.Theme.sectionBackground)
         )
-        .foregroundColor(.primary)
+        .foregroundColor(Constants.Theme.textPrimary)
         .help(tooltip)
+        .onHover { hovering in
+            isHovered = hovering
+        }
+    }
+}
+
+struct LabeledSlider: View {
+    let value: Binding<Int>
+    let range: ClosedRange<Int>
+    let step: Int
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Slider(
+                value: Binding(
+                    get: { Double(value.wrappedValue) },
+                    set: { value.wrappedValue = Int($0) }
+                ),
+                in: Double(range.lowerBound)...Double(range.upperBound),
+                step: Double(step)
+            )
+            .tint(Constants.Theme.accentBlue)
+
+            Text("\(value.wrappedValue)")
+                .font(.system(size: 10, design: .monospaced))
+                .foregroundColor(Constants.Theme.textPrimary)
+                .frame(width: 22, alignment: .trailing)
+                .padding(.horizontal, 4)
+                .padding(.vertical, 2)
+                .background(Constants.Theme.sectionBackground)
+                .cornerRadius(2)
+        }
+    }
+}
+
+struct CompactColorPicker: View {
+    let selection: Binding<Color>
+
+    var body: some View {
+        ColorPicker("", selection: selection)
+            .labelsHidden()
+            .frame(height: 24)
     }
 }

@@ -12,91 +12,93 @@ struct ToolPanel: View {
     @ObservedObject var toolSettingsManager: ToolSettingsManager
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .center, spacing: 0) {
-                // Draw tools
-                VStack(spacing: 2) {
-                    ToolIconButton(
-                        icon: "pencil",
-                        tooltip: "Pencil (B)",
-                        isSelected: toolSettingsManager.selectedTool == .pencil,
-                        action: { toolSettingsManager.selectTool(.pencil) }
-                    )
+        VStack(spacing: 0) {
+            // Draw tools
+            VStack(spacing: 0) {
+                ToolIconButton(
+                    icon: "pencil",
+                    tooltip: "Pencil (B)",
+                    isSelected: toolSettingsManager.selectedTool == .pencil,
+                    action: { toolSettingsManager.selectTool(.pencil) }
+                )
 
-                    ToolIconButton(
-                        icon: "eraser",
-                        tooltip: "Eraser (E)",
-                        isSelected: toolSettingsManager.selectedTool == .eraser,
-                        action: { toolSettingsManager.selectTool(.eraser) }
-                    )
+                ToolIconButton(
+                    icon: "eraser",
+                    tooltip: "Eraser (E)",
+                    isSelected: toolSettingsManager.selectedTool == .eraser,
+                    action: { toolSettingsManager.selectTool(.eraser) }
+                )
 
-                    ToolIconButton(
-                        icon: "paintbrush.fill",
-                        tooltip: "Fill (G)",
-                        isSelected: toolSettingsManager.selectedTool == .fill,
-                        action: { toolSettingsManager.selectTool(.fill) }
-                    )
+                ToolIconButton(
+                    icon: "paintbrush.fill",
+                    tooltip: "Fill (G)",
+                    isSelected: toolSettingsManager.selectedTool == .fill,
+                    action: { toolSettingsManager.selectTool(.fill) }
+                )
 
-                    ToolIconButton(
-                        icon: "square.lefthalf.filled",
-                        tooltip: "Mirror (M)",
-                        isSelected: toolSettingsManager.selectedTool == .mirror,
-                        action: { toolSettingsManager.selectTool(.mirror) }
-                    )
+                ToolIconButton(
+                    icon: "square.lefthalf.filled",
+                    tooltip: "Mirror (M)",
+                    isSelected: toolSettingsManager.selectedTool == .mirror,
+                    action: { toolSettingsManager.selectTool(.mirror) }
+                )
 
-                    ToolIconButton(
-                        icon: "circle.grid.cross",
-                        tooltip: "Dithering (D)",
-                        isSelected: toolSettingsManager.selectedTool == .dithering,
-                        action: { toolSettingsManager.selectTool(.dithering) }
-                    )
-                }
-
-                Divider()
-                    .padding(.vertical, 8)
-
-                // Shape tools
-                VStack(spacing: 2) {
-                    ToolIconButton(
-                        icon: "rectangle",
-                        tooltip: "Rectangle (U)",
-                        isSelected: toolSettingsManager.selectedTool == .rectangle,
-                        action: { toolSettingsManager.selectTool(.rectangle) }
-                    )
-
-                    ToolIconButton(
-                        icon: "circle",
-                        tooltip: "Circle (O)",
-                        isSelected: toolSettingsManager.selectedTool == .circle,
-                        action: { toolSettingsManager.selectTool(.circle) }
-                    )
-
-                    ToolIconButton(
-                        icon: "line.diagonal",
-                        tooltip: "Line (L)",
-                        isSelected: toolSettingsManager.selectedTool == .line,
-                        action: { toolSettingsManager.selectTool(.line) }
-                    )
-                }
-
-                Divider()
-                    .padding(.vertical, 8)
-
-                // Selection tool
-                VStack(spacing: 2) {
-                    ToolIconButton(
-                        icon: "selection.pin.in.out",
-                        tooltip: "Selection (V)",
-                        isSelected: toolSettingsManager.selectedTool == .selection,
-                        action: { toolSettingsManager.selectTool(.selection) }
-                    )
-                }
-
+                ToolIconButton(
+                    icon: "circle.grid.cross",
+                    tooltip: "Dithering (D)",
+                    isSelected: toolSettingsManager.selectedTool == .dithering,
+                    action: { toolSettingsManager.selectTool(.dithering) }
+                )
             }
-            .padding(.vertical, 8)
+
+            Rectangle()
+                .fill(Constants.Theme.divider)
+                .frame(height: 1)
+                .padding(.vertical, 4)
+
+            // Shape tools
+            VStack(spacing: 0) {
+                ToolIconButton(
+                    icon: "rectangle",
+                    tooltip: "Rectangle (U)",
+                    isSelected: toolSettingsManager.selectedTool == .rectangle,
+                    action: { toolSettingsManager.selectTool(.rectangle) }
+                )
+
+                ToolIconButton(
+                    icon: "circle",
+                    tooltip: "Circle (O)",
+                    isSelected: toolSettingsManager.selectedTool == .circle,
+                    action: { toolSettingsManager.selectTool(.circle) }
+                )
+
+                ToolIconButton(
+                    icon: "line.diagonal",
+                    tooltip: "Line (L)",
+                    isSelected: toolSettingsManager.selectedTool == .line,
+                    action: { toolSettingsManager.selectTool(.line) }
+                )
+            }
+
+            Rectangle()
+                .fill(Constants.Theme.divider)
+                .frame(height: 1)
+                .padding(.vertical, 4)
+
+            // Selection tool
+            VStack(spacing: 0) {
+                ToolIconButton(
+                    icon: "selection.pin.in.out",
+                    tooltip: "Selection (V)",
+                    isSelected: toolSettingsManager.selectedTool == .selection,
+                    action: { toolSettingsManager.selectTool(.selection) }
+                )
+            }
+
+            Spacer()
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color(nsColor: .controlBackgroundColor).opacity(0.95))
+        .frame(width: 50)
+        .background(Constants.Theme.panelBackground)
     }
 }
 
@@ -107,24 +109,31 @@ struct ToolIconButton: View {
     let isSelected: Bool
     let action: () -> Void
 
+    @State private var isHovered = false
+
     var body: some View {
         Button(action: action) {
             Image(systemName: icon)
-                .font(.system(size: 18, weight: .regular))
-                .frame(width: 44, height: 44)
+                .font(.system(size: 18))
+                .frame(width: 50, height: 40)
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .background(
-            RoundedRectangle(cornerRadius: 4)
-                .fill(isSelected ? Color.accentColor.opacity(0.2) : Color.clear)
+            Rectangle()
+                .fill(isSelected ? Constants.Theme.sectionBackground : (isHovered ? Constants.Theme.hoverBackground : Color.clear))
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 4)
-                .strokeBorder(isSelected ? Color.accentColor : Color.clear, lineWidth: 1)
+            Rectangle()
+                .fill(isSelected ? Constants.Theme.accentBlue : Color.clear)
+                .frame(width: 2)
+            , alignment: .leading
         )
-        .foregroundColor(isSelected ? Color.accentColor : .primary)
+        .foregroundColor(isSelected ? Constants.Theme.accentBlue : Constants.Theme.textSecondary)
         .help(tooltip)
+        .onHover { hovering in
+            isHovered = hovering
+        }
     }
 }
 
@@ -137,41 +146,66 @@ struct CanvasSizeSheet: View {
     @State private var height: String = ""
 
     var body: some View {
-        VStack(spacing: 20) {
+        VStack(spacing: 16) {
+            // Header
             Text("Resize Canvas")
-                .font(.headline)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundColor(Constants.Theme.textPrimary)
+                .frame(maxWidth: .infinity, alignment: .leading)
 
-            VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 10) {
                 // Width
-                HStack {
+                HStack(spacing: 8) {
                     Text("Width:")
-                        .frame(width: 60, alignment: .leading)
+                        .font(.system(size: 11))
+                        .foregroundColor(Constants.Theme.textSecondary)
+                        .frame(width: 55, alignment: .leading)
                     TextField("Width", text: $width)
-                        .textFieldStyle(.roundedBorder)
-                        .frame(width: 100)
+                        .textFieldStyle(.plain)
+                        .padding(6)
+                        .background(Constants.Theme.sectionBackground)
+                        .cornerRadius(2)
+                        .frame(width: 80)
                     Text("px")
-                        .foregroundColor(.secondary)
+                        .font(.system(size: 11))
+                        .foregroundColor(Constants.Theme.textSecondary)
                 }
 
                 // Height
-                HStack {
+                HStack(spacing: 8) {
                     Text("Height:")
-                        .frame(width: 60, alignment: .leading)
+                        .font(.system(size: 11))
+                        .foregroundColor(Constants.Theme.textSecondary)
+                        .frame(width: 55, alignment: .leading)
                     TextField("Height", text: $height)
-                        .textFieldStyle(.roundedBorder)
-                        .frame(width: 100)
+                        .textFieldStyle(.plain)
+                        .padding(6)
+                        .background(Constants.Theme.sectionBackground)
+                        .cornerRadius(2)
+                        .frame(width: 80)
                     Text("px")
-                        .foregroundColor(.secondary)
+                        .font(.system(size: 11))
+                        .foregroundColor(Constants.Theme.textSecondary)
                 }
             }
 
-            Divider()
+            Rectangle()
+                .fill(Constants.Theme.divider)
+                .frame(height: 1)
+                .padding(.vertical, 4)
 
             // Buttons
-            HStack(spacing: 12) {
+            HStack(spacing: 8) {
+                Spacer()
                 Button("Cancel") {
                     dismiss()
                 }
+                .buttonStyle(.plain)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .background(Constants.Theme.sectionBackground)
+                .foregroundColor(Constants.Theme.textPrimary)
+                .cornerRadius(2)
                 .keyboardShortcut(.cancelAction)
 
                 Button("Resize") {
@@ -181,12 +215,19 @@ struct CanvasSizeSheet: View {
                         dismiss()
                     }
                 }
+                .buttonStyle(.plain)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .background(isValid ? Constants.Theme.accentBlue : Constants.Theme.sectionBackground)
+                .foregroundColor(isValid ? .white : Constants.Theme.textDisabled)
+                .cornerRadius(2)
                 .keyboardShortcut(.defaultAction)
                 .disabled(!isValid)
             }
         }
-        .padding(24)
-        .frame(width: Constants.Layout.Panel.toolPanelWidth)
+        .padding(20)
+        .frame(width: 280)
+        .background(Constants.Theme.panelBackground)
         .onAppear {
             width = "\(viewModel.canvas.width)"
             height = "\(viewModel.canvas.height)"

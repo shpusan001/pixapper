@@ -30,6 +30,45 @@ enum Constants {
         static let defaultTolerance: Double = 0.001
     }
 
+    /// Adobe 스타일 프로페셔널 UI 색상
+    enum Theme {
+        /// 메인 배경 (가장 어두운 영역 - 캔버스 주변)
+        static let backgroundDark = SwiftUI.Color(red: 0.18, green: 0.18, blue: 0.18) // #2E2E2E
+
+        /// 패널 배경 (툴바, 사이드 패널)
+        static let panelBackground = SwiftUI.Color(red: 0.22, green: 0.22, blue: 0.22) // #383838
+
+        /// 섹션 배경 (그룹 영역, 카드)
+        static let sectionBackground = SwiftUI.Color(red: 0.27, green: 0.27, blue: 0.27) // #454545
+
+        /// 호버/활성 상태
+        static let hoverBackground = SwiftUI.Color(red: 0.32, green: 0.32, blue: 0.32) // #525252
+
+        /// 구분선
+        static let divider = SwiftUI.Color(red: 0.15, green: 0.15, blue: 0.15) // #262626
+
+        /// 선택/액센트 블루
+        static let accentBlue = SwiftUI.Color(red: 0.25, green: 0.53, blue: 0.96) // #4087F5
+
+        /// 액센트 블루 호버
+        static let accentBlueHover = SwiftUI.Color(red: 0.33, green: 0.61, blue: 1.0) // #549CFF
+
+        /// 주 텍스트 (밝은 회색)
+        static let textPrimary = SwiftUI.Color(red: 0.9, green: 0.9, blue: 0.9) // #E6E6E6
+
+        /// 보조 텍스트 (중간 회색)
+        static let textSecondary = SwiftUI.Color(red: 0.65, green: 0.65, blue: 0.65) // #A6A6A6
+
+        /// 비활성 텍스트 (어두운 회색)
+        static let textDisabled = SwiftUI.Color(red: 0.45, green: 0.45, blue: 0.45) // #737373
+
+        /// 타임라인 현재 프레임 인디케이터
+        static let playheadRed = SwiftUI.Color(red: 0.95, green: 0.26, blue: 0.21) // #F24336
+
+        /// 키프레임 다이아몬드
+        static let keyframeDiamond = SwiftUI.Color(red: 0.35, green: 0.71, blue: 0.29) // #59B54A
+    }
+
     /// Command Manager 설정
     enum CommandManager {
         /// Undo/Redo 히스토리 최대 크기
@@ -38,6 +77,20 @@ enum Constants {
 
     /// UI 레이아웃 설정
     enum Layout {
+        /// 표준 스페이싱 스케일
+        enum Spacing {
+            /// Extra small - 최소 간격 (4pt)
+            static let xs: CGFloat = 4
+            /// Small - 작은 간격 (8pt)
+            static let sm: CGFloat = 8
+            /// Medium - 기본 간격 (12pt)
+            static let md: CGFloat = 12
+            /// Large - 큰 간격 (16pt)
+            static let lg: CGFloat = 16
+            /// Extra large - 패널/화면 패딩 (24pt)
+            static let xl: CGFloat = 24
+        }
+
         /// 패널 너비
         enum Panel {
             /// 레이어 패널 너비

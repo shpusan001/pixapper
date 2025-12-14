@@ -49,7 +49,7 @@ struct CanvasView: View {
                 ScrollView([.horizontal, .vertical], showsIndicators: true) {
                     ZStack(alignment: .topLeading) {
                         // 전체 배경
-                        Color(nsColor: .controlBackgroundColor)
+                        Constants.Theme.backgroundDark
 
                         // 캔버스 배경 (체커보드 또는 흰색)
                         if viewModel.backgroundMode == .checkerboard {
@@ -541,7 +541,7 @@ struct GridLinesView: View {
 
     var body: some View {
         Canvas { context, size in
-            let gridColor = Color(white: 0.5, opacity: 0.4)
+            let gridColor = Color(nsColor: .tertiaryLabelColor).opacity(0.4)
             var path = Path()
 
             for x in 0...width {
@@ -769,7 +769,7 @@ struct SelectionRectView: View {
         path.addRect(borderRect)
         context.stroke(
             path,
-            with: .color(Color(red: 0.0, green: 0.5, blue: 1.0)),
+            with: .color(Color.accentColor),
             style: StrokeStyle(lineWidth: 2.5, dash: [6, 4])
         )
     }
@@ -818,10 +818,10 @@ struct SelectionRectView: View {
         var linePath = Path()
         linePath.move(to: CGPoint(x: borderRect.midX, y: borderRect.minY))
         linePath.addLine(to: CGPoint(x: position.x, y: position.y))
-        context.stroke(linePath, with: .color(Color(red: 0.0, green: 0.5, blue: 1.0).opacity(0.5)), lineWidth: 1.5)
+        context.stroke(linePath, with: .color(Color.accentColor.opacity(0.5)), lineWidth: 1.5)
 
         let circlePath = Path(ellipseIn: circleRect)
-        let fillColor = isHovered ? Color(red: 0.4, green: 0.7, blue: 1.0, opacity: 0.7) : Color(red: 0.0, green: 0.5, blue: 1.0, opacity: 0.9)
+        let fillColor = isHovered ? Color.accentColor.opacity(0.7) : Color.accentColor.opacity(0.9)
         context.fill(circlePath, with: .color(fillColor))
         context.stroke(circlePath, with: .color(.white), lineWidth: 2)
     }
@@ -831,8 +831,8 @@ struct SelectionRectView: View {
 
         context.fill(Path(handleRect), with: .color(.black.opacity(0.15)))
 
-        let fillColor = isHovered ? Color(red: 0.4, green: 0.7, blue: 1.0, opacity: 0.5) : .white
-        let borderColor = isHovered ? Color(red: 0.0, green: 0.5, blue: 1.0) : Color(red: 0.0, green: 0.45, blue: 0.9)
+        let fillColor = isHovered ? Color.accentColor.opacity(0.5) : .white
+        let borderColor = Color.accentColor
         let borderWidth: CGFloat = isHovered ? 2.5 : 2
 
         context.fill(Path(handleRect), with: .color(fillColor))
