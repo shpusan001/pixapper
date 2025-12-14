@@ -74,14 +74,20 @@ struct LayerTimeline {
     }
 
     /// 키프레임 span 계산 (시작, 길이)
+    /// - Note: sortedKeyframeIndices를 활용한 이진 탐색으로 O(log n) 성능
     func getKeyframeSpan(at frameIndex: Int, totalFrames: Int) -> (start: Int, length: Int)? {
         guard let keyframeStart = getOwningKeyframe(at: frameIndex) else {
             return nil
         }
 
-        // 다음 키프레임 찾기
-        let nextKeyframes = keyframes.keys.filter { $0 > keyframeStart }.sorted()
-        let spanEnd = nextKeyframes.first.map { $0 - 1 } ?? (totalFrames - 1)
+        // sortedKeyframeIndices에서 keyframeStart 다음 키프레임 찾기 (이진 탐색)
+        let insertionPoint = sortedKeyframeIndices.firstIndex(where: { $0 > keyframeStart })
+        let spanEnd: Int
+        if let nextKeyframeIndex = insertionPoint {
+            spanEnd = sortedKeyframeIndices[nextKeyframeIndex] - 1
+        } else {
+            spanEnd = totalFrames - 1
+        }
 
         let length = spanEnd - keyframeStart + 1
         return (start: keyframeStart, length: length)

@@ -60,8 +60,8 @@ class PencilEraserTool: CanvasTool {
         // 스트로크 완료 - Command 생성
         if !currentStrokePixels.isEmpty {
             let command = DrawCommand(
-                layerViewModel: layerViewModel,
-                layerIndex: currentLayerIndex,
+                timelineViewModel: timelineViewModel,
+                layerId: layerViewModel.layers[currentLayerIndex].id,
                 oldPixels: oldStrokePixels,
                 newPixels: currentStrokePixels
             )
@@ -72,8 +72,8 @@ class PencilEraserTool: CanvasTool {
         drawnPixelsInStroke = []
         lastDrawPoint = nil
 
-        // Timeline에 동기화
-        timelineViewModel?.syncCurrentLayerToKeyframe()
+        // 스트로크 완료 시 timeline에 즉시 동기화
+        timelineViewModel?.pixelStateManager?.syncToTimeline()
     }
 
     func updateHover(x: Int, y: Int) {
@@ -119,21 +119,31 @@ class PencilEraserTool: CanvasTool {
                 guard px >= 0 && px < canvas.canvas.width && py >= 0 && py < canvas.canvas.height else { continue }
 
                 // 이미 그린 픽셀인지 체크 (보간 중 중복 방지)
+                // - Note: Set을 사용하여 O(1) 중복 체크
+                //   같은 스트로크에서 같은 픽셀을 여러 번 그리는 것을 방지하여
+                //   oldStrokePixels의 정확성을 보장하고 Undo/Redo 버그 방지
                 let pixelKey = "\(px),\(py)"
                 if drawnPixelsInStroke.contains(pixelKey) {
                     continue
                 }
                 drawnPixelsInStroke.insert(pixelKey)
 
+                // Single Source of Truth: TimelineViewModel 사용
+                let layerId = layerViewModel.layers[currentLayerIndex].id
+
                 // 픽셀을 변경하기 **전에** 이전 값 저장
-                let oldColor = layerViewModel.layers[currentLayerIndex].getPixel(x: px, y: py)
+                var oldColor: Color? = nil
+                if let pixels = timelineViewModel?.getCurrentFramePixels(layerId: layerId),
+                   py >= 0, py < pixels.count, px >= 0, px < pixels[py].count {
+                    oldColor = pixels[py][px]
+                }
                 oldStrokePixels.append(PixelChange(x: px, y: py, color: oldColor))
 
                 // 새로운 값 저장
                 currentStrokePixels.append(PixelChange(x: px, y: py, color: color))
 
-                // 픽셀 변경
-                layerViewModel.layers[currentLayerIndex].setPixel(x: px, y: py, color: color)
+                // 픽셀 변경 - TimelineViewModel을 통해 즉시 timeline 반영
+                timelineViewModel?.setPixel(layerId: layerId, x: px, y: py, color: color)
             }
         }
     }

@@ -11,6 +11,7 @@ import SwiftUI
 class SelectionMoveCommand: LayerPixelApplicable {
     private weak var canvasViewModel: CanvasViewModel?
     weak var layerViewModel: LayerViewModel?
+    weak var timelineViewModel: TimelineViewModel?
     let layerIndex: Int
 
     // 이동 전 상태
@@ -34,6 +35,7 @@ class SelectionMoveCommand: LayerPixelApplicable {
     init(
         canvasViewModel: CanvasViewModel,
         layerViewModel: LayerViewModel,
+        timelineViewModel: TimelineViewModel?,
         layerIndex: Int,
         oldRect: CGRect,
         oldPixels: [[Color?]],
@@ -44,6 +46,7 @@ class SelectionMoveCommand: LayerPixelApplicable {
     ) {
         self.canvasViewModel = canvasViewModel
         self.layerViewModel = layerViewModel
+        self.timelineViewModel = timelineViewModel
         self.layerIndex = layerIndex
         self.oldRect = oldRect
         self.oldPixels = oldPixels

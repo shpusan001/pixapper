@@ -11,6 +11,7 @@ import SwiftUI
 class SelectionCaptureCommand: LayerPixelApplicable {
     private weak var canvasViewModel: CanvasViewModel?
     weak var layerViewModel: LayerViewModel?
+    weak var timelineViewModel: TimelineViewModel?
     let layerIndex: Int
 
     // 선택 전 상태 (선택 없음)
@@ -35,6 +36,7 @@ class SelectionCaptureCommand: LayerPixelApplicable {
     init(
         canvasViewModel: CanvasViewModel,
         layerViewModel: LayerViewModel,
+        timelineViewModel: TimelineViewModel?,
         layerIndex: Int,
         wasFloating: Bool,
         oldRect: CGRect?,
@@ -48,6 +50,7 @@ class SelectionCaptureCommand: LayerPixelApplicable {
     ) {
         self.canvasViewModel = canvasViewModel
         self.layerViewModel = layerViewModel
+        self.timelineViewModel = timelineViewModel
         self.layerIndex = layerIndex
         self.wasFloating = wasFloating
         self.oldRect = oldRect

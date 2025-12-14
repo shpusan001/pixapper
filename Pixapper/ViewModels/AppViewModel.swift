@@ -110,7 +110,7 @@ class AppViewModel: ObservableObject {
     func newProject(width: Int = 32, height: Int = 32) {
         // 기존 내용 초기화
         let newLayerVM = LayerViewModel(width: width, height: height)
-        let newTimelineVM = TimelineViewModel(width: width, height: height, layerViewModel: newLayerVM)
+        _ = TimelineViewModel(width: width, height: height, layerViewModel: newLayerVM)
 
         // 데이터 복사
         layerViewModel.layers = newLayerVM.layers

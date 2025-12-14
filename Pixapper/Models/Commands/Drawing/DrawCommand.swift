@@ -15,12 +15,12 @@ struct PixelChange {
 }
 
 /// 그리기 작업(연필, 지우개, 도형 등)을 캡슐화하는 Command
-class DrawCommand: LayerPixelApplicable {
-    /// LayerViewModel에 대한 weak reference
-    weak var layerViewModel: LayerViewModel?
+class DrawCommand: Command {
+    /// TimelineViewModel에 대한 weak reference (Single Source of Truth)
+    weak var timelineViewModel: TimelineViewModel?
 
-    /// 변경할 레이어의 인덱스
-    let layerIndex: Int
+    /// 변경할 레이어의 ID
+    let layerId: UUID
 
     /// 변경 전 픽셀 상태
     private let oldPixels: [PixelChange]
@@ -30,29 +30,29 @@ class DrawCommand: LayerPixelApplicable {
 
     /// 명령에 대한 설명
     var description: String {
-        "Draw \(newPixels.count) pixels on layer \(layerIndex)"
+        "Draw \(newPixels.count) pixels on layer \(layerId)"
     }
 
     /// DrawCommand 초기화
     /// - Parameters:
-    ///   - layerViewModel: 레이어를 관리하는 ViewModel
-    ///   - layerIndex: 변경할 레이어의 인덱스
+    ///   - timelineViewModel: Timeline을 관리하는 ViewModel
+    ///   - layerId: 변경할 레이어의 ID
     ///   - oldPixels: 변경 전 픽셀들
     ///   - newPixels: 변경 후 픽셀들
-    init(layerViewModel: LayerViewModel, layerIndex: Int, oldPixels: [PixelChange], newPixels: [PixelChange]) {
-        self.layerViewModel = layerViewModel
-        self.layerIndex = layerIndex
+    init(timelineViewModel: TimelineViewModel?, layerId: UUID, oldPixels: [PixelChange], newPixels: [PixelChange]) {
+        self.timelineViewModel = timelineViewModel
+        self.layerId = layerId
         self.oldPixels = oldPixels
         self.newPixels = newPixels
     }
 
     /// 명령을 실행합니다 (새 픽셀 적용)
     func execute() {
-        applyPixelChanges(newPixels)
+        timelineViewModel?.applyPixelChanges(layerId: layerId, changes: newPixels)
     }
 
     /// 명령을 취소합니다 (이전 픽셀 복원)
     func undo() {
-        applyPixelChanges(oldPixels)
+        timelineViewModel?.applyPixelChanges(layerId: layerId, changes: oldPixels)
     }
 }

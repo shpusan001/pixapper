@@ -159,9 +159,15 @@ struct CanvasView: View {
     private func renderCurrentLayers(marginX: CGFloat, marginY: CGFloat) -> some View {
         ForEach(viewModel.canvas.layers.indices.reversed(), id: \.self) { index in
             let layer = viewModel.canvas.layers[index]
-            if layer.isVisible {
-                PixelGridView(layer: layer, pixelSize: pixelSize, marginX: marginX, marginY: marginY)
-                    .opacity(layer.opacity)
+            if layer.isVisible, let timeline = timelineViewModel {
+                PixelGridView(
+                    layer: layer,
+                    pixelStateManager: timeline.pixelStateManager,
+                    pixelSize: pixelSize,
+                    marginX: marginX,
+                    marginY: marginY
+                )
+                .opacity(layer.opacity)
             }
         }
     }
@@ -464,15 +470,19 @@ struct CheckerboardView: View {
 
 struct PixelGridView: View {
     let layer: Layer
+    @ObservedObject var pixelStateManager: PixelStateManager
     let pixelSize: CGFloat
     let marginX: CGFloat
     let marginY: CGFloat
 
     var body: some View {
         Canvas { context, size in
-            for y in 0..<layer.pixels.count {
-                for x in 0..<layer.pixels[y].count {
-                    if let color = layer.pixels[y][x] {
+            // Single Source of Truth: PixelStateManager에서 픽셀 직접 조회 (Reactive)
+            let pixels = pixelStateManager.currentFramePixels[layer.id] ?? []
+
+            for y in 0..<pixels.count {
+                for x in 0..<pixels[y].count {
+                    if let color = pixels[y][x] {
                         let rect = CGRect(
                             x: marginX + CGFloat(x) * pixelSize,
                             y: marginY + CGFloat(y) * pixelSize,

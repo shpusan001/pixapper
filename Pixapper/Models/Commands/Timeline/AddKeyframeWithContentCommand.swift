@@ -37,8 +37,8 @@ class AddKeyframeWithContentCommand: Command {
         previousTotalFrames = timelineViewModel.totalFrames
         previousCurrentFrameIndex = timelineViewModel.currentFrameIndex
 
-        // 현재 레이어의 픽셀을 미리 저장
-        let currentPixels = timelineViewModel.layerViewModel.layers[layerIndex].pixels
+        // 현재 레이어의 픽셀을 PixelStateManager에서 가져오기
+        guard let currentPixels = timelineViewModel.pixelStateManager.getPixels(layerId: layerId) else { return }
         insertedPixels = currentPixels
 
         // 현재 프레임 다음에 삽입할 위치

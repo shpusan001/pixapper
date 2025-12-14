@@ -44,9 +44,9 @@ class ClearFrameContentCommand: Command {
         // 픽셀 복원
         timelineViewModel.layerViewModel.layers[layerIndex].timeline.setKeyframe(at: frameIndex, pixels: pixels)
 
-        // 현재 프레임이면 화면 갱신
+        // 현재 프레임이면 PixelStateManager 갱신
         if frameIndex == timelineViewModel.currentFrameIndex {
-            timelineViewModel.layerViewModel.layers[layerIndex].pixels = pixels
+            timelineViewModel.pixelStateManager.setAllPixels(layerId: layerId, pixels: pixels)
         }
     }
 }

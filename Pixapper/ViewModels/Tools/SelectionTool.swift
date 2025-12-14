@@ -280,6 +280,8 @@ class SelectionTool: CanvasTool {
         var layerOldPixels: [PixelChange] = []
         var layerNewPixels: [PixelChange] = []
 
+        let layerId = layerViewModel.layers[currentLayerIndex].id
+
         for y in 0..<height {
             var row: [Color?] = []
             for x in 0..<width {
@@ -287,7 +289,7 @@ class SelectionTool: CanvasTool {
                 let pixelY = startY + y
                 if let canvas = canvasViewModel,
                    pixelX >= 0 && pixelX < canvas.canvas.width && pixelY >= 0 && pixelY < canvas.canvas.height {
-                    let color = layerViewModel.layers[currentLayerIndex].getPixel(x: pixelX, y: pixelY)
+                    let color = timelineViewModel?.getCurrentFramePixels(layerId: layerId)?[pixelY][pixelX]
                     row.append(color)
 
                     // 색칠된 픽셀만 제거
@@ -302,9 +304,9 @@ class SelectionTool: CanvasTool {
             pixels.append(row)
         }
 
-        // 2. 레이어에서 픽셀 제거
+        // 2. 레이어에서 픽셀 제거 (TimelineViewModel 사용)
         for change in layerNewPixels {
-            layerViewModel.layers[currentLayerIndex].setPixel(x: change.x, y: change.y, color: change.color)
+            timelineViewModel?.setPixel(layerId: layerId, x: change.x, y: change.y, color: change.color)
         }
 
         // 3. 선택 상태 설정
@@ -318,6 +320,7 @@ class SelectionTool: CanvasTool {
             let command = SelectionCaptureCommand(
                 canvasViewModel: canvasViewModel!,
                 layerViewModel: layerViewModel,
+                timelineViewModel: timelineViewModel,
                 layerIndex: currentLayerIndex,
                 wasFloating: wasFloating,
                 oldRect: oldRect,
@@ -330,7 +333,9 @@ class SelectionTool: CanvasTool {
                 layerNewPixels: layerNewPixels
             )
             commandManager.addExecutedCommand(command)
-            timelineViewModel?.syncCurrentLayerToKeyframe()
+
+            // 선택 캡처 완료 시 timeline에 즉시 동기화
+            timelineViewModel?.pixelStateManager?.syncToTimeline()
         }
     }
 
@@ -377,6 +382,8 @@ class SelectionTool: CanvasTool {
         var layerOldPixels: [PixelChange] = []
         var layerNewPixels: [PixelChange] = []
 
+        let layerId = layerViewModel.layers[currentLayerIndex].id
+
         // 현재 위치에 픽셀 배치 준비
         for y in 0..<pixels.count {
             for x in 0..<pixels[y].count {
@@ -385,7 +392,7 @@ class SelectionTool: CanvasTool {
                     let pixelX = startX + x
                     let pixelY = startY + y
                     if pixelX >= 0 && pixelX < canvas.canvas.width && pixelY >= 0 && pixelY < canvas.canvas.height {
-                        let oldColor = layerViewModel.layers[currentLayerIndex].getPixel(x: pixelX, y: pixelY)
+                        let oldColor = timelineViewModel?.getCurrentFramePixels(layerId: layerId)?[pixelY][pixelX]
                         layerOldPixels.append(PixelChange(x: pixelX, y: pixelY, color: oldColor))
                         layerNewPixels.append(PixelChange(x: pixelX, y: pixelY, color: color))
                     }
@@ -393,9 +400,9 @@ class SelectionTool: CanvasTool {
             }
         }
 
-        // 레이어에 픽셀 배치
+        // 레이어에 픽셀 배치 (TimelineViewModel 사용)
         for change in layerNewPixels {
-            layerViewModel.layers[currentLayerIndex].setPixel(x: change.x, y: change.y, color: change.color)
+            timelineViewModel?.setPixel(layerId: layerId, x: change.x, y: change.y, color: change.color)
         }
 
         // 선택 상태 해제
@@ -406,6 +413,7 @@ class SelectionTool: CanvasTool {
             let command = SelectionCommitCommand(
                 canvasViewModel: canvasViewModel!,
                 layerViewModel: layerViewModel,
+                timelineViewModel: timelineViewModel,
                 layerIndex: currentLayerIndex,
                 oldRect: rect,
                 oldPixels: pixels,
@@ -415,7 +423,9 @@ class SelectionTool: CanvasTool {
                 layerNewPixels: layerNewPixels
             )
             commandManager.addExecutedCommand(command)
-            timelineViewModel?.syncCurrentLayerToKeyframe()
+
+            // 선택 커밋 완료 시 timeline에 즉시 동기화
+            timelineViewModel?.pixelStateManager?.syncToTimeline()
         } else {
             clearSelection()
         }
@@ -652,7 +662,7 @@ class SelectionTool: CanvasTool {
         guard let oldPixels = rotateStartPixels,
               let newRect = selectionRect,
               let newPixels = selectionPixels,
-              let origRect = originalRect else {
+              originalRect != nil else {
             selectionMode = .idle
             rotateStartPixels = nil
             lastDrawPoint = nil
@@ -822,6 +832,7 @@ class SelectionTool: CanvasTool {
         let command = PasteCommand(
             canvasViewModel: canvas,
             layerViewModel: layerViewModel,
+            timelineViewModel: timelineViewModel,
             layerIndex: currentLayerIndex,
             previousSelectionRect: prevRect,
             previousSelectionPixels: prevPixels,
@@ -866,24 +877,28 @@ class SelectionTool: CanvasTool {
                     let pixelY = startY + y
 
                     if pixelX >= 0 && pixelX < canvas.canvas.width && pixelY >= 0 && pixelY < canvas.canvas.height {
-                        let oldColor = layerViewModel.layers[currentLayerIndex].getPixel(x: pixelX, y: pixelY)
+                        let layerId = layerViewModel.layers[currentLayerIndex].id
+                        let oldColor = timelineViewModel?.getCurrentFramePixels(layerId: layerId)?[pixelY][pixelX]
                         oldPixels.append(PixelChange(x: pixelX, y: pixelY, color: oldColor))
                         newPixels.append(PixelChange(x: pixelX, y: pixelY, color: nil))
-                        layerViewModel.layers[currentLayerIndex].setPixel(x: pixelX, y: pixelY, color: nil)
+                        timelineViewModel?.setPixel(layerId: layerId, x: pixelX, y: pixelY, color: nil)
                     }
                 }
             }
         }
 
         if !newPixels.isEmpty {
+            let layerId = layerViewModel.layers[currentLayerIndex].id
             let command = DrawCommand(
-                layerViewModel: layerViewModel,
-                layerIndex: currentLayerIndex,
+                timelineViewModel: timelineViewModel,
+                layerId: layerId,
                 oldPixels: oldPixels,
                 newPixels: newPixels
             )
             commandManager.addExecutedCommand(command)
-            timelineViewModel?.syncCurrentLayerToKeyframe()
+
+            // 선택 삭제 완료 시 timeline에 즉시 동기화
+            timelineViewModel?.pixelStateManager?.syncToTimeline()
         }
 
         clearSelection()

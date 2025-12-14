@@ -12,6 +12,7 @@ import SwiftUI
 class PasteCommand: LayerPixelApplicable {
     private weak var canvasViewModel: CanvasViewModel?
     weak var layerViewModel: LayerViewModel?
+    weak var timelineViewModel: TimelineViewModel?
     let layerIndex: Int
 
     // 이전 선택 상태 (undo 시 복원)
@@ -40,6 +41,7 @@ class PasteCommand: LayerPixelApplicable {
     init(
         canvasViewModel: CanvasViewModel,
         layerViewModel: LayerViewModel,
+        timelineViewModel: TimelineViewModel?,
         layerIndex: Int,
         previousSelectionRect: CGRect?,
         previousSelectionPixels: [[Color?]]?,
@@ -51,6 +53,7 @@ class PasteCommand: LayerPixelApplicable {
     ) {
         self.canvasViewModel = canvasViewModel
         self.layerViewModel = layerViewModel
+        self.timelineViewModel = timelineViewModel
         self.layerIndex = layerIndex
         self.previousSelectionRect = previousSelectionRect
         self.previousSelectionPixels = previousSelectionPixels

@@ -11,6 +11,7 @@ import SwiftUI
 class SelectionCommitCommand: LayerPixelApplicable {
     private weak var canvasViewModel: CanvasViewModel?
     weak var layerViewModel: LayerViewModel?
+    weak var timelineViewModel: TimelineViewModel?
     let layerIndex: Int
 
     // 커밋 전 상태 (floating 선택 있음)
@@ -30,6 +31,7 @@ class SelectionCommitCommand: LayerPixelApplicable {
     init(
         canvasViewModel: CanvasViewModel,
         layerViewModel: LayerViewModel,
+        timelineViewModel: TimelineViewModel?,
         layerIndex: Int,
         oldRect: CGRect,
         oldPixels: [[Color?]],
@@ -40,6 +42,7 @@ class SelectionCommitCommand: LayerPixelApplicable {
     ) {
         self.canvasViewModel = canvasViewModel
         self.layerViewModel = layerViewModel
+        self.timelineViewModel = timelineViewModel
         self.layerIndex = layerIndex
         self.oldRect = oldRect
         self.oldPixels = oldPixels

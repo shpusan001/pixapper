@@ -47,8 +47,8 @@ class ShapeTool: CanvasTool {
         shapeStartPoint = nil
         canvasViewModel?.shapePreview = []
 
-        // Timeline에 동기화
-        timelineViewModel?.syncCurrentLayerToKeyframe()
+        // Shape 완료 시 timeline에 즉시 동기화
+        timelineViewModel?.pixelStateManager?.syncToTimeline()
     }
 
     // MARK: - Private Methods
@@ -96,24 +96,34 @@ class ShapeTool: CanvasTool {
 
     private func commitShape() {
         guard let canvas = canvasViewModel,
+              let timelineVM = timelineViewModel,
               currentLayerIndex < layerViewModel.layers.count else { return }
 
+        let layerId = layerViewModel.layers[currentLayerIndex].id
         var oldPixels: [PixelChange] = []
         var newPixels: [PixelChange] = []
 
         for pixel in canvas.shapePreview {
-            let oldColor = layerViewModel.layers[currentLayerIndex].getPixel(x: pixel.x, y: pixel.y)
+            // Timeline에서 이전 색상 가져오기
+            var oldColor: Color? = nil
+            if let pixels = timelineVM.getCurrentFramePixels(layerId: layerId),
+               pixel.y >= 0, pixel.y < pixels.count,
+               pixel.x >= 0, pixel.x < pixels[pixel.y].count {
+                oldColor = pixels[pixel.y][pixel.x]
+            }
             oldPixels.append(PixelChange(x: pixel.x, y: pixel.y, color: oldColor))
             newPixels.append(PixelChange(x: pixel.x, y: pixel.y, color: pixel.color))
 
-            layerViewModel.layers[currentLayerIndex].setPixel(x: pixel.x, y: pixel.y, color: pixel.color)
+            // Timeline에 즉시 반영
+            timelineVM.setPixel(layerId: layerId, x: pixel.x, y: pixel.y, color: pixel.color)
         }
 
         // Command 생성 (이미 실행된 상태)
         if !newPixels.isEmpty {
+            let layerId = layerViewModel.layers[currentLayerIndex].id
             let command = DrawCommand(
-                layerViewModel: layerViewModel,
-                layerIndex: currentLayerIndex,
+                timelineViewModel: timelineViewModel,
+                layerId: layerId,
                 oldPixels: oldPixels,
                 newPixels: newPixels
             )

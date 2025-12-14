@@ -40,12 +40,10 @@ struct FrameInfo: Identifiable {
 /// UI 자동 업데이트 (@Published)
 /// ```
 @MainActor
-class TimelineViewModel: ObservableObject {
+class TimelineViewModel: ObservableObject, PlaybackControllerDelegate {
     @Published var totalFrames: Int = 1  // Frame 배열 대신 개수만 관리
     @Published var frames: [FrameInfo] = []  // UI 업데이트를 위한 프레임 배열
     @Published var currentFrameIndex: Int = 0
-    @Published var isPlaying: Bool = false
-    @Published var settings = AnimationSettings()
 
     // 다중 선택 지원
     @Published var selectedFrameIndices: Set<Int> = []  // 선택된 프레임들
@@ -54,7 +52,20 @@ class TimelineViewModel: ObservableObject {
     // 프레임 클립보드 (복사/붙여넣기)
     @Published var frameClipboard: FrameClipboard = .empty
 
-    var playbackTimer: Timer?  // fileprivate for extension access
+    // 플레이백 컨트롤러 (책임 분리)
+    let playbackController = PlaybackController()
+
+    /// 플레이백 설정 (PlaybackController로 위임)
+    var settings: AnimationSettings {
+        get { playbackController.settings }
+        set { playbackController.settings = newValue }
+    }
+
+    /// 재생 중 여부 (PlaybackController로 위임)
+    var isPlaying: Bool {
+        playbackController.isPlaying
+    }
+
     var canvasWidth: Int
     var canvasHeight: Int
 
@@ -65,13 +76,34 @@ class TimelineViewModel: ObservableObject {
     // 성능 최적화: totalFrames 계산 캐싱
     private var cachedMaxFrameIndex: Int?
 
+    // MARK: - Reactive State Manager (Single Source of Truth)
+    /// 픽셀 상태 관리자 - 모든 픽셀 읽기/쓰기는 이 매니저를 통해 수행
+    /// - Note: Reactive + State Manager 패턴으로 완벽한 동기화 보장
+    @Published var pixelStateManager: PixelStateManager!
+
     init(width: Int, height: Int, layerViewModel: LayerViewModel) {
         self.canvasWidth = width
         self.canvasHeight = height
         self.layerViewModel = layerViewModel
 
+        // PixelStateManager 초기화
+        self.pixelStateManager = PixelStateManager(
+            canvasWidth: width,
+            canvasHeight: height,
+            layerViewModel: layerViewModel
+        )
+
+        // LayerViewModel에 PixelStateManager 연결 (양방향 weak 참조)
+        layerViewModel.pixelStateManager = self.pixelStateManager
+
+        // PlaybackController delegate 설정
+        playbackController.delegate = self
+
         // 초기 frames 배열 생성
         self.frames = (0..<totalFrames).map { FrameInfo(index: $0) }
+
+        // 초기 프레임 로드
+        self.pixelStateManager.loadFrame(at: 0)
     }
 
     // MARK: - Helper Methods
@@ -115,18 +147,54 @@ class TimelineViewModel: ObservableObject {
         frames = (0..<totalFrames).map { FrameInfo(index: $0) }
     }
 
-    /// 현재 작업 중인 레이어의 픽셀을 소속 키프레임에 저장
+    // MARK: - Pixel Access API (Delegated to PixelStateManager)
+
+    /// 레이어의 현재 프레임 픽셀 가져오기 (PixelStateManager로 위임)
+    /// - Parameter layerId: 레이어 ID
+    /// - Returns: 픽셀 배열 (Reactive - 자동 업데이트됨)
+    func getCurrentFramePixels(layerId: UUID) -> [[Color?]]? {
+        return pixelStateManager.getPixels(layerId: layerId)
+    }
+
+    /// 특정 레이어의 단일 픽셀 수정 (PixelStateManager로 위임)
+    /// - Parameters:
+    ///   - layerId: 레이어 ID
+    ///   - x: X 좌표
+    ///   - y: Y 좌표
+    ///   - color: 색상 (nil = 투명)
+    func setPixel(layerId: UUID, x: Int, y: Int, color: Color?) {
+        pixelStateManager.setPixel(layerId: layerId, x: x, y: y, color: color)
+    }
+
+    /// 대량 픽셀 변경 (Command용 - PixelStateManager로 위임)
+    /// - Parameters:
+    ///   - layerId: 레이어 ID
+    ///   - changes: 픽셀 변경 배열
+    func applyPixelChanges(layerId: UUID, changes: [PixelChange]) {
+        pixelStateManager.applyPixelChanges(layerId: layerId, changes: changes)
+    }
+
+    // MARK: - Legacy: 기존 syncCurrentLayerToKeyframe (점진적 제거 예정)
+
+    /// 현재 작업 중인 레이어의 픽셀을 키프레임에 저장
     /// - Note: 도구(Tool)가 픽셀을 변경한 후 이 메서드를 호출하여 변경사항을 키프레임에 영구 저장합니다
-    /// - Important: Layer.pixels는 캐시이므로, 반드시 timeline.setKeyframe()으로 저장해야 합니다
+    /// - Important:
+    ///   - 현재 프레임이 이미 키프레임이면 업데이트
+    ///   - 현재 프레임이 키프레임이 아니면 새 키프레임 생성 (Flash/Animate 방식)
+    ///   - 이로 인해 기존 키프레임의 픽셀이 덮어써지는 버그가 방지됩니다
     func syncCurrentLayerToKeyframe() {
         guard currentFrameIndex < totalFrames else { return }
 
         for layerIndex in layerViewModel.layers.indices {
             var layer = layerViewModel.layers[layerIndex]
 
-            // 현재 프레임이 속한 키프레임 찾기
-            let keyframeIndex = layer.timeline.getOwningKeyframe(at: currentFrameIndex) ?? currentFrameIndex
-            layer.timeline.setKeyframe(at: keyframeIndex, pixels: layer.pixels)
+            // 현재 프레임에 키프레임 생성/업데이트
+            // (이전 방식: getOwningKeyframe으로 찾아서 업데이트 -> 버그 발생)
+            // (새 방식: 현재 프레임에 키프레임 생성 -> 정확함)
+            // PixelStateManager에서 현재 픽셀 가져오기
+            if let pixels = pixelStateManager.getPixels(layerId: layer.id) {
+                layer.timeline.setKeyframe(at: currentFrameIndex, pixels: pixels)
+            }
 
             layerViewModel.layers[layerIndex] = layer
         }
@@ -156,6 +224,54 @@ class TimelineViewModel: ObservableObject {
         }
 
         // totalFrames는 updateTotalFrames()에서 자동 계산
+        updateTotalFrames()
+
+        // 현재 프레임 인덱스 조정
+        if currentFrameIndex >= totalFrames && totalFrames > 0 {
+            currentFrameIndex = totalFrames - 1
+        }
+
+        loadFrame(at: currentFrameIndex)
+    }
+
+    /// 선택된 여러 프레임을 일괄 삭제 (범위 삭제)
+    /// - Note: selectedFrameIndices에 있는 모든 프레임을 삭제합니다.
+    ///         뒤에서부터 삭제하여 인덱스 불일치를 방지합니다.
+    func deleteSelectedFrames() {
+        guard !selectedFrameIndices.isEmpty && totalFrames > 1 else { return }
+
+        // 삭제할 수 없는 프레임 확인 (마지막 프레임만 남는 경우 방지)
+        let framesToDelete = selectedFrameIndices.filter { $0 < totalFrames }
+        guard totalFrames - framesToDelete.count >= 1 else {
+            // 최소 1개 프레임은 남겨야 함
+            return
+        }
+
+        // 내림차순 정렬 (뒤에서부터 삭제하여 인덱스 불일치 방지)
+        let sortedFrames = framesToDelete.sorted(by: >)
+
+        // 각 프레임 삭제
+        for frameIndex in sortedFrames {
+            // deleteFrame은 이미 모든 레이어 처리 + totalFrames 업데이트 + currentFrameIndex 조정 포함
+            // 하지만 여러 프레임 삭제 시 매번 호출하면 비효율적
+            // 직접 구현 (deleteFrame 로직을 최적화)
+
+            // 각 레이어에서 해당 프레임의 키프레임 제거
+            for layerIndex in layerViewModel.layers.indices {
+                if layerViewModel.layers[layerIndex].timeline.isKeyframe(at: frameIndex) {
+                    layerViewModel.layers[layerIndex].timeline.removeKeyframe(at: frameIndex)
+                }
+
+                // frameIndex 이후의 모든 키프레임을 -1 인덱스로 이동
+                layerViewModel.layers[layerIndex].timeline.shiftKeyframes(after: frameIndex, by: -1)
+            }
+        }
+
+        // 선택 상태 초기화
+        selectedFrameIndices.removeAll()
+        selectionAnchor = nil
+
+        // totalFrames 업데이트
         updateTotalFrames()
 
         // 현재 프레임 인덱스 조정
@@ -203,8 +319,9 @@ class TimelineViewModel: ObservableObject {
     func addKeyframeWithContent() {
         guard let layerIndex = validateSelectedLayer() else { return }
 
-        // 현재 레이어의 픽셀을 미리 저장
-        let currentPixels = layerViewModel.layers[layerIndex].pixels
+        // 현재 레이어의 픽셀을 미리 저장 (PixelStateManager에서 가져오기)
+        let layerId = layerViewModel.layers[layerIndex].id
+        guard let currentPixels = pixelStateManager.getPixels(layerId: layerId) else { return }
 
         // 현재 프레임 다음에 삽입할 위치
         let insertIndex = currentFrameIndex + 1
@@ -354,13 +471,8 @@ class TimelineViewModel: ObservableObject {
     func loadFrame(at index: Int) {
         guard index < totalFrames else { return }
 
-        let emptyPixels = createEmptyPixels()
-
-        // 각 레이어의 timeline에서 effective 픽셀 로드
-        for layerIndex in layerViewModel.layers.indices {
-            let effectivePixels = layerViewModel.layers[layerIndex].timeline.getEffectivePixels(at: index) ?? emptyPixels
-            layerViewModel.layers[layerIndex].pixels = effectivePixels
-        }
+        // PixelStateManager가 모든 레이어의 픽셀을 로드 (Reactive)
+        pixelStateManager.loadFrame(at: index)
     }
 
     // MARK: - Keyframe Operations
@@ -417,6 +529,9 @@ class TimelineViewModel: ObservableObject {
             invalidateTotalFramesCache()
             updateTotalFrames()
             objectWillChange.send()
+
+            // PixelStateManager 무효화 (다음 렌더링에서 최신 데이터 사용)
+            pixelStateManager.invalidateState()
         }
     }
 
@@ -430,11 +545,14 @@ class TimelineViewModel: ObservableObject {
 
         invalidateTotalFramesCache()
         updateTotalFrames()
-        objectWillChange.send()
 
+        // 현재 프레임이면 PixelStateManager 업데이트
         if frameIndex == currentFrameIndex {
-            layerViewModel.layers[layerIndex].pixels = emptyPixels
+            pixelStateManager.setAllPixels(layerId: layerId, pixels: emptyPixels)
         }
+
+        // PixelStateManager 무효화 (다음 렌더링에서 최신 데이터 사용)
+        pixelStateManager.invalidateState()
     }
 
     /// 기존 프레임을 빈 키프레임으로 변환 (F7)
@@ -448,11 +566,14 @@ class TimelineViewModel: ObservableObject {
 
         invalidateTotalFramesCache()
         updateTotalFrames()
-        objectWillChange.send()
 
+        // 현재 프레임이면 PixelStateManager 업데이트
         if frameIndex == currentFrameIndex {
-            layerViewModel.layers[layerIndex].pixels = emptyPixels
+            pixelStateManager.setAllPixels(layerId: layerId, pixels: emptyPixels)
         }
+
+        // PixelStateManager 무효화 (다음 렌더링에서 최신 데이터 사용)
+        pixelStateManager.invalidateState()
     }
 
     // MARK: - Helper Methods
@@ -558,93 +679,56 @@ class TimelineViewModel: ObservableObject {
     /// 프레임 선택 (Command에서 사용)
     func selectFrame(at index: Int, clearSelection: Bool = true) {
         guard index < totalFrames else { return }
+
         currentFrameIndex = index
 
         if clearSelection {
             selectedFrameIndices = [index]
         }
 
+        // PixelStateManager가 프레임 로드 (Reactive - 자동 동기화)
         loadFrame(at: index)
     }
 
-    // MARK: - Playback
+    // MARK: - Playback (Delegated to PlaybackController)
 
+    /// 재생/일시정지 토글 (PlaybackController로 위임)
     func togglePlayback() {
-        isPlaying.toggle()
-        if isPlaying {
-            startPlayback()
-        } else {
-            stopPlayback()
-        }
+        playbackController.togglePlayback()
     }
 
+    /// 애니메이션 재생 (PlaybackController로 위임)
     func play() {
-        isPlaying = true
-        startPlayback()
+        playbackController.play()
     }
 
+    /// 애니메이션 일시정지 (PlaybackController로 위임)
     func pause() {
-        isPlaying = false
-        stopPlayback()
+        playbackController.pause()
     }
 
-    func startPlayback() {
-        stopPlayback()
-
-        let interval = settings.frameDuration
-        playbackTimer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { [weak self] _ in
-            Task { @MainActor in
-                guard let self = self else { return }
-                self.advanceFrame()
-            }
-        }
-        if let timer = playbackTimer {
-            RunLoop.main.add(timer, forMode: .common)
-        }
-    }
-
-    func stopPlayback() {
-        playbackTimer?.invalidate()
-        playbackTimer = nil
-    }
-
-    func advanceFrame() {
-        if currentFrameIndex < totalFrames - 1 {
-            currentFrameIndex += 1
-        } else if settings.isLooping {
-            currentFrameIndex = 0
-        } else {
-            pause()
-            return
-        }
-        loadFrame(at: currentFrameIndex)
-    }
-
+    /// 다음 프레임으로 이동 (PlaybackController로 위임)
     func nextFrame() {
-        if currentFrameIndex < totalFrames - 1 {
-            currentFrameIndex += 1
-            loadFrame(at: currentFrameIndex)
-        }
+        playbackController.nextFrame()
     }
 
+    /// 이전 프레임으로 이동 (PlaybackController로 위임)
     func previousFrame() {
-        if currentFrameIndex > 0 {
-            currentFrameIndex -= 1
-            loadFrame(at: currentFrameIndex)
-        }
+        playbackController.previousFrame()
     }
 
+    /// FPS 설정
     func setFPS(_ fps: Int) {
-        settings.fps = fps
-        if isPlaying {
-            startPlayback()
-        }
+        playbackController.settings.fps = fps
     }
 
+    /// 재생 속도 설정
     func setPlaybackSpeed(_ speed: Double) {
-        settings.playbackSpeed = speed
-        if isPlaying {
-            startPlayback()
+        playbackController.settings.playbackSpeed = speed
+        // 재생 중이면 타이머 재시작 (새로운 속도 반영)
+        if playbackController.isPlaying {
+            playbackController.pause()
+            playbackController.play()
         }
     }
 
@@ -790,7 +874,5 @@ class TimelineViewModel: ObservableObject {
         return !frameClipboard.isEmpty
     }
 
-    deinit {
-        playbackTimer?.invalidate()
-    }
+    // deinit 제거 - PlaybackController가 자체적으로 정리함
 }

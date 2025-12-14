@@ -11,11 +11,11 @@ struct Layer: Identifiable {
     let id = UUID()
     var name: String
 
-    /// 현재 프레임의 픽셀 캐시
-    /// - Note: 이 값은 `timeline`에 저장된 키프레임 데이터의 캐시입니다.
-    ///   프레임 전환 시 `TimelineViewModel.loadFrame()`이 `timeline.getEffectivePixels()`를 호출하여
-    ///   이 필드를 업데이트합니다. 직접 수정 시 timeline과 동기화되지 않을 수 있습니다.
-    /// - Warning: 픽셀 변경 후에는 `timeline.setKeyframe()`를 호출하여 키프레임에 저장해야 합니다.
+    /// 현재 프레임의 픽셀 캐시 (내부 전용 - 호환성 유지용)
+    /// - Note: Layer 내부에서만 사용됩니다. 외부에서는 `PixelStateManager`를 사용하세요.
+    ///   - 읽기: `timelineViewModel.pixelStateManager.getPixels(layerId:)`
+    ///   - 쓰기: `timelineViewModel.pixelStateManager.setPixel()` 또는 `applyPixelChanges()`
+    /// - Important: 직접 수정 시 PixelStateManager와 동기화되지 않을 수 있습니다.
     var pixels: [[Color?]]
 
     var isVisible: Bool = true

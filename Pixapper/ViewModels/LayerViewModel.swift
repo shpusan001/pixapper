@@ -32,6 +32,10 @@ class LayerViewModel: ObservableObject {
     private let canvasWidth: Int
     private let canvasHeight: Int
 
+    /// PixelStateManager 참조 (레이어 변경 시 상태 동기화용)
+    /// - Note: TimelineViewModel이 초기화 후 설정합니다
+    weak var pixelStateManager: PixelStateManager?
+
     init(width: Int, height: Int) {
         self.canvasWidth = width
         self.canvasHeight = height
@@ -42,6 +46,9 @@ class LayerViewModel: ObservableObject {
         let newLayer = Layer(name: "Layer \(layers.count + 1)", width: canvasWidth, height: canvasHeight)
         layers.append(newLayer)
         selectedLayerIndex = layers.count - 1
+
+        // 레이어 추가 후 PixelStateManager 상태 동기화
+        pixelStateManager?.invalidateState()
     }
 
     func deleteLayer(at index: Int) {
@@ -50,6 +57,9 @@ class LayerViewModel: ObservableObject {
         if selectedLayerIndex >= layers.count {
             selectedLayerIndex = layers.count - 1
         }
+
+        // 레이어 삭제 후 PixelStateManager 상태 동기화
+        pixelStateManager?.invalidateState()
     }
 
     func duplicateLayer(at index: Int) {
@@ -57,6 +67,12 @@ class LayerViewModel: ObservableObject {
         let duplicatedLayer = layers[index].duplicate(newName: "\(layers[index].name) Copy")
         layers.insert(duplicatedLayer, at: index + 1)
         selectedLayerIndex = index + 1
+
+        // 레이어 복제 후 PixelStateManager 상태 동기화
+        pixelStateManager?.invalidateState()
+
+        // UI 즉시 업데이트 강제
+        objectWillChange.send()
     }
 
     func renameLayer(at index: Int, to newName: String) {
