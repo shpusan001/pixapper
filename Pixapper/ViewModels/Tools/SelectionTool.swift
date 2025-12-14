@@ -815,8 +815,8 @@ class SelectionTool: CanvasTool {
         var pasteY: Int
 
         if let lastRect = prevRect {
-            pasteX = Int(lastRect.minX) + 10
-            pasteY = Int(lastRect.minY) + 10
+            pasteX = Int(lastRect.minX) + Constants.Selection.pasteOffset
+            pasteY = Int(lastRect.minY) + Constants.Selection.pasteOffset
         } else {
             pasteX = (canvas.canvas.width - clipboardData.width) / 2
             pasteY = (canvas.canvas.height - clipboardData.height) / 2
@@ -922,14 +922,14 @@ class SelectionTool: CanvasTool {
     private func getResizeHandle(x: Int, y: Int) -> ResizeHandle? {
         guard let rect = selectionRect else { return nil }
 
-        let handleSize: CGFloat = 1
+        let handleSize = Constants.Selection.handleSize
         let px = CGFloat(x)
         let py = CGFloat(y)
 
         // 회전 핸들 체크
         let centerX = rect.midX
-        let rotateY = rect.minY - 3
-        let rotateHandleSize: CGFloat = 2
+        let rotateY = rect.minY - Constants.Selection.rotateHandleDistance
+        let rotateHandleSize = Constants.Selection.rotateHandleSize
         if abs(px - centerX) <= rotateHandleSize && abs(py - rotateY) <= rotateHandleSize {
             return .rotate
         }

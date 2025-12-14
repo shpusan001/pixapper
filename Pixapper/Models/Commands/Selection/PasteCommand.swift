@@ -100,10 +100,8 @@ class PasteCommand: LayerPixelApplicable {
         // 2. 붙여넣기 픽셀을 레이어에 바로 적용
         applyPixelChanges(newPastePixels)
 
-        // 3. TimelineViewModel에 동기화 (타임라인 모드에서만)
-        if let timeline = canvasViewModel?.timelineViewModel {
-            timeline.syncCurrentLayerToKeyframe()
-        }
+        // 3. TimelineViewModel에 동기화
+        timelineViewModel?.pixelStateManager?.syncToTimeline()
 
         // 4. 선택 영역 클리어 (붙여넣기 후 floating selection을 만들지 않음)
         canvasViewModel?.clearSelection()
@@ -118,10 +116,8 @@ class PasteCommand: LayerPixelApplicable {
             applyPixelChanges(oldCommitPixels)
         }
 
-        // 3. TimelineViewModel에 동기화 (타임라인 모드에서만)
-        if let timeline = canvasViewModel?.timelineViewModel {
-            timeline.syncCurrentLayerToKeyframe()
-        }
+        // 3. TimelineViewModel에 동기화
+        timelineViewModel?.pixelStateManager?.syncToTimeline()
 
         // 4. 이전 선택 상태 복원
         canvasViewModel?.restoreSelectionState(

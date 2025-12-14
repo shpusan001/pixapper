@@ -32,7 +32,7 @@ class DeleteFrameInLayerCommand: Command {
         self.previousTotalFrames = timelineViewModel.totalFrames
 
         // 삭제 전에 키프레임 데이터 백업
-        if let layerIndex = timelineViewModel.layerViewModel.layers.firstIndex(where: { $0.id == layerId }) {
+        if let layerIndex = timelineViewModel.getLayerIndex(for: layerId) {
             let layer = timelineViewModel.layerViewModel.layers[layerIndex]
             wasKeyframe = layer.timeline.isKeyframe(at: index)
 

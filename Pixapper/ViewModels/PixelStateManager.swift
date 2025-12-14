@@ -164,11 +164,11 @@ class PixelStateManager: ObservableObject {
 
     // MARK: - Private Methods
 
-    /// Timeline 동기화 스케줄 (debounced - 100ms)
+    /// Timeline 동기화 스케줄 (debounced)
     /// - Note: 연속 그리기 중에는 UI만 업데이트하고, 멈추면 timeline에 동기화
     private func scheduleSyncToTimeline() {
         syncTimer?.invalidate()
-        syncTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: false) { [weak self] _ in
+        syncTimer = Timer.scheduledTimer(withTimeInterval: Constants.PixelState.syncDebounceInterval, repeats: false) { [weak self] _ in
             Task { @MainActor [weak self] in
                 self?.syncToTimelineImmediate()
             }

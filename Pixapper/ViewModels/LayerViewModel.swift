@@ -23,7 +23,7 @@ import Combine
 /// ## 중요 사항
 /// - Layer.pixels는 **현재 프레임의 캐시**입니다
 /// - 실제 타임라인 데이터는 **Layer.timeline**에 키프레임 형태로 저장됩니다
-/// - 픽셀 변경 후 반드시 `TimelineViewModel.syncCurrentLayerToKeyframe()`을 호출해야 합니다
+/// - 픽셀 변경은 PixelStateManager를 통해 관리되며, 자동으로 타임라인에 동기화됩니다
 @MainActor
 class LayerViewModel: ObservableObject {
     @Published var layers: [Layer]

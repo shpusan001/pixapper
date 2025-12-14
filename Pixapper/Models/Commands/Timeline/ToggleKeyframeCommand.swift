@@ -28,7 +28,7 @@ class ToggleKeyframeCommand: Command {
 
     func execute() {
         guard let timelineViewModel = timelineViewModel,
-              let layerIndex = timelineViewModel.layerViewModel.layers.firstIndex(where: { $0.id == layerId }) else {
+              let layerIndex = timelineViewModel.getLayerIndex(for: layerId) else {
             return
         }
 
@@ -45,7 +45,7 @@ class ToggleKeyframeCommand: Command {
 
     func undo() {
         guard let timelineViewModel = timelineViewModel,
-              let layerIndex = timelineViewModel.layerViewModel.layers.firstIndex(where: { $0.id == layerId }) else {
+              let layerIndex = timelineViewModel.getLayerIndex(for: layerId) else {
             return
         }
 

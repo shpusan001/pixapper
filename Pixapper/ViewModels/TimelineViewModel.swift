@@ -174,36 +174,6 @@ class TimelineViewModel: ObservableObject, PlaybackControllerDelegate {
         pixelStateManager.applyPixelChanges(layerId: layerId, changes: changes)
     }
 
-    // MARK: - Legacy: 기존 syncCurrentLayerToKeyframe (점진적 제거 예정)
-
-    /// 현재 작업 중인 레이어의 픽셀을 키프레임에 저장
-    /// - Note: 도구(Tool)가 픽셀을 변경한 후 이 메서드를 호출하여 변경사항을 키프레임에 영구 저장합니다
-    /// - Important:
-    ///   - 현재 프레임이 이미 키프레임이면 업데이트
-    ///   - 현재 프레임이 키프레임이 아니면 새 키프레임 생성 (Flash/Animate 방식)
-    ///   - 이로 인해 기존 키프레임의 픽셀이 덮어써지는 버그가 방지됩니다
-    func syncCurrentLayerToKeyframe() {
-        guard currentFrameIndex < totalFrames else { return }
-
-        for layerIndex in layerViewModel.layers.indices {
-            var layer = layerViewModel.layers[layerIndex]
-
-            // 현재 프레임에 키프레임 생성/업데이트
-            // (이전 방식: getOwningKeyframe으로 찾아서 업데이트 -> 버그 발생)
-            // (새 방식: 현재 프레임에 키프레임 생성 -> 정확함)
-            // PixelStateManager에서 현재 픽셀 가져오기
-            if let pixels = pixelStateManager.getPixels(layerId: layer.id) {
-                layer.timeline.setKeyframe(at: currentFrameIndex, pixels: pixels)
-            }
-
-            layerViewModel.layers[layerIndex] = layer
-        }
-
-        // 레이어별 키프레임 변경 후 캐시 무효화 및 totalFrames 자동 업데이트
-        invalidateTotalFramesCache()
-        updateTotalFrames()
-    }
-
     // MARK: - Frame Management
 
 

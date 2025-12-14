@@ -109,4 +109,22 @@ enum Constants {
             static let extendedSpanBackground: Double = 0.25
         }
     }
+
+    /// 선택 도구 설정
+    enum Selection {
+        /// 리사이즈 핸들 크기 (픽셀)
+        static let handleSize: CGFloat = 1
+        /// 회전 핸들 크기 (픽셀)
+        static let rotateHandleSize: CGFloat = 2
+        /// 회전 핸들과 선택 영역 간 거리 (픽셀)
+        static let rotateHandleDistance: CGFloat = 3
+        /// 복사-붙여넣기 시 오프셋 (픽셀)
+        static let pasteOffset: Int = 10
+    }
+
+    /// PixelStateManager 설정
+    enum PixelState {
+        /// Timeline 동기화 debounce 시간 (초)
+        static let syncDebounceInterval: TimeInterval = 0.1
+    }
 }
