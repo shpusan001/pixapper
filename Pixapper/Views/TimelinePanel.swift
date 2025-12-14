@@ -66,7 +66,7 @@ struct TimelinePanel: View {
                             Rectangle()
                                 .fill(Constants.Theme.playheadRed)
                                 .frame(width: 2)
-                                .offset(x: lineX, y: Constants.Layout.Timeline.frameHeaderHeight)
+                                .offset(x: lineX, y: Constants.Layout.Timeline.rowHeight)
                         }
                     )
                 }
@@ -168,8 +168,8 @@ struct TimelinePanel: View {
                 }
             }
         }
+        .frame(height: Constants.Layout.Timeline.rowHeight)
         .padding(.horizontal, 10)
-        .padding(.vertical, 6)
         .background(Constants.Theme.sectionBackground)
     }
 
@@ -181,7 +181,7 @@ struct TimelinePanel: View {
             Text("LAYERS")
                 .font(.system(size: 9, weight: .bold))
                 .foregroundColor(Constants.Theme.textSecondary)
-                .frame(width: layerColumnWidth, height: 26)
+                .frame(width: layerColumnWidth, height: Constants.Layout.Timeline.rowHeight)
                 .background(Constants.Theme.sectionBackground)
 
             // Frame numbers with drag selection support
@@ -193,41 +193,14 @@ struct TimelinePanel: View {
     }
 
     private func frameHeaderCell(frameIndex: Int) -> some View {
-        let isCurrent = frameIndex == viewModel.currentFrameIndex
-
-        return Text("\(frameIndex + 1)")
-            .font(.system(size: 9, design: .monospaced))
-            .fontWeight(isCurrent ? .bold : .regular)
-            .foregroundColor(isCurrent ? Constants.Theme.textPrimary : Constants.Theme.textSecondary)
-            .frame(width: cellSize, height: 26)
-            .background(isCurrent ? Constants.Theme.hoverBackground : Constants.Theme.sectionBackground)
-            .contentShape(Rectangle())
-            .gesture(
-                DragGesture(minimumDistance: 5)
-                    .onChanged { value in
-                        if dragStartFrameIndex == nil {
-                            dragStartFrameIndex = frameIndex
-                            viewModel.selectionAnchor = frameIndex
-                        }
-
-                        if let startIndex = dragStartFrameIndex {
-                            let currentHoverIndex = calculateFrameIndex(from: value.location)
-                            viewModel.updateDragSelection(from: startIndex, to: currentHoverIndex)
-                        }
-                    }
-                    .onEnded { _ in
-                        dragStartFrameIndex = nil
-
-                        if let lastSelected = viewModel.selectedFrameIndices.max() {
-                            viewModel.selectFrame(at: lastSelected, clearSelection: false)
-                        }
-                    }
-            )
-            .simultaneousGesture(
-                TapGesture().onEnded {
-                    viewModel.selectSingleFrame(at: frameIndex)
-                }
-            )
+        FrameHeaderCellView(
+            frameIndex: frameIndex,
+            isCurrent: frameIndex == viewModel.currentFrameIndex,
+            cellSize: cellSize,
+            dragStartFrameIndex: $dragStartFrameIndex,
+            viewModel: viewModel,
+            calculateFrameIndex: calculateFrameIndex
+        )
     }
 
     // 마우스 위치로부터 프레임 인덱스 계산
@@ -256,7 +229,7 @@ struct TimelinePanel: View {
     // MARK: - Layer Info Column
 
     private func layerInfoColumn(layer: Layer, layerIndex: Int) -> some View {
-        HStack(spacing: 4) {
+        HStack(alignment: .center, spacing: 4) {
             // Drag handle
             Image(systemName: "line.3.horizontal")
                 .font(.system(size: 9))
@@ -275,7 +248,7 @@ struct TimelinePanel: View {
             .buttonStyle(.plain)
 
             // Layer name and opacity
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: 1) {
                 // Layer name (editable)
                 if editingLayerIndex == layerIndex {
                     TextField("Name", text: $editingLayerName, onCommit: {
@@ -299,27 +272,37 @@ struct TimelinePanel: View {
                             editingLayerIndex = layerIndex
                             editingLayerName = layer.name
                         }
+                        .onTapGesture(count: 1) {
+                            if editingLayerIndex == nil && editingOpacityLayerIndex == nil {
+                                viewModel.layerViewModel.selectedLayerIndex = layerIndex
+                            }
+                        }
                 }
 
-                // Opacity control
-                HStack(spacing: 4) {
-                    if editingOpacityLayerIndex == layerIndex {
-                        // Editing mode: Show slider
+                // Opacity control - interactive
+                if editingOpacityLayerIndex == layerIndex {
+                    HStack(spacing: 2) {
                         Slider(
-                            value: $currentOpacity,
+                            value: Binding(
+                                get: { currentOpacity },
+                                set: { newValue in
+                                    currentOpacity = newValue
+                                    viewModel.layerViewModel.setOpacity(at: layerIndex, opacity: newValue)
+                                }
+                            ),
                             in: 0...1,
                             onEditingChanged: { isEditing in
                                 if isEditing {
-                                    opacityBeforeDrag = viewModel.layerViewModel.layers[layerIndex].opacity
-                                    currentOpacity = viewModel.layerViewModel.layers[layerIndex].opacity
+                                    opacityBeforeDrag = layer.opacity
                                 } else {
                                     if let oldOpacity = opacityBeforeDrag {
-                                        if abs(oldOpacity - currentOpacity) > 0.001 {
+                                        let newOpacity = currentOpacity
+                                        if abs(oldOpacity - newOpacity) > 0.001 {
                                             let command = SetLayerOpacityCommand(
                                                 layerViewModel: viewModel.layerViewModel,
                                                 index: layerIndex,
                                                 oldOpacity: oldOpacity,
-                                                newOpacity: currentOpacity
+                                                newOpacity: newOpacity
                                             )
                                             commandManager.addExecutedCommand(command)
                                         }
@@ -329,39 +312,25 @@ struct TimelinePanel: View {
                                 }
                             }
                         )
-                        .controlSize(.mini)
-                        .onChange(of: currentOpacity) { _, newValue in
-                            viewModel.layerViewModel.setOpacity(at: layerIndex, opacity: newValue)
-                        }
+                        .tint(Constants.Theme.accentBlue)
+                        .frame(height: 12)
                     }
-
-                    // Percentage display (always visible, clickable)
-                    Text("\(Int((editingOpacityLayerIndex == layerIndex ? currentOpacity : viewModel.layerViewModel.layers[layerIndex].opacity) * 100))%")
-                        .font(.system(size: 9, design: .monospaced))
-                        .foregroundColor(editingOpacityLayerIndex == layerIndex ? Constants.Theme.accentBlue : Constants.Theme.textSecondary)
-                        .underline(editingOpacityLayerIndex != layerIndex, color: Constants.Theme.textSecondary.opacity(0.3))
-                        .frame(width: 30, alignment: .trailing)
-                        .contentShape(Rectangle())
-                        .onHover { hovering in
-                            if hovering && editingOpacityLayerIndex != layerIndex {
-                                NSCursor.pointingHand.push()
-                            } else {
-                                NSCursor.pop()
-                            }
-                        }
+                } else {
+                    // Percentage display (clickable to edit)
+                    Text("\(Int(layer.opacity * 100))%")
+                        .font(.system(size: 8, design: .monospaced))
+                        .foregroundColor(Constants.Theme.textSecondary.opacity(0.7))
+                        .frame(width: 28, alignment: .trailing)
                         .onTapGesture {
-                            if editingOpacityLayerIndex == layerIndex {
-                                editingOpacityLayerIndex = nil
-                            } else {
-                                currentOpacity = viewModel.layerViewModel.layers[layerIndex].opacity
-                                editingOpacityLayerIndex = layerIndex
-                            }
+                            editingOpacityLayerIndex = layerIndex
+                            currentOpacity = layer.opacity
                         }
                 }
             }
             .frame(maxWidth: .infinity)
         }
-        .padding(.horizontal, 6)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
         .frame(width: layerColumnWidth, height: cellSize)
         .background(
             Group {
@@ -376,11 +345,6 @@ struct TimelinePanel: View {
         )
         .contentShape(Rectangle())
         .opacity(draggingLayerIndex == layerIndex ? 0.5 : 1.0)
-        .onTapGesture {
-            if editingLayerIndex == nil {
-                viewModel.layerViewModel.selectedLayerIndex = layerIndex
-            }
-        }
         .onDrag {
             draggingLayerIndex = layerIndex
             return NSItemProvider(object: "\(layerIndex)" as NSString)
@@ -926,8 +890,8 @@ struct TimelinePanel: View {
 
             Spacer()
         }
+        .frame(height: Constants.Layout.Timeline.rowHeight)
         .padding(.horizontal, 10)
-        .padding(.vertical, 6)
         .background(Constants.Theme.sectionBackground)
     }
 
@@ -956,24 +920,13 @@ struct TimelinePanel: View {
         disabled: Bool = false,
         action: @escaping () -> Void
     ) -> some View {
-        Button(action: action) {
-            HStack(spacing: 2) {
-                Image(systemName: icon)
-                    .font(.system(size: 10))
-                Text(text)
-                    .font(.system(size: 9, weight: .medium))
-            }
-            .padding(.horizontal, 6)
-            .padding(.vertical, 4)
-            .foregroundColor(disabled ? Constants.Theme.textDisabled : Constants.Theme.textPrimary)
-        }
-        .buttonStyle(.plain)
-        .background(
-            RoundedRectangle(cornerRadius: 2)
-                .fill(disabled ? Constants.Theme.panelBackground : Constants.Theme.hoverBackground)
+        TimelineToolbarButton(
+            icon: icon,
+            text: text,
+            tooltip: tooltip,
+            disabled: disabled,
+            action: action
         )
-        .disabled(disabled)
-        .help(tooltip)
     }
 }
 
@@ -1170,6 +1123,98 @@ struct Triangle: Shape {
         path.closeSubpath()
 
         return path
+    }
+}
+
+// MARK: - Frame Header Cell with Hover
+
+struct FrameHeaderCellView: View {
+    let frameIndex: Int
+    let isCurrent: Bool
+    let cellSize: CGFloat
+    @Binding var dragStartFrameIndex: Int?
+    let viewModel: TimelineViewModel
+    let calculateFrameIndex: (CGPoint) -> Int
+
+    @State private var isHovered = false
+
+    var body: some View {
+        Text("\(frameIndex + 1)")
+            .font(.system(size: 9, design: .monospaced))
+            .fontWeight(isCurrent ? .bold : .regular)
+            .foregroundColor(isCurrent ? Constants.Theme.textPrimary : Constants.Theme.textSecondary)
+            .frame(width: cellSize, height: Constants.Layout.Timeline.rowHeight)
+            .background(
+                isCurrent ? Constants.Theme.accentBlue.opacity(0.2) :
+                    (isHovered ? Constants.Theme.hoverBackground : Constants.Theme.sectionBackground)
+            )
+            .contentShape(Rectangle())
+            .onHover { hovering in
+                isHovered = hovering
+            }
+            .gesture(
+                DragGesture(minimumDistance: 5)
+                    .onChanged { value in
+                        if dragStartFrameIndex == nil {
+                            dragStartFrameIndex = frameIndex
+                            viewModel.selectionAnchor = frameIndex
+                        }
+
+                        if let startIndex = dragStartFrameIndex {
+                            let currentHoverIndex = calculateFrameIndex(value.location)
+                            viewModel.updateDragSelection(from: startIndex, to: currentHoverIndex)
+                        }
+                    }
+                    .onEnded { _ in
+                        dragStartFrameIndex = nil
+
+                        if let lastSelected = viewModel.selectedFrameIndices.max() {
+                            viewModel.selectFrame(at: lastSelected, clearSelection: false)
+                        }
+                    }
+            )
+            .simultaneousGesture(
+                TapGesture().onEnded {
+                    viewModel.selectSingleFrame(at: frameIndex)
+                }
+            )
+    }
+}
+
+// MARK: - Timeline Toolbar Button with Hover
+
+struct TimelineToolbarButton: View {
+    let icon: String
+    let text: String
+    let tooltip: String
+    var disabled: Bool = false
+    let action: () -> Void
+
+    @State private var isHovered = false
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 2) {
+                Image(systemName: icon)
+                    .font(.system(size: 10))
+                Text(text)
+                    .font(.system(size: 9, weight: .medium))
+            }
+            .padding(.horizontal, 6)
+            .padding(.vertical, 4)
+            .foregroundColor(disabled ? Constants.Theme.textDisabled : Constants.Theme.textPrimary)
+        }
+        .buttonStyle(.plain)
+        .background(
+            RoundedRectangle(cornerRadius: 2)
+                .fill(disabled ? Constants.Theme.panelBackground :
+                      (isHovered ? Constants.Theme.hoverBackground : Constants.Theme.sectionBackground))
+        )
+        .disabled(disabled)
+        .help(tooltip)
+        .onHover { hovering in
+            isHovered = hovering
+        }
     }
 }
 

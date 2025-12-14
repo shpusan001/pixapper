@@ -25,12 +25,12 @@ struct FrameCellView: View {
         ZStack {
             // 배경색
             backgroundColor
-                .cornerRadius(2)
+                .cornerRadius(1)
 
             // 썸네일
             if spanPosition == .keyframeStart && hasContent {
                 thumbnailView
-                    .padding(3)
+                    .padding(4)
             }
 
             // 키프레임 인디케이터
@@ -44,26 +44,40 @@ struct FrameCellView: View {
             )
         }
         .overlay(
-            RoundedRectangle(cornerRadius: 2)
-                .strokeBorder(borderColor, lineWidth: isSelected ? 2 : 0)
+            RoundedRectangle(cornerRadius: 1)
+                .strokeBorder(borderColor, lineWidth: isSelected ? 2 : (isMultiSelected ? 1 : 0))
         )
     }
 
     // MARK: - UI Components
 
     private var backgroundColor: Color {
+        let isCurrentLayer = layerIndex == viewModel.layerViewModel.selectedLayerIndex
+
         switch spanPosition {
         case .keyframeStart:
-            return Color(nsColor: .separatorColor).opacity(0.6)
+            if isCurrentFrame && isCurrentLayer {
+                return Constants.Theme.accentBlue.opacity(0.3)
+            }
+            return Constants.Theme.sectionBackground
         case .extended, .end:
-            return Color(nsColor: .separatorColor).opacity(0.2)
+            if isCurrentFrame && isCurrentLayer {
+                return Constants.Theme.accentBlue.opacity(0.15)
+            }
+            return Constants.Theme.sectionBackground.opacity(0.5)
         case .empty:
-            return Color(nsColor: .controlBackgroundColor)
+            return Constants.Theme.backgroundDark
         }
     }
 
     private var borderColor: Color {
-        isSelected ? .red : .clear
+        if isSelected {
+            return Constants.Theme.accentBlue
+        } else if isMultiSelected {
+            return Constants.Theme.accentBlue.opacity(0.5)
+        } else {
+            return Color.clear
+        }
     }
 
     private var thumbnailView: some View {

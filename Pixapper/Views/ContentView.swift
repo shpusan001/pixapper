@@ -52,9 +52,10 @@ struct ContentView: View {
             // Toolbar - Adobe style with better grouping
             HStack(spacing: 0) {
                 // Left: File operations group
-                HStack(spacing: 8) {
-                    ToolbarIconButton(
+                HStack(spacing: 6) {
+                    ToolbarTextButton(
                         icon: "doc.badge.plus",
+                        text: "New",
                         tooltip: "New Project (⌘N)",
                         action: {
                             if appViewModel.isDirty {
@@ -65,22 +66,25 @@ struct ContentView: View {
                         }
                     )
 
-                    ToolbarIconButton(
+                    ToolbarTextButton(
                         icon: "folder",
+                        text: "Open",
                         tooltip: "Open (⌘O)",
                         action: { appViewModel.loadProject() }
                     )
 
-                    ToolbarIconButton(
+                    ToolbarTextButton(
                         icon: "square.and.arrow.down",
+                        text: "Save",
                         tooltip: "Save (⌘S)",
                         action: { appViewModel.saveProject() }
                     )
 
                     ToolbarDivider()
 
-                    ToolbarIconButton(
+                    ToolbarTextButton(
                         icon: "square.and.arrow.up",
+                        text: "Export",
                         tooltip: "Export (PNG, GIF, Sprite Sheet)",
                         action: { showingExportSheet = true }
                     )
@@ -89,58 +93,28 @@ struct ContentView: View {
 
                 Spacer()
 
-                // Center: Canvas info and controls
-                HStack(spacing: 12) {
-                    // Canvas size indicator (clickable)
-                    Button(action: { showingCanvasSizeSheet = true }) {
-                        HStack(spacing: 4) {
-                            Image(systemName: "square.resize")
-                                .font(.system(size: 10))
-                            Text("\(canvasViewModel.canvas.width)×\(canvasViewModel.canvas.height)")
-                                .font(.system(size: 10, design: .monospaced))
-                        }
-                        .foregroundColor(Constants.Theme.textSecondary)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(
-                            RoundedRectangle(cornerRadius: 2)
-                                .fill(Constants.Theme.sectionBackground)
-                        )
-                    }
-                    .buttonStyle(.plain)
-                    .help("Resize Canvas (⌘R)")
-
-                    // Zoom control
+                // Center: Canvas size indicator
+                Button(action: { showingCanvasSizeSheet = true }) {
                     HStack(spacing: 6) {
-                        Image(systemName: "magnifyingglass")
-                            .font(.system(size: 10))
-                            .foregroundColor(Constants.Theme.textSecondary)
-
-                        Slider(
-                            value: Binding(
-                                get: { appViewModel.canvasViewModel.zoomLevel },
-                                set: { appViewModel.canvasViewModel.zoomLevel = $0 }
-                            ),
-                            in: 100...1600,
-                            step: 100
-                        )
-                        .frame(width: 100)
-                        .tint(Constants.Theme.accentBlue)
-
-                        Text("\(Int(canvasViewModel.zoomLevel))%")
-                            .font(.system(size: 10, design: .monospaced))
-                            .foregroundColor(Constants.Theme.textPrimary)
-                            .frame(width: 42, alignment: .center)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
-                            .background(Constants.Theme.sectionBackground)
-                            .cornerRadius(2)
+                        Image(systemName: "square.resize")
+                            .font(.system(size: 11))
+                        Text("\(canvasViewModel.canvas.width)×\(canvasViewModel.canvas.height)")
+                            .font(.system(size: 12, weight: .medium, design: .monospaced))
                     }
+                    .foregroundColor(Constants.Theme.textPrimary)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(
+                        RoundedRectangle(cornerRadius: 2)
+                            .fill(Constants.Theme.sectionBackground)
+                    )
                 }
+                .buttonStyle(.plain)
+                .help("Resize Canvas (⌘R)")
 
                 Spacer()
 
-                // Right: View and Edit controls
+                // Right: Edit controls + Zoom
                 HStack(spacing: 8) {
                     ToolbarIconButton(
                         icon: "arrow.uturn.backward",
@@ -170,10 +144,39 @@ struct ContentView: View {
                         isOn: canvasViewModel.showGrid,
                         action: { canvasViewModel.toggleGrid() }
                     )
+
+                    ToolbarDivider()
+
+                    // Zoom control
+                    HStack(spacing: 6) {
+                        Image(systemName: "magnifyingglass")
+                            .font(.system(size: 11))
+                            .foregroundColor(Constants.Theme.textSecondary)
+
+                        Slider(
+                            value: Binding(
+                                get: { appViewModel.canvasViewModel.zoomLevel },
+                                set: { appViewModel.canvasViewModel.zoomLevel = $0 }
+                            ),
+                            in: 100...1600,
+                            step: 100
+                        )
+                        .frame(width: 100)
+                        .tint(Constants.Theme.accentBlue)
+
+                        Text("\(Int(canvasViewModel.zoomLevel))%")
+                            .font(.system(size: 10, design: .monospaced))
+                            .foregroundColor(Constants.Theme.textPrimary)
+                            .frame(width: 42, alignment: .center)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Constants.Theme.sectionBackground)
+                            .cornerRadius(2)
+                    }
                 }
                 .padding(.trailing, 12)
             }
-            .frame(height: 36)
+            .frame(height: 50)
             .background(Constants.Theme.panelBackground)
 
             Rectangle()
@@ -212,7 +215,7 @@ struct ContentView: View {
             )
         }
         .sheet(isPresented: $showingCanvasSizeSheet) {
-            CanvasSizeSheet(viewModel: canvasViewModel)
+            CanvasSizeSheet(viewModel: canvasViewModel, commandManager: commandManager)
         }
         .focusable()
         .focused($isFocused)
@@ -317,6 +320,41 @@ struct ContentView: View {
 
 // MARK: - Toolbar Components
 
+struct ToolbarTextButton: View {
+    let icon: String
+    let text: String
+    let tooltip: String
+    var isDisabled: Bool = false
+    let action: () -> Void
+
+    @State private var isHovered = false
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 4) {
+                Image(systemName: icon)
+                    .font(.system(size: 11))
+                Text(text)
+                    .font(.system(size: 11, weight: .medium))
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .foregroundColor(isDisabled ? Constants.Theme.textDisabled : Constants.Theme.textPrimary)
+        .disabled(isDisabled)
+        .help(tooltip)
+        .background(
+            RoundedRectangle(cornerRadius: 2)
+                .fill(isHovered && !isDisabled ? Constants.Theme.hoverBackground : Color.clear)
+        )
+        .onHover { hovering in
+            isHovered = hovering
+        }
+    }
+}
+
 struct ToolbarIconButton: View {
     let icon: String
     let tooltip: String
@@ -350,7 +388,7 @@ struct ToolbarDivider: View {
     var body: some View {
         Rectangle()
             .fill(Constants.Theme.divider)
-            .frame(width: 1, height: 18)
+            .frame(width: 1, height: 24)
             .padding(.horizontal, 6)
     }
 }

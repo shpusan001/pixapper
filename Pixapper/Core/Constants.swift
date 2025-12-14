@@ -107,8 +107,8 @@ enum Constants {
             static let layerColumnWidth: CGFloat = 180
             /// 프레임 셀 크기 (더 조밀한 타임라인)
             static let cellSize: CGFloat = 48
-            /// 프레임 헤더 행 높이
-            static let frameHeaderHeight: CGFloat = 26
+            /// 타임라인 행 높이 (헤더, 툴바 모두 동일)
+            static let rowHeight: CGFloat = 32
             /// Playback 버튼 크기
             static let playbackButtonSize: CGFloat = 24
         }

@@ -18,17 +18,23 @@ struct LayerPanel: View {
         VStack(spacing: 0) {
             // Header
             HStack {
-                Text("Layers")
-                    .font(.headline)
+                Text("LAYERS")
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundColor(Constants.Theme.textSecondary)
+                    .tracking(0.5)
                 Spacer()
             }
-            .padding(12)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 8)
+            .background(Constants.Theme.sectionBackground)
 
-            Divider()
+            Rectangle()
+                .fill(Constants.Theme.divider)
+                .frame(height: 1)
 
             // Layer list
             ScrollView {
-                LazyVStack(spacing: 4) {
+                LazyVStack(spacing: 1) {
                     ForEach(Array(viewModel.layers.enumerated().reversed()), id: \.element.id) { index, layer in
                         let actualIndex = viewModel.layers.count - 1 - index
                         LayerRow(
@@ -64,104 +70,93 @@ struct LayerPanel: View {
                         )
                     }
                 }
-                .padding(8)
             }
 
-            Divider()
+            Rectangle()
+                .fill(Constants.Theme.divider)
+                .frame(height: 1)
 
             // Selected layer controls
             if viewModel.selectedLayerIndex < viewModel.layers.count, !viewModel.layers.isEmpty {
-                VStack(alignment: .leading, spacing: 12) {
-                    // Opacity control
-                    VStack(alignment: .leading, spacing: 4) {
-                        HStack {
-                            Text("Opacity")
-                                .font(.callout)
-                            Spacer()
-                            Text("\(Int(viewModel.layers[viewModel.selectedLayerIndex].opacity * 100))%")
-                                .font(.callout)
-                                .foregroundColor(.secondary)
-                        }
-                        Slider(
-                            value: Binding(
-                                get: {
-                                    guard viewModel.selectedLayerIndex < viewModel.layers.count else { return 1.0 }
-                                    return viewModel.layers[viewModel.selectedLayerIndex].opacity
-                                },
-                                set: { newValue in
-                                    guard viewModel.selectedLayerIndex < viewModel.layers.count else { return }
-                                    viewModel.setOpacity(at: viewModel.selectedLayerIndex, opacity: newValue)
-                                }
-                            ),
-                            in: 0...1,
-                            onEditingChanged: { isEditing in
-                                if isEditing {
-                                    // 드래그 시작: 이전 opacity 저장
-                                    opacityBeforeDrag = viewModel.layers[viewModel.selectedLayerIndex].opacity
-                                } else {
-                                    // 드래그 종료: Command 생성
-                                    if let oldOpacity = opacityBeforeDrag {
-                                        let newOpacity = viewModel.layers[viewModel.selectedLayerIndex].opacity
-                                        if abs(oldOpacity - newOpacity) > 0.001 {
-                                            let command = SetLayerOpacityCommand(
-                                                layerViewModel: viewModel,
-                                                index: viewModel.selectedLayerIndex,
-                                                oldOpacity: oldOpacity,
-                                                newOpacity: newOpacity
-                                            )
-                                            commandManager.addExecutedCommand(command)
-                                        }
-                                        opacityBeforeDrag = nil
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Text("Opacity")
+                            .font(.system(size: 10, weight: .medium))
+                            .foregroundColor(Constants.Theme.textSecondary)
+                        Spacer()
+                        Text("\(Int(viewModel.layers[viewModel.selectedLayerIndex].opacity * 100))%")
+                            .font(.system(size: 10, design: .monospaced))
+                            .foregroundColor(Constants.Theme.textPrimary)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Constants.Theme.sectionBackground)
+                            .cornerRadius(2)
+                    }
+                    Slider(
+                        value: Binding(
+                            get: {
+                                guard viewModel.selectedLayerIndex < viewModel.layers.count else { return 1.0 }
+                                return viewModel.layers[viewModel.selectedLayerIndex].opacity
+                            },
+                            set: { newValue in
+                                guard viewModel.selectedLayerIndex < viewModel.layers.count else { return }
+                                viewModel.setOpacity(at: viewModel.selectedLayerIndex, opacity: newValue)
+                            }
+                        ),
+                        in: 0...1,
+                        onEditingChanged: { isEditing in
+                            if isEditing {
+                                opacityBeforeDrag = viewModel.layers[viewModel.selectedLayerIndex].opacity
+                            } else {
+                                if let oldOpacity = opacityBeforeDrag {
+                                    let newOpacity = viewModel.layers[viewModel.selectedLayerIndex].opacity
+                                    if abs(oldOpacity - newOpacity) > 0.001 {
+                                        let command = SetLayerOpacityCommand(
+                                            layerViewModel: viewModel,
+                                            index: viewModel.selectedLayerIndex,
+                                            oldOpacity: oldOpacity,
+                                            newOpacity: newOpacity
+                                        )
+                                        commandManager.addExecutedCommand(command)
                                     }
+                                    opacityBeforeDrag = nil
                                 }
                             }
-                        )
-                    }
+                        }
+                    )
+                    .tint(Constants.Theme.accentBlue)
                 }
-                .padding(12)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 10)
             }
 
-            Divider()
+            Rectangle()
+                .fill(Constants.Theme.divider)
+                .frame(height: 1)
 
             // Layer operations
-            HStack(spacing: 12) {
-                Button(action: {
+            HStack(spacing: 6) {
+                LayerActionButton(icon: "plus", tooltip: "Add Layer") {
                     let command = AddLayerCommand(layerViewModel: viewModel)
                     commandManager.performCommand(command)
-                }) {
-                    Image(systemName: "plus")
-                        .frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.bordered)
-                .help("Add Layer")
 
-                Button(action: {
+                LayerActionButton(icon: "trash", tooltip: "Delete Layer", disabled: viewModel.layers.count <= 1) {
                     if viewModel.layers.count > 1 {
                         let command = DeleteLayerCommand(layerViewModel: viewModel, index: viewModel.selectedLayerIndex)
                         commandManager.performCommand(command)
                     }
-                }) {
-                    Image(systemName: "trash")
-                        .frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.bordered)
-                .disabled(viewModel.layers.count <= 1)
-                .help("Delete Layer")
 
-                Button(action: {
-                    // Duplicate는 나중에 Command로 추가
+                LayerActionButton(icon: "doc.on.doc", tooltip: "Duplicate Layer") {
                     viewModel.duplicateLayer(at: viewModel.selectedLayerIndex)
-                }) {
-                    Image(systemName: "doc.on.doc")
-                        .frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.bordered)
-                .help("Duplicate Layer")
             }
-            .padding(12)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 8)
         }
         .frame(width: Constants.Layout.Panel.layerPanelWidth)
-        .background(Color(nsColor: .controlBackgroundColor))
+        .background(Constants.Theme.panelBackground)
     }
 }
 
@@ -177,25 +172,33 @@ struct LayerRow: View {
     let onDelete: () -> Void
     let onDuplicate: () -> Void
 
+    @State private var isHovered = false
+
     var body: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 6) {
             // Visibility toggle
             Button(action: onToggleVisibility) {
-                Image(systemName: layer.isVisible ? "eye" : "eye.slash")
-                    .font(.system(size: 14))
-                    .frame(width: 20, height: 20)
-                    .foregroundColor(layer.isVisible ? .primary : .secondary)
+                Image(systemName: layer.isVisible ? "eye.fill" : "eye.slash")
+                    .font(.system(size: 10))
+                    .frame(width: 18, height: 18)
+                    .foregroundColor(layer.isVisible ? Constants.Theme.textPrimary : Constants.Theme.textDisabled)
             }
             .buttonStyle(.plain)
 
             // Layer name
             if isEditing {
                 TextField("Layer name", text: $editingName, onCommit: onEndEditing)
-                    .textFieldStyle(.roundedBorder)
-                    .font(.callout)
+                    .textFieldStyle(.plain)
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundColor(Constants.Theme.textPrimary)
+                    .padding(.horizontal, 4)
+                    .padding(.vertical, 2)
+                    .background(Constants.Theme.sectionBackground)
+                    .cornerRadius(2)
             } else {
                 Text(layer.name)
-                    .font(.callout)
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundColor(Constants.Theme.textPrimary)
                     .lineLimit(1)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .onTapGesture(count: 2) {
@@ -203,20 +206,62 @@ struct LayerRow: View {
                     }
             }
         }
-        .padding(8)
-        .background(isSelected ? Color.accentColor.opacity(0.2) : Color.clear)
-        .cornerRadius(4)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 6)
+        .background(
+            Rectangle()
+                .fill(isSelected ? Constants.Theme.accentBlue.opacity(0.2) : (isHovered ? Constants.Theme.hoverBackground : Constants.Theme.panelBackground))
+        )
+        .overlay(
+            Rectangle()
+                .fill(isSelected ? Constants.Theme.accentBlue : Color.clear)
+                .frame(width: 2)
+            , alignment: .leading
+        )
         .contentShape(Rectangle())
         .onTapGesture {
             if !isEditing {
                 onSelect()
             }
         }
+        .onHover { hovering in
+            isHovered = hovering
+        }
         .contextMenu {
             Button("Rename") { onStartEditing() }
             Button("Duplicate") { onDuplicate() }
             Divider()
             Button("Delete", role: .destructive) { onDelete() }
+        }
+    }
+}
+
+struct LayerActionButton: View {
+    let icon: String
+    let tooltip: String
+    var disabled: Bool = false
+    let action: () -> Void
+
+    @State private var isHovered = false
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: icon)
+                .font(.system(size: 11))
+                .frame(maxWidth: .infinity)
+                .frame(height: 28)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .foregroundColor(disabled ? Constants.Theme.textDisabled : Constants.Theme.textPrimary)
+        .background(
+            RoundedRectangle(cornerRadius: 2)
+                .fill(disabled ? Constants.Theme.panelBackground : (isHovered ? Constants.Theme.hoverBackground : Constants.Theme.sectionBackground))
+        )
+        .disabled(disabled)
+        .help(tooltip)
+        .onHover { hovering in
+            isHovered = hovering
         }
     }
 }

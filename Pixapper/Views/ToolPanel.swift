@@ -141,6 +141,7 @@ struct ToolIconButton: View {
 
 struct CanvasSizeSheet: View {
     @ObservedObject var viewModel: CanvasViewModel
+    var commandManager: CommandManager?
     @Environment(\.dismiss) var dismiss
     @State private var width: String = ""
     @State private var height: String = ""
@@ -211,7 +212,23 @@ struct CanvasSizeSheet: View {
                 Button("Resize") {
                     if let w = Int(width), let h = Int(height),
                        w > 0, w <= 1024, h > 0, h <= 1024 {
-                        viewModel.resizeCanvas(width: w, height: h)
+                        let oldWidth = viewModel.canvas.width
+                        let oldHeight = viewModel.canvas.height
+
+                        // CommandManager가 있으면 Command로 실행
+                        if let commandManager = commandManager {
+                            let command = ResizeCanvasCommand(
+                                canvasViewModel: viewModel,
+                                oldWidth: oldWidth,
+                                oldHeight: oldHeight,
+                                newWidth: w,
+                                newHeight: h
+                            )
+                            commandManager.performCommand(command)
+                        } else {
+                            // CommandManager가 없으면 직접 실행 (fallback)
+                            viewModel.resizeCanvas(width: w, height: h)
+                        }
                         dismiss()
                     }
                 }
