@@ -148,19 +148,33 @@ struct TimelinePanel: View {
             // Right: Options
             HStack(spacing: 4) {
                 Button(action: { viewModel.toggleLoop() }) {
-                    Image(systemName: "repeat")
-                        .font(.system(size: 14))
-                        .foregroundColor(viewModel.settings.isLooping ? .accentColor : .secondary)
+                    HStack(spacing: 3) {
+                        Image(systemName: "repeat")
+                            .font(.system(size: 11))
+                        Text("Loop")
+                            .font(.system(size: 10))
+                    }
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 3)
+                    .foregroundColor(viewModel.settings.isLooping ? .accentColor : .primary)
                 }
-                .buttonStyle(.borderless)
+                .buttonStyle(.bordered)
+                .controlSize(.small)
                 .help("Loop")
 
                 Button(action: { viewModel.toggleOnionSkin() }) {
-                    Image(systemName: "circle.lefthalf.filled")
-                        .font(.system(size: 14))
-                        .foregroundColor(viewModel.settings.onionSkinEnabled ? .accentColor : .secondary)
+                    HStack(spacing: 3) {
+                        Image(systemName: "circle.lefthalf.filled")
+                            .font(.system(size: 11))
+                        Text("Onion")
+                            .font(.system(size: 10))
+                    }
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 3)
+                    .foregroundColor(viewModel.settings.onionSkinEnabled ? .accentColor : .primary)
                 }
-                .buttonStyle(.borderless)
+                .buttonStyle(.bordered)
+                .controlSize(.small)
                 .help("Onion Skin (O)")
             }
         }
@@ -838,100 +852,47 @@ struct TimelinePanel: View {
     // MARK: - Operations Toolbar
 
     private var operationsToolbar: some View {
-        HStack(spacing: 6) {
-            // Layer operations
-            HStack(spacing: 3) {
-                Text("Layer")
-                    .font(.system(size: 9, weight: .medium))
-                    .foregroundColor(.secondary)
-
-                Button(action: {
+        HStack(spacing: 12) {
+            // LAYER
+            toolbarSection(title: "LAYER") {
+                toolbarButton(icon: "plus.square", text: "Add", tooltip: "Add Layer") {
                     let command = AddLayerCommand(layerViewModel: viewModel.layerViewModel)
                     commandManager.performCommand(command)
-                }) {
-                    HStack(spacing: 3) {
-                        Image(systemName: "plus.square")
-                            .font(.system(size: 11))
-                        Text("Add")
-                            .font(.system(size: 10))
-                    }
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 3)
                 }
-                .buttonStyle(.bordered)
-                .controlSize(.small)
-                .help("Add Layer")
 
-                Button(action: {
+                toolbarButton(
+                    icon: "minus.square",
+                    text: "Delete",
+                    tooltip: "Delete Layer",
+                    disabled: viewModel.layerViewModel.layers.count <= 1
+                ) {
                     if viewModel.layerViewModel.layers.count > 1 {
                         let command = DeleteLayerCommand(layerViewModel: viewModel.layerViewModel, index: viewModel.layerViewModel.selectedLayerIndex)
                         commandManager.performCommand(command)
                     }
-                }) {
-                    HStack(spacing: 3) {
-                        Image(systemName: "minus.square")
-                            .font(.system(size: 11))
-                        Text("Delete")
-                            .font(.system(size: 10))
-                    }
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 3)
                 }
-                .buttonStyle(.bordered)
-                .controlSize(.small)
-                .disabled(viewModel.layerViewModel.layers.count <= 1)
-                .help("Delete Layer")
             }
 
             Divider()
-                .frame(height: 14)
+                .frame(height: 20)
 
-            // Keyframe operations
-            HStack(spacing: 3) {
-                Text("Keyframe")
-                    .font(.system(size: 9, weight: .medium))
-                    .foregroundColor(.secondary)
+            // KEYFRAME
+            toolbarSection(title: "KEYFRAME") {
+                let layerId = viewModel.layerViewModel.layers[viewModel.layerViewModel.selectedLayerIndex].id
 
-                Button(action: {
-                    let layerId = viewModel.layerViewModel.layers[viewModel.layerViewModel.selectedLayerIndex].id
+                toolbarButton(icon: "scope", text: "Toggle", tooltip: "Toggle Keyframe (F6)") {
                     viewModel.toggleKeyframe(frameIndex: viewModel.currentFrameIndex, layerId: layerId)
-                }) {
-                    HStack(spacing: 3) {
-                        Image(systemName: "scope")
-                            .font(.system(size: 11))
-                        Text("Toggle")
-                            .font(.system(size: 10))
-                    }
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 3)
                 }
-                .buttonStyle(.bordered)
-                .controlSize(.small)
-                .help("Toggle Keyframe (F6)")
 
-                Button(action: {
-                    let layerId = viewModel.layerViewModel.layers[viewModel.layerViewModel.selectedLayerIndex].id
+                toolbarButton(icon: "plus.circle.fill", text: "Insert", tooltip: "Insert Keyframe (F5)") {
                     let command = AddKeyframeWithContentCommand(
                         timelineViewModel: viewModel,
                         layerId: layerId
                     )
                     commandManager.performCommand(command)
-                }) {
-                    HStack(spacing: 3) {
-                        Image(systemName: "plus.circle.fill")
-                            .font(.system(size: 11))
-                        Text("Insert")
-                            .font(.system(size: 10))
-                    }
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 3)
                 }
-                .buttonStyle(.bordered)
-                .controlSize(.small)
-                .help("Insert Keyframe")
 
-                Button(action: {
-                    let layerId = viewModel.layerViewModel.layers[viewModel.layerViewModel.selectedLayerIndex].id
+                toolbarButton(icon: "plus.circle.dashed", text: "Blank", tooltip: "Blank Keyframe (F7)") {
                     let command = AddBlankKeyframeCommand(
                         timelineViewModel: viewModel,
                         layerId: layerId,
@@ -939,144 +900,81 @@ struct TimelinePanel: View {
                         canvasHeight: viewModel.canvasHeight
                     )
                     commandManager.performCommand(command)
-                }) {
-                    HStack(spacing: 3) {
-                        Image(systemName: "plus.circle.dashed")
-                            .font(.system(size: 11))
-                        Text("Blank")
-                            .font(.system(size: 10))
-                    }
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 3)
                 }
-                .buttonStyle(.bordered)
-                .controlSize(.small)
-                .help("Blank Keyframe (F7)")
             }
 
             Divider()
-                .frame(height: 14)
+                .frame(height: 20)
 
-            // Frame operations
-            HStack(spacing: 3) {
-                Text("Frame")
-                    .font(.system(size: 9, weight: .medium))
-                    .foregroundColor(.secondary)
+            // FRAME
+            toolbarSection(title: "FRAME") {
+                let layerId = viewModel.layerViewModel.layers[viewModel.layerViewModel.selectedLayerIndex].id
 
-                Button(action: {
-                    let layerId = viewModel.layerViewModel.layers[viewModel.layerViewModel.selectedLayerIndex].id
+                toolbarButton(icon: "plus.square", text: "Extend", tooltip: "Extend Frame") {
                     let command = ExtendFrameCommand(
                         timelineViewModel: viewModel,
                         frameIndex: viewModel.currentFrameIndex,
                         layerId: layerId
                     )
                     commandManager.performCommand(command)
-                }) {
-                    HStack(spacing: 3) {
-                        Image(systemName: "plus.square")
-                            .font(.system(size: 11))
-                        Text("Extend")
-                            .font(.system(size: 10))
-                    }
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 3)
                 }
-                .buttonStyle(.bordered)
-                .controlSize(.small)
-                .help("Extend Frame (F5)")
 
-                Button(action: {
-                    let layerId = viewModel.layerViewModel.layers[viewModel.layerViewModel.selectedLayerIndex].id
+                toolbarButton(icon: "minus.square", text: "Remove", tooltip: "Remove Frame") {
                     let command = DeleteFrameInLayerCommand(
                         timelineViewModel: viewModel,
                         index: viewModel.currentFrameIndex,
                         layerId: layerId
                     )
                     commandManager.performCommand(command)
-                }) {
-                    HStack(spacing: 3) {
-                        Image(systemName: "minus.square")
-                            .font(.system(size: 11))
-                        Text("Remove")
-                            .font(.system(size: 10))
-                    }
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 3)
                 }
-                .buttonStyle(.bordered)
-                .controlSize(.small)
-                .help("Remove Frame")
-            }
-
-            Divider()
-                .frame(height: 14)
-
-            // Edit operations (Copy/Cut/Paste)
-            HStack(spacing: 3) {
-                Text("Edit")
-                    .font(.system(size: 9, weight: .medium))
-                    .foregroundColor(.secondary)
-
-                Button(action: {
-                    let layerId = viewModel.layerViewModel.layers[viewModel.layerViewModel.selectedLayerIndex].id
-                    viewModel.copyFrames(frameIndices: viewModel.selectedFrameIndices, layerId: layerId)
-                }) {
-                    HStack(spacing: 3) {
-                        Image(systemName: "doc.on.doc")
-                            .font(.system(size: 11))
-                        Text("Copy")
-                            .font(.system(size: 10))
-                    }
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 3)
-                }
-                .buttonStyle(.bordered)
-                .controlSize(.small)
-                .disabled(viewModel.selectedFrameIndices.isEmpty)
-                .help("Copy Selected Frames (⌘C)")
-
-                Button(action: {
-                    let layerId = viewModel.layerViewModel.layers[viewModel.layerViewModel.selectedLayerIndex].id
-                    viewModel.cutFrames(frameIndices: viewModel.selectedFrameIndices, layerId: layerId)
-                }) {
-                    HStack(spacing: 3) {
-                        Image(systemName: "scissors")
-                            .font(.system(size: 11))
-                        Text("Cut")
-                            .font(.system(size: 10))
-                    }
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 3)
-                }
-                .buttonStyle(.bordered)
-                .controlSize(.small)
-                .disabled(viewModel.selectedFrameIndices.isEmpty)
-                .help("Cut Selected Frames (⌘X)")
-
-                Button(action: {
-                    let layerId = viewModel.layerViewModel.layers[viewModel.layerViewModel.selectedLayerIndex].id
-                    viewModel.pasteFrames(at: viewModel.currentFrameIndex, layerId: layerId)
-                }) {
-                    HStack(spacing: 3) {
-                        Image(systemName: "doc.on.clipboard")
-                            .font(.system(size: 11))
-                        Text("Paste")
-                            .font(.system(size: 10))
-                    }
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 3)
-                }
-                .buttonStyle(.bordered)
-                .controlSize(.small)
-                .disabled(!viewModel.hasFrameClipboard)
-                .help("Paste Frames (⌘V)")
             }
 
             Spacer()
         }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 5)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
         .background(Color(nsColor: .controlBackgroundColor))
+    }
+
+    // MARK: - Toolbar Helpers
+
+    private func toolbarSection<Content: View>(
+        title: String,
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        HStack(spacing: 4) {
+            Text(title)
+                .font(.system(size: 9, weight: .semibold))
+                .foregroundColor(.secondary)
+                .frame(width: 60, alignment: .leading)
+
+            HStack(spacing: 3) {
+                content()
+            }
+        }
+    }
+
+    private func toolbarButton(
+        icon: String,
+        text: String,
+        tooltip: String,
+        disabled: Bool = false,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            HStack(spacing: 3) {
+                Image(systemName: icon)
+                    .font(.system(size: 11))
+                Text(text)
+                    .font(.system(size: 10))
+            }
+            .padding(.horizontal, 6)
+            .padding(.vertical, 3)
+        }
+        .buttonStyle(.bordered)
+        .controlSize(.small)
+        .disabled(disabled)
+        .help(tooltip)
     }
 }
 

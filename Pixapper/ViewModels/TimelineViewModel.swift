@@ -733,10 +733,12 @@ class TimelineViewModel: ObservableObject, PlaybackControllerDelegate {
     }
 
     func toggleLoop() {
+        objectWillChange.send()
         settings.isLooping.toggle()
     }
 
     func toggleOnionSkin() {
+        objectWillChange.send()
         settings.onionSkinEnabled.toggle()
     }
 

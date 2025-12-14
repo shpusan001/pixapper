@@ -486,8 +486,8 @@ struct PixelGridView: View {
                         let rect = CGRect(
                             x: marginX + CGFloat(x) * pixelSize,
                             y: marginY + CGFloat(y) * pixelSize,
-                            width: pixelSize,
-                            height: pixelSize
+                            width: pixelSize + 1,
+                            height: pixelSize + 1
                         )
                         context.fill(Path(rect), with: .color(color))
                     }
@@ -506,22 +506,22 @@ struct GridLinesView: View {
 
     var body: some View {
         Canvas { context, size in
-            let gridColor = Color(white: 0.6, opacity: 0.3)
+            let gridColor = Color(white: 0.6, opacity: 0.2)
             var path = Path()
 
             for x in 0...width {
-                let xPos = marginX + CGFloat(x) * pixelSize
+                let xPos = floor(marginX + CGFloat(x) * pixelSize) + 0.5
                 path.move(to: CGPoint(x: xPos, y: marginY))
                 path.addLine(to: CGPoint(x: xPos, y: marginY + CGFloat(height) * pixelSize))
             }
 
             for y in 0...height {
-                let yPos = marginY + CGFloat(y) * pixelSize
+                let yPos = floor(marginY + CGFloat(y) * pixelSize) + 0.5
                 path.move(to: CGPoint(x: marginX, y: yPos))
                 path.addLine(to: CGPoint(x: marginX + CGFloat(width) * pixelSize, y: yPos))
             }
 
-            context.stroke(path, with: .color(gridColor), lineWidth: 1)
+            context.stroke(path, with: .color(gridColor), lineWidth: 0.5)
         }
     }
 }
@@ -538,8 +538,8 @@ struct ShapePreviewView: View {
                 let rect = CGRect(
                     x: marginX + CGFloat(pixel.x) * pixelSize,
                     y: marginY + CGFloat(pixel.y) * pixelSize,
-                    width: pixelSize,
-                    height: pixelSize
+                    width: pixelSize + 1,
+                    height: pixelSize + 1
                 )
                 context.fill(Path(rect), with: .color(pixel.color.opacity(Constants.Opacity.Canvas.shapePreview)))
             }
@@ -569,8 +569,8 @@ struct BrushPreviewView: View {
                         let rect = CGRect(
                             x: marginX + CGFloat(px) * pixelSize,
                             y: marginY + CGFloat(py) * pixelSize,
-                            width: pixelSize,
-                            height: pixelSize
+                            width: pixelSize + 1,
+                            height: pixelSize + 1
                         )
                         context.fill(Path(rect), with: .color(brushColor.opacity(0.3)))
                     }
@@ -596,8 +596,8 @@ struct OnionSkinLayerView: View {
                         let rect = CGRect(
                             x: marginX + CGFloat(x) * pixelSize,
                             y: marginY + CGFloat(y) * pixelSize,
-                            width: pixelSize,
-                            height: pixelSize
+                            width: pixelSize + 1,
+                            height: pixelSize + 1
                         )
                         let tintedColor = color.opacity(opacity)
                         context.fill(Path(rect), with: .color(tintedColor))
@@ -661,8 +661,8 @@ struct SelectionRectView: View {
                     let pixelRect = CGRect(
                         x: marginX + (rect.minX + CGFloat(x)) * pixelSize,
                         y: marginY + (rect.minY + CGFloat(y)) * pixelSize,
-                        width: pixelSize,
-                        height: pixelSize
+                        width: pixelSize + 1,
+                        height: pixelSize + 1
                     )
                     context.fill(Path(pixelRect), with: .color(color.opacity(opacity)))
                 }
