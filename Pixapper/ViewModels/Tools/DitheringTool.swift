@@ -1,48 +1,46 @@
 //
-//  PencilEraserTool.swift
+//  DitheringTool.swift
 //  Pixapper
 //
-//  Created by Claude on 2025-12-13.
+//  Created by Claude on 2025-12-14.
 //
 
 import SwiftUI
 
-/// 그리기 도구 (연필, 지우개)
+/// 디더링 브러시 도구
 @MainActor
-class PencilEraserTool: BaseTool, CanvasTool {
+class DitheringTool: BaseTool, CanvasTool {
     // Drawing state
     private var lastDrawPoint: (x: Int, y: Int)?
     private var currentStrokePixels: [PixelChange] = []
     private var oldStrokePixels: [PixelChange] = []
-    private var drawnPixelsInStroke: Set<String> = []  // "x,y" 형식으로 저장
+    private var drawnPixelsInStroke: Set<String> = []
 
     func handleDown(x: Int, y: Int, altPressed: Bool) {
         lastDrawPoint = (x, y)
         currentStrokePixels = []
         oldStrokePixels = []
         drawnPixelsInStroke = []
-        drawPixel(x: x, y: y)
+        drawDithering(x: x, y: y)
     }
 
     func handleDrag(x: Int, y: Int) {
         // 드래그 중에도 프리뷰 위치 업데이트
         canvasViewModel?.brushPreviewPosition = (x, y)
 
-        // 보간을 통해 끊김 방지
         if let last = lastDrawPoint {
             drawInterpolatedLine(from: last, to: (x, y))
         } else {
-            drawPixel(x: x, y: y)
+            drawDithering(x: x, y: y)
         }
         lastDrawPoint = (x, y)
     }
 
     func handleUp(x: Int, y: Int) {
-        // 스트로크 완료 - Command 생성
-        if !currentStrokePixels.isEmpty {
+        if !currentStrokePixels.isEmpty, let layerId = currentLayerId {
             let command = DrawCommand(
                 timelineViewModel: timelineViewModel,
-                layerId: layerViewModel.layers[currentLayerIndex].id,
+                layerId: layerId,
                 oldPixels: oldStrokePixels,
                 newPixels: currentStrokePixels
             )
@@ -52,8 +50,6 @@ class PencilEraserTool: BaseTool, CanvasTool {
         oldStrokePixels = []
         drawnPixelsInStroke = []
         lastDrawPoint = nil
-
-        // 스트로크 완료 시 timeline에 즉시 동기화
         timelineViewModel?.pixelStateManager?.syncToTimeline()
     }
 
@@ -67,79 +63,108 @@ class PencilEraserTool: BaseTool, CanvasTool {
 
     // MARK: - Private Methods
 
-    private func drawPixel(x: Int, y: Int) {
-        guard let canvas = canvasViewModel,
-              currentLayerIndex < layerViewModel.layers.count else { return }
+    private func drawDithering(x: Int, y: Int) {
+        let settings = toolSettingsManager.selectedTool == .dithering ?
+            (toolSettingsManager.getSettings(for: .dithering) as? DitheringSettings) : nil
 
-        let color: Color?
-        let brushSize: Int
+        guard let settings = settings,
+              let canvas = canvasViewModel,
+              let layerId = currentLayerId else { return }
 
-        switch toolSettingsManager.selectedTool {
-        case .pencil:
-            color = toolSettingsManager.pencilSettings.color
-            brushSize = toolSettingsManager.pencilSettings.brushSize
-        case .eraser:
-            color = nil
-            brushSize = toolSettingsManager.eraserSettings.brushSize
-        default:
-            return
-        }
+        let pattern = settings.pattern
+        let color1 = settings.color
+        let color2 = settings.secondaryColor
+        let brushSize = settings.brushSize
+        let density = settings.density
 
-        // 브러시 크기에 따라 여러 픽셀 그리기
-        // 홀수: 정사각형, 짝수: 원형(맨해튼 거리)
         let radius = brushSize / 2
         for dy in -radius...radius {
             for dx in -radius...radius {
                 let px = x + dx
                 let py = y + dy
 
-                // 캔버스 범위 체크
                 guard px >= 0 && px < canvas.canvas.width && py >= 0 && py < canvas.canvas.height else { continue }
 
                 // 브러시 모양 결정
-                let shouldDraw: Bool
+                let isInBrush: Bool
                 if brushSize % 2 == 1 {
                     // 홀수: 정사각형
-                    shouldDraw = true
+                    isInBrush = true
                 } else {
                     // 짝수: 원형 (맨해튼 거리)
-                    shouldDraw = abs(dx) + abs(dy) <= radius
+                    isInBrush = abs(dx) + abs(dy) <= radius
                 }
-                guard shouldDraw else { continue }
+                guard isInBrush else { continue }
 
-                // 이미 그린 픽셀인지 체크 (보간 중 중복 방지)
-                // - Note: Set을 사용하여 O(1) 중복 체크
-                //   같은 스트로크에서 같은 픽셀을 여러 번 그리는 것을 방지하여
-                //   oldStrokePixels의 정확성을 보장하고 Undo/Redo 버그 방지
                 let pixelKey = "\(px),\(py)"
                 if drawnPixelsInStroke.contains(pixelKey) {
                     continue
                 }
                 drawnPixelsInStroke.insert(pixelKey)
 
-                // Single Source of Truth: TimelineViewModel 사용
-                let layerId = layerViewModel.layers[currentLayerIndex].id
+                // 패턴에 따라 색상 결정 (항상 그림)
+                // shouldDrawPixel은 항상 true를 반환하므로 체크 불필요
 
-                // 픽셀을 변경하기 **전에** 이전 값 저장
+                let color = getPatternColor(x: px, y: py, pattern: pattern, color1: color1, color2: color2)
+
                 var oldColor: Color? = nil
                 if let pixels = timelineViewModel?.getCurrentFramePixels(layerId: layerId),
                    py >= 0, py < pixels.count, px >= 0, px < pixels[py].count {
                     oldColor = pixels[py][px]
                 }
                 oldStrokePixels.append(PixelChange(x: px, y: py, color: oldColor))
-
-                // 새로운 값 저장
                 currentStrokePixels.append(PixelChange(x: px, y: py, color: color))
-
-                // 픽셀 변경 - TimelineViewModel을 통해 즉시 timeline 반영
                 timelineViewModel?.setPixel(layerId: layerId, x: px, y: py, color: color)
             }
         }
     }
 
-    /// 두 점 사이를 보간하여 끊김 없이 그립니다
+    private func shouldDrawPixel(x: Int, y: Int, pattern: DitheringPattern, density: Double) -> Bool {
+        // 모든 패턴은 항상 그림 (색상으로 패턴 구분)
+        return true
+    }
+
+    private func getPatternColor(x: Int, y: Int, pattern: DitheringPattern, color1: Color, color2: Color) -> Color {
+        switch pattern {
+        case .checkerboard:
+            // 체커보드: 대각선 / 방향
+            return (x + y) % 2 == 0 ? color1 : color2
+
+        case .dots:
+            // 점 패턴 (25% 밀도)
+            return (x % 2 == 0 && y % 2 == 0) ? color1 : color2
+
+        case .horizontal:
+            // 수평 줄무늬
+            return y % 2 == 0 ? color1 : color2
+
+        case .vertical:
+            // 수직 줄무늬
+            return x % 2 == 0 ? color1 : color2
+
+        case .crosshatch:
+            // 크로스 해치 (격자)
+            return (x % 2 == 0 || y % 2 == 0) ? color1 : color2
+
+        case .sparse:
+            // 드문 점 패턴 (12.5% 밀도)
+            return (x % 4 == 0 && y % 4 == 0) ? color1 : color2
+
+        case .custom:
+            // 커스텀 패턴 (동적 크기 타일링)
+            let settings = toolSettingsManager.selectedTool == .dithering ?
+                (toolSettingsManager.getSettings(for: .dithering) as? DitheringSettings) : nil
+            guard let customPattern = settings?.customPattern,
+                  let patternSize = settings?.customPatternSize else {
+                return color1
+            }
+            let patternX = ((x % patternSize) + patternSize) % patternSize  // 음수 좌표 처리
+            let patternY = ((y % patternSize) + patternSize) % patternSize
+            return customPattern[patternY][patternX] ? color1 : color2
+        }
+    }
+
     private func drawInterpolatedLine(from start: (x: Int, y: Int), to end: (x: Int, y: Int)) {
-        // Bresenham's line algorithm for interpolation
         let dx = abs(end.x - start.x)
         let dy = abs(end.y - start.y)
         let sx = start.x < end.x ? 1 : -1
@@ -150,7 +175,7 @@ class PencilEraserTool: BaseTool, CanvasTool {
         var y = start.y
 
         while true {
-            drawPixel(x: x, y: y)
+            drawDithering(x: x, y: y)
 
             if x == end.x && y == end.y {
                 break

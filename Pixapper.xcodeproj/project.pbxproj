@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		A2F6E4442EE796ED00F35F04 /* claude.md in Resources */ = {isa = PBXBuildFile; fileRef = A2F6E4432EE796E600F35F04 /* claude.md */; };
+		A2F6E77F2EEEA88700F35F04 /* ARCHITECTURE.md in Resources */ = {isa = PBXBuildFile; fileRef = A2F6E77C2EEEA88700F35F04 /* ARCHITECTURE.md */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -32,6 +33,7 @@
 		A2F6E4262EE78F5800F35F04 /* PixapperTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PixapperTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		A2F6E4302EE78F5800F35F04 /* PixapperUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PixapperUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		A2F6E4432EE796E600F35F04 /* claude.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = claude.md; sourceTree = "<group>"; };
+		A2F6E77C2EEEA88700F35F04 /* ARCHITECTURE.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = ARCHITECTURE.md; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -80,6 +82,7 @@
 		A2F6E4102EE78F5600F35F04 = {
 			isa = PBXGroup;
 			children = (
+				A2F6E77C2EEEA88700F35F04 /* ARCHITECTURE.md */,
 				A2F6E4432EE796E600F35F04 /* claude.md */,
 				A2F6E41B2EE78F5600F35F04 /* Pixapper */,
 				A2F6E4292EE78F5800F35F04 /* PixapperTests */,
@@ -219,6 +222,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				A2F6E4442EE796ED00F35F04 /* claude.md in Resources */,
+				A2F6E77F2EEEA88700F35F04 /* ARCHITECTURE.md in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

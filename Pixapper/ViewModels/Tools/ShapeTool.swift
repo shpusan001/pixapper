@@ -9,29 +9,9 @@ import SwiftUI
 
 /// 도형 도구 (사각형, 원, 선)
 @MainActor
-class ShapeTool: CanvasTool {
-    private weak var canvasViewModel: CanvasViewModel?
-    private let layerViewModel: LayerViewModel
-    private let commandManager: CommandManager
-    private let toolSettingsManager: ToolSettingsManager
-    private weak var timelineViewModel: TimelineViewModel?
-
+class ShapeTool: BaseTool, CanvasTool {
     // Shape state
     private var shapeStartPoint: (x: Int, y: Int)?
-
-    init(
-        canvasViewModel: CanvasViewModel,
-        layerViewModel: LayerViewModel,
-        commandManager: CommandManager,
-        toolSettingsManager: ToolSettingsManager,
-        timelineViewModel: TimelineViewModel?
-    ) {
-        self.canvasViewModel = canvasViewModel
-        self.layerViewModel = layerViewModel
-        self.commandManager = commandManager
-        self.toolSettingsManager = toolSettingsManager
-        self.timelineViewModel = timelineViewModel
-    }
 
     func handleDown(x: Int, y: Int, altPressed: Bool) {
         shapeStartPoint = (x, y)
@@ -52,10 +32,6 @@ class ShapeTool: CanvasTool {
     }
 
     // MARK: - Private Methods
-
-    private var currentLayerIndex: Int {
-        layerViewModel.selectedLayerIndex
-    }
 
     private func updateShapePreview(endX: Int, endY: Int) {
         guard let canvas = canvasViewModel,

@@ -11,14 +11,7 @@ import Combine
 /// 선택 도구
 /// - Note: 선택 상태는 CanvasViewModel에 저장되며, 이 클래스는 상태를 수정하는 로직만 담당합니다.
 @MainActor
-class SelectionTool: CanvasTool {
-    // MARK: - Dependencies
-    private weak var canvasViewModel: CanvasViewModel?
-    private let layerViewModel: LayerViewModel
-    private let commandManager: CommandManager
-    private let toolSettingsManager: ToolSettingsManager
-    private weak var timelineViewModel: TimelineViewModel?
-
+class SelectionTool: BaseTool, CanvasTool {
     // MARK: - Selection State (Enums)
     enum SelectionMode: Equatable {
         case idle
@@ -91,22 +84,6 @@ class SelectionTool: CanvasTool {
             return true
         }
         return false
-    }
-
-    // MARK: - Initialization
-
-    init(
-        canvasViewModel: CanvasViewModel,
-        layerViewModel: LayerViewModel,
-        commandManager: CommandManager,
-        toolSettingsManager: ToolSettingsManager,
-        timelineViewModel: TimelineViewModel?
-    ) {
-        self.canvasViewModel = canvasViewModel
-        self.layerViewModel = layerViewModel
-        self.commandManager = commandManager
-        self.toolSettingsManager = toolSettingsManager
-        self.timelineViewModel = timelineViewModel
     }
 
     // MARK: - CanvasTool Protocol
@@ -909,10 +886,6 @@ class SelectionTool: CanvasTool {
     }
 
     // MARK: - Helper Methods
-
-    private var currentLayerIndex: Int {
-        layerViewModel.selectedLayerIndex
-    }
 
     private func isInsideSelection(x: Int, y: Int) -> Bool {
         guard let rect = selectionRect else { return false }

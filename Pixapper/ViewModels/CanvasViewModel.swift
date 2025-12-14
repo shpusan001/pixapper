@@ -23,6 +23,7 @@ class CanvasViewModel: ObservableObject {
     @Published var showGrid: Bool = true
     @Published var shapePreview: [(x: Int, y: Int, color: Color)] = []
     @Published var brushPreviewPosition: (x: Int, y: Int)?
+    @Published var brushPreviewPositions: [(x: Int, y: Int)] = []  // Mirror 툴용 다중 프리뷰
     @Published var shiftPressed: Bool = false {
         didSet {
             _selectionTool?.setShiftPressed(shiftPressed)
@@ -52,6 +53,8 @@ class CanvasViewModel: ObservableObject {
     private var fillTool: FillTool!
     private var shapeTool: ShapeTool!
     private var _selectionTool: SelectionTool!
+    private var mirrorTool: MirrorTool!
+    private var ditheringTool: DitheringTool!
 
     // MARK: - Internal State
     private var cancellables = Set<AnyCancellable>()
@@ -129,6 +132,22 @@ class CanvasViewModel: ObservableObject {
         )
 
         self.shapeTool = ShapeTool(
+            canvasViewModel: self,
+            layerViewModel: layerViewModel,
+            commandManager: commandManager,
+            toolSettingsManager: toolSettingsManager,
+            timelineViewModel: timelineViewModel
+        )
+
+        self.mirrorTool = MirrorTool(
+            canvasViewModel: self,
+            layerViewModel: layerViewModel,
+            commandManager: commandManager,
+            toolSettingsManager: toolSettingsManager,
+            timelineViewModel: timelineViewModel
+        )
+
+        self.ditheringTool = DitheringTool(
             canvasViewModel: self,
             layerViewModel: layerViewModel,
             commandManager: commandManager,
@@ -217,6 +236,10 @@ class CanvasViewModel: ObservableObject {
             return shapeTool
         case .selection:
             return _selectionTool
+        case .mirror:
+            return mirrorTool
+        case .dithering:
+            return ditheringTool
         }
     }
 

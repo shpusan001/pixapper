@@ -25,6 +25,8 @@ enum DrawingTool: String, CaseIterable, Identifiable {
     case circle
     case line
     case selection
+    case mirror          // 대칭 그리기
+    case dithering       // 디더링 브러시
 
     var id: String { rawValue }
 
@@ -38,6 +40,8 @@ enum DrawingTool: String, CaseIterable, Identifiable {
         case .circle: return "Circle"
         case .line: return "Line"
         case .selection: return "Selection"
+        case .mirror: return "Mirror"
+        case .dithering: return "Dithering"
         }
     }
 }

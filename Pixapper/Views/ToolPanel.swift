@@ -36,6 +36,20 @@ struct ToolPanel: View {
                         isSelected: toolSettingsManager.selectedTool == .fill,
                         action: { toolSettingsManager.selectTool(.fill) }
                     )
+
+                    ToolIconButton(
+                        icon: "square.lefthalf.filled",
+                        tooltip: "Mirror (M)",
+                        isSelected: toolSettingsManager.selectedTool == .mirror,
+                        action: { toolSettingsManager.selectTool(.mirror) }
+                    )
+
+                    ToolIconButton(
+                        icon: "circle.grid.cross",
+                        tooltip: "Dithering (D)",
+                        isSelected: toolSettingsManager.selectedTool == .dithering,
+                        action: { toolSettingsManager.selectTool(.dithering) }
+                    )
                 }
 
                 Divider()
@@ -77,6 +91,7 @@ struct ToolPanel: View {
                         action: { toolSettingsManager.selectTool(.selection) }
                     )
                 }
+
             }
             .padding(.vertical, 8)
         }

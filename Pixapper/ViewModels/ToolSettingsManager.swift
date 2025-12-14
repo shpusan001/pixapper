@@ -34,6 +34,12 @@ class ToolSettingsManager: ObservableObject {
     /// 선택 도구 설정
     @Published var selectionSettings = SelectionSettings()
 
+    /// 대칭 그리기 설정
+    @Published var mirrorSettings = MirrorSettings()
+
+    /// 디더링 설정
+    @Published var ditheringSettings = DitheringSettings()
+
     /// 현재 선택된 도구의 기본 색상 (UI 표시용)
     var currentColor: Color {
         get {
@@ -52,6 +58,10 @@ class ToolSettingsManager: ObservableObject {
                 return lineSettings.strokeColor
             case .selection:
                 return .blue
+            case .mirror:
+                return mirrorSettings.color
+            case .dithering:
+                return ditheringSettings.color
             }
         }
         set {
@@ -66,6 +76,10 @@ class ToolSettingsManager: ObservableObject {
                 circleSettings.strokeColor = newValue
             case .line:
                 lineSettings.strokeColor = newValue
+            case .mirror:
+                mirrorSettings.color = newValue
+            case .dithering:
+                ditheringSettings.color = newValue
             default:
                 break
             }
@@ -86,6 +100,10 @@ class ToolSettingsManager: ObservableObject {
                 return circleSettings.strokeWidth
             case .line:
                 return lineSettings.strokeWidth
+            case .mirror:
+                return mirrorSettings.brushSize
+            case .dithering:
+                return ditheringSettings.brushSize
             default:
                 return 1
             }
@@ -102,6 +120,10 @@ class ToolSettingsManager: ObservableObject {
                 circleSettings.strokeWidth = max(1, newValue)
             case .line:
                 lineSettings.strokeWidth = max(1, newValue)
+            case .mirror:
+                mirrorSettings.brushSize = max(1, newValue)
+            case .dithering:
+                ditheringSettings.brushSize = max(1, newValue)
             default:
                 break
             }
@@ -133,6 +155,10 @@ class ToolSettingsManager: ObservableObject {
             return lineSettings
         case .selection:
             return selectionSettings
+        case .mirror:
+            return mirrorSettings
+        case .dithering:
+            return ditheringSettings
         }
     }
 
@@ -145,5 +171,7 @@ class ToolSettingsManager: ObservableObject {
         lineSettings = ShapeSettings(toolType: .line)
         fillSettings = FillSettings()
         selectionSettings = SelectionSettings()
+        mirrorSettings = MirrorSettings()
+        ditheringSettings = DitheringSettings()
     }
 }

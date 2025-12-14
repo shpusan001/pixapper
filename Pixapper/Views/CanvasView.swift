@@ -181,7 +181,25 @@ struct CanvasView: View {
 
     @ViewBuilder
     private func renderBrushPreview(marginX: CGFloat, marginY: CGFloat) -> some View {
-        if let brushPos = viewModel.brushPreviewPosition {
+        // Mirror 툴은 다중 프리뷰 사용
+        if viewModel.toolSettingsManager.selectedTool == .mirror && !viewModel.brushPreviewPositions.isEmpty {
+            let brushSize = viewModel.toolSettingsManager.mirrorSettings.brushSize
+            let brushColor = viewModel.toolSettingsManager.mirrorSettings.color
+
+            ForEach(viewModel.brushPreviewPositions.indices, id: \.self) { index in
+                BrushPreviewView(
+                    brushPos: viewModel.brushPreviewPositions[index],
+                    brushSize: brushSize,
+                    brushColor: brushColor,
+                    isEraser: false,
+                    canvasWidth: viewModel.canvas.width,
+                    canvasHeight: viewModel.canvas.height,
+                    pixelSize: pixelSize,
+                    marginX: marginX,
+                    marginY: marginY
+                )
+            }
+        } else if let brushPos = viewModel.brushPreviewPosition {
             if viewModel.toolSettingsManager.selectedTool == .pencil {
                 let brushSize = viewModel.toolSettingsManager.pencilSettings.brushSize
                 let brushColor = viewModel.toolSettingsManager.pencilSettings.color
@@ -190,6 +208,7 @@ struct CanvasView: View {
                     brushPos: brushPos,
                     brushSize: brushSize,
                     brushColor: brushColor,
+                    isEraser: false,
                     canvasWidth: viewModel.canvas.width,
                     canvasHeight: viewModel.canvas.height,
                     pixelSize: pixelSize,
@@ -203,6 +222,22 @@ struct CanvasView: View {
                     brushPos: brushPos,
                     brushSize: brushSize,
                     brushColor: .gray,
+                    isEraser: true,
+                    canvasWidth: viewModel.canvas.width,
+                    canvasHeight: viewModel.canvas.height,
+                    pixelSize: pixelSize,
+                    marginX: marginX,
+                    marginY: marginY
+                )
+            } else if viewModel.toolSettingsManager.selectedTool == .dithering {
+                let brushSize = viewModel.toolSettingsManager.ditheringSettings.brushSize
+                let brushColor = viewModel.toolSettingsManager.ditheringSettings.color
+
+                BrushPreviewView(
+                    brushPos: brushPos,
+                    brushSize: brushSize,
+                    brushColor: brushColor,
+                    isEraser: false,
                     canvasWidth: viewModel.canvas.width,
                     canvasHeight: viewModel.canvas.height,
                     pixelSize: pixelSize,
@@ -551,6 +586,7 @@ struct BrushPreviewView: View {
     let brushPos: (x: Int, y: Int)
     let brushSize: Int
     let brushColor: Color
+    let isEraser: Bool
     let canvasWidth: Int
     let canvasHeight: Int
     let pixelSize: CGFloat
@@ -559,11 +595,22 @@ struct BrushPreviewView: View {
 
     var body: some View {
         Canvas { context, size in
-            let halfSize = (brushSize - 1) / 2
-            for dy in -halfSize...halfSize {
-                for dx in -halfSize...halfSize {
+            let radius = brushSize / 2
+            for dy in -radius...radius {
+                for dx in -radius...radius {
                     let px = brushPos.x + dx
                     let py = brushPos.y + dy
+
+                    // 브러시 모양 결정
+                    let shouldDraw: Bool
+                    if brushSize % 2 == 1 {
+                        // 홀수: 정사각형
+                        shouldDraw = true
+                    } else {
+                        // 짝수: 원형 (맨해튼 거리)
+                        shouldDraw = abs(dx) + abs(dy) <= radius
+                    }
+                    guard shouldDraw else { continue }
 
                     if px >= 0 && px < canvasWidth && py >= 0 && py < canvasHeight {
                         let rect = CGRect(
@@ -575,6 +622,46 @@ struct BrushPreviewView: View {
                         context.fill(Path(rect), with: .color(brushColor.opacity(0.3)))
                     }
                 }
+            }
+
+            // 지우개일 때 외곽선 표시
+            if isEraser {
+                // 브러시 영역의 바운딩 박스 계산
+                var minX = brushPos.x
+                var maxX = brushPos.x
+                var minY = brushPos.y
+                var maxY = brushPos.y
+
+                for dy in -radius...radius {
+                    for dx in -radius...radius {
+                        let shouldDraw: Bool
+                        if brushSize % 2 == 1 {
+                            shouldDraw = true
+                        } else {
+                            shouldDraw = abs(dx) + abs(dy) <= radius
+                        }
+                        if shouldDraw {
+                            minX = min(minX, brushPos.x + dx)
+                            maxX = max(maxX, brushPos.x + dx)
+                            minY = min(minY, brushPos.y + dy)
+                            maxY = max(maxY, brushPos.y + dy)
+                        }
+                    }
+                }
+
+                let outlineRect = CGRect(
+                    x: marginX + CGFloat(minX) * pixelSize,
+                    y: marginY + CGFloat(minY) * pixelSize,
+                    width: CGFloat(maxX - minX + 1) * pixelSize,
+                    height: CGFloat(maxY - minY + 1) * pixelSize
+                )
+                var path = Path()
+                path.addRect(outlineRect)
+                context.stroke(
+                    path,
+                    with: .color(.red.opacity(0.6)),
+                    lineWidth: 1.5
+                )
             }
         }
     }

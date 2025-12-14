@@ -49,7 +49,186 @@ struct PropertiesPanel: View {
             )
         case .selection:
             SelectionPropertiesView(viewModel: viewModel)
+        case .mirror:
+            MirrorPropertiesView(settings: $toolSettingsManager.mirrorSettings)
+        case .dithering:
+            DitheringPropertiesView(settings: $toolSettingsManager.ditheringSettings)
         }
+    }
+}
+
+// MARK: - Mirror Properties
+struct MirrorPropertiesView: View {
+    @Binding var settings: MirrorSettings
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            PropertySectionHeader(title: "Mirror Tool")
+
+            PropertyRow(label: "Size") {
+                HStack(spacing: 8) {
+                    Slider(value: Binding(
+                        get: { Double(settings.brushSize) },
+                        set: { settings.brushSize = Int($0) }
+                    ), in: 1...10, step: 1)
+                    Text("\(settings.brushSize)")
+                        .font(.system(size: 11, design: .monospaced))
+                        .foregroundColor(.secondary)
+                        .frame(width: 20, alignment: .trailing)
+                }
+            }
+
+            PropertyDivider()
+
+            PropertyRow(label: "Color") {
+                ColorPicker("", selection: $settings.color)
+                    .labelsHidden()
+            }
+
+            PropertyDivider()
+
+            PropertyRow(label: "Mode") {
+                Picker("", selection: $settings.mode) {
+                    ForEach(MirrorMode.allCases) { mode in
+                        Text(mode.displayName).tag(mode)
+                    }
+                }
+                .labelsHidden()
+            }
+        }
+    }
+}
+
+// MARK: - Dithering Properties
+struct DitheringPropertiesView: View {
+    @Binding var settings: DitheringSettings
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            PropertySectionHeader(title: "Dithering Tool")
+
+            PropertyRow(label: "Size") {
+                HStack(spacing: 8) {
+                    Slider(value: Binding(
+                        get: { Double(settings.brushSize) },
+                        set: { settings.brushSize = Int($0) }
+                    ), in: 1...10, step: 1)
+                    Text("\(settings.brushSize)")
+                        .font(.system(size: 11, design: .monospaced))
+                        .foregroundColor(.secondary)
+                        .frame(width: 20, alignment: .trailing)
+                }
+            }
+
+            PropertyDivider()
+
+            PropertyRow(label: "Color 1") {
+                ColorPicker("", selection: $settings.color)
+                    .labelsHidden()
+            }
+
+            PropertyDivider()
+
+            PropertyRow(label: "Color 2") {
+                ColorPicker("", selection: $settings.secondaryColor)
+                    .labelsHidden()
+            }
+
+            PropertyDivider()
+
+            PropertyRow(label: "Pattern") {
+                Picker("", selection: $settings.pattern) {
+                    ForEach(DitheringPattern.allCases) { pattern in
+                        Text(pattern.displayName).tag(pattern)
+                    }
+                }
+                .labelsHidden()
+            }
+
+            // Custom Pattern Editor
+            if settings.pattern == .custom {
+                PropertyDivider()
+
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Text("Grid Size")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+
+                        Spacer()
+
+                        Picker("", selection: Binding(
+                            get: { settings.customPatternSize },
+                            set: { newSize in
+                                settings.resizeCustomPattern(newSize: newSize)
+                            }
+                        )) {
+                            Text("2×2").tag(2)
+                            Text("4×4").tag(4)
+                            Text("8×8").tag(8)
+                            Text("16×16").tag(16)
+                        }
+                        .labelsHidden()
+                        .frame(width: 80)
+                    }
+
+                    CustomPatternEditor(
+                        pattern: $settings.customPattern,
+                        size: settings.customPatternSize,
+                        color1: settings.color,
+                        color2: settings.secondaryColor
+                    )
+                }
+                .padding(.vertical, 4)
+            }
+        }
+    }
+}
+
+// MARK: - Custom Pattern Editor
+struct CustomPatternEditor: View {
+    @Binding var pattern: [[Bool]]
+    let size: Int
+    let color1: Color
+    let color2: Color
+
+    private var cellSize: CGFloat {
+        // 전체 크기를 160으로 유지하되, 그리드 크기에 따라 셀 크기 조정
+        let totalSize: CGFloat = 160
+        let spacing: CGFloat = 2
+        let totalSpacing = CGFloat(size - 1) * spacing
+        return (totalSize - totalSpacing) / CGFloat(size)
+    }
+
+    var body: some View {
+        VStack(spacing: 2) {
+            ForEach(0..<size, id: \.self) { row in
+                HStack(spacing: 2) {
+                    ForEach(0..<size, id: \.self) { col in
+                        Button(action: {
+                            if row < pattern.count && col < pattern[row].count {
+                                pattern[row][col].toggle()
+                            }
+                        }) {
+                            Rectangle()
+                                .fill(
+                                    (row < pattern.count && col < pattern[row].count && pattern[row][col])
+                                    ? color1 : color2
+                                )
+                                .frame(width: cellSize, height: cellSize)
+                        }
+                        .buttonStyle(.plain)
+                        .overlay(
+                            Rectangle()
+                                .strokeBorder(Color(nsColor: .separatorColor), lineWidth: 0.5)
+                        )
+                    }
+                }
+            }
+        }
+        .frame(height: 160)
+        .background(Color(nsColor: .controlBackgroundColor))
+        .cornerRadius(4)
     }
 }
 

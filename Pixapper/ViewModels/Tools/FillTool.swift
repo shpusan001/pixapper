@@ -9,26 +9,7 @@ import SwiftUI
 
 /// 채우기 도구
 @MainActor
-class FillTool: CanvasTool {
-    private weak var canvasViewModel: CanvasViewModel?
-    private let layerViewModel: LayerViewModel
-    private let commandManager: CommandManager
-    private let toolSettingsManager: ToolSettingsManager
-    private weak var timelineViewModel: TimelineViewModel?
-
-    init(
-        canvasViewModel: CanvasViewModel,
-        layerViewModel: LayerViewModel,
-        commandManager: CommandManager,
-        toolSettingsManager: ToolSettingsManager,
-        timelineViewModel: TimelineViewModel?
-    ) {
-        self.canvasViewModel = canvasViewModel
-        self.layerViewModel = layerViewModel
-        self.commandManager = commandManager
-        self.toolSettingsManager = toolSettingsManager
-        self.timelineViewModel = timelineViewModel
-    }
+class FillTool: BaseTool, CanvasTool {
 
     func handleDown(x: Int, y: Int, altPressed: Bool) {
         floodFill(
@@ -48,10 +29,6 @@ class FillTool: CanvasTool {
     }
 
     // MARK: - Private Methods
-
-    private var currentLayerIndex: Int {
-        layerViewModel.selectedLayerIndex
-    }
 
     private func floodFill(x: Int, y: Int, fillColor: Color, tolerance: Double) {
         guard let canvas = canvasViewModel,
