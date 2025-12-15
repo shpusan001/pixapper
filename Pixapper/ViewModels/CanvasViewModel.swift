@@ -356,6 +356,38 @@ class CanvasViewModel: ObservableObject {
         }
     }
 
+    // MARK: - Undo/Redo
+
+    func performUndo() {
+        commandManager.undo()
+
+        // Undo 후 selection tool이 아니면 선택 영역 정리
+        if toolSettingsManager.selectedTool != .selection {
+            if isFloatingSelection {
+                // Floating selection은 레이어에 커밋
+                commitSelection()
+            } else {
+                // 일반 selection은 그냥 clear
+                clearSelection()
+            }
+        }
+    }
+
+    func performRedo() {
+        commandManager.redo()
+
+        // Redo 후 selection tool이 아니면 선택 영역 정리
+        if toolSettingsManager.selectedTool != .selection {
+            if isFloatingSelection {
+                // Floating selection은 레이어에 커밋
+                commitSelection()
+            } else {
+                // 일반 selection은 그냥 clear
+                clearSelection()
+            }
+        }
+    }
+
     // MARK: - Helper Methods
 
     /// 두 색상의 RGB 정밀 비교
