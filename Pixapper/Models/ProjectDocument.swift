@@ -67,6 +67,7 @@ struct ProjectDocument: Codable {
     var timeline: SerializableTimelineState
     var toolSettings: SerializableToolSettings
     var zoomLevel: Double
+    var colorPalette: [SerializableColor]
 
     /// 새 프로젝트 생성
     static func createNew(width: Int = 32, height: Int = 32) -> ProjectDocument {
@@ -83,6 +84,9 @@ struct ProjectDocument: Codable {
         let toolSettingsManager = ToolSettingsManager()
         let toolSettings = SerializableToolSettings(from: toolSettingsManager)
 
+        // 기본 팔레트 (ColorManager의 초기값)
+        let defaultPalette = ColorManager().palette.map { SerializableColor(from: $0) }
+
         return ProjectDocument(
             metadata: ProjectMetadata(),
             canvasWidth: width,
@@ -91,7 +95,8 @@ struct ProjectDocument: Codable {
             selectedLayerIndex: 0,
             timeline: timelineState,
             toolSettings: toolSettings,
-            zoomLevel: 400.0
+            zoomLevel: 400.0,
+            colorPalette: defaultPalette
         )
     }
 

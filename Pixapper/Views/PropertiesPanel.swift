@@ -11,16 +11,98 @@ struct PropertiesPanel: View {
     @ObservedObject var toolSettingsManager: ToolSettingsManager
     @ObservedObject var viewModel: CanvasViewModel
 
+    @State private var selectedTab: PropertiesTab = .color
+
+    enum PropertiesTab: String, CaseIterable {
+        case color = "Color"
+        case tool = "Tool"
+    }
+
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 0) {
-                toolPropertiesView
+        VStack(spacing: 0) {
+            // Tab selector
+            HStack(spacing: 0) {
+                ForEach(PropertiesTab.allCases, id: \.self) { tab in
+                    Button(action: {
+                        selectedTab = tab
+                    }) {
+                        Text(tab.rawValue.uppercased())
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundColor(selectedTab == tab ? Constants.Theme.textPrimary : Constants.Theme.textSecondary)
+                            .tracking(0.5)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 10)
+                            .background(selectedTab == tab ? Constants.Theme.sectionBackground : Constants.Theme.sectionBackground.opacity(0))
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                }
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
+            .background(Constants.Theme.panelBackground)
+
+            Rectangle()
+                .fill(Constants.Theme.divider)
+                .frame(height: 1)
+
+            // Tab content
+            ScrollView {
+                VStack(alignment: .leading, spacing: 0) {
+                    if selectedTab == .color {
+                        commonColorSection
+                    } else {
+                        toolPropertiesView
+                    }
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Constants.Theme.panelBackground)
+    }
+
+    @ViewBuilder
+    private var commonColorSection: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            PropertySectionHeader(title: "Color")
+
+            VStack(alignment: .leading, spacing: 16) {
+                // Primary/Secondary color swatch
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("CURRENT")
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundColor(Constants.Theme.textSecondary)
+
+                    HStack {
+                        Spacer()
+                        ColorSwatchView(colorManager: toolSettingsManager.colorManager)
+                        Spacer()
+                    }
+                }
+
+                Rectangle()
+                    .fill(Constants.Theme.divider)
+                    .frame(height: 1)
+
+                // Recent colors
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("RECENT")
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundColor(Constants.Theme.textSecondary)
+
+                    RecentColorsView(colorManager: toolSettingsManager.colorManager)
+                }
+
+                Rectangle()
+                    .fill(Constants.Theme.divider)
+                    .frame(height: 1)
+
+                // Color palette
+                ColorPaletteView(colorManager: toolSettingsManager.colorManager)
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 12)
+        }
     }
 
     @ViewBuilder
@@ -52,7 +134,10 @@ struct PropertiesPanel: View {
         case .mirror:
             MirrorPropertiesView(settings: $toolSettingsManager.mirrorSettings)
         case .dithering:
-            DitheringPropertiesView(settings: $toolSettingsManager.ditheringSettings)
+            DitheringPropertiesView(
+                settings: $toolSettingsManager.ditheringSettings,
+                colorManager: toolSettingsManager.colorManager
+            )
         }
     }
 }
@@ -68,12 +153,6 @@ struct MirrorPropertiesView: View {
             VStack(alignment: .leading, spacing: 8) {
                 PropertyRow(label: "Size") {
                     LabeledSlider(value: $settings.brushSize, range: 1...10, step: 1)
-                }
-
-                PropertyDivider()
-
-                PropertyRow(label: "Color") {
-                    CompactColorPicker(selection: $settings.color)
                 }
 
                 PropertyDivider()
@@ -97,6 +176,7 @@ struct MirrorPropertiesView: View {
 // MARK: - Dithering Properties
 struct DitheringPropertiesView: View {
     @Binding var settings: DitheringSettings
+    @ObservedObject var colorManager: ColorManager
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -105,18 +185,6 @@ struct DitheringPropertiesView: View {
             VStack(alignment: .leading, spacing: 8) {
                 PropertyRow(label: "Size") {
                     LabeledSlider(value: $settings.brushSize, range: 1...10, step: 1)
-                }
-
-                PropertyDivider()
-
-                PropertyRow(label: "Color 1") {
-                    CompactColorPicker(selection: $settings.color)
-                }
-
-                PropertyDivider()
-
-                PropertyRow(label: "Color 2") {
-                    CompactColorPicker(selection: $settings.secondaryColor)
                 }
 
                 PropertyDivider()
@@ -162,8 +230,8 @@ struct DitheringPropertiesView: View {
                         CustomPatternEditor(
                             pattern: $settings.customPattern,
                             size: settings.customPatternSize,
-                            color1: settings.color,
-                            color2: settings.secondaryColor
+                            color1: colorManager.primaryColor,
+                            color2: colorManager.secondaryColor
                         )
                     }
                     .padding(.vertical, 4)
@@ -234,14 +302,6 @@ struct PencilPropertiesView: View {
                 PropertyRow(label: "Size") {
                     LabeledSlider(value: $settings.brushSize, range: 1...10, step: 1)
                 }
-
-                PropertyDivider()
-
-                PropertyRow(label: "Color") {
-                    ColorPicker("", selection: $settings.color, supportsOpacity: true)
-                        .labelsHidden()
-                        .frame(height: 24)
-                }
             }
             .padding(.horizontal, 8)
             .padding(.vertical, 10)
@@ -277,14 +337,6 @@ struct FillPropertiesView: View {
             PropertySectionHeader(title: "Fill")
 
             VStack(alignment: .leading, spacing: 8) {
-                PropertyRow(label: "Color") {
-                    ColorPicker("", selection: $settings.color, supportsOpacity: true)
-                        .labelsHidden()
-                        .frame(height: 24)
-                }
-
-                PropertyDivider()
-
                 PropertyRow(label: "Tolerance") {
                     HStack(spacing: 6) {
                         Slider(value: $settings.tolerance, in: 0...1, step: 0.01)
@@ -311,21 +363,12 @@ struct FillPropertiesView: View {
 struct ShapePropertiesView: View {
     @Binding var settings: ShapeSettings
     let toolName: String
-    @State private var hasFill: Bool = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             PropertySectionHeader(title: toolName)
 
             VStack(alignment: .leading, spacing: 8) {
-                PropertyRow(label: "Stroke") {
-                    ColorPicker("", selection: $settings.strokeColor, supportsOpacity: true)
-                        .labelsHidden()
-                        .frame(height: 24)
-                }
-
-                PropertyDivider()
-
                 PropertyRow(label: "Width") {
                     LabeledSlider(value: $settings.strokeWidth, range: 1...10, step: 1)
                 }
@@ -333,36 +376,13 @@ struct ShapePropertiesView: View {
                 PropertyDivider()
 
                 PropertyRow(label: "Fill") {
-                    Toggle("", isOn: $hasFill)
+                    Toggle("", isOn: $settings.isFilled)
                         .labelsHidden()
                         .toggleStyle(.switch)
-                        .onChange(of: hasFill) { _, newValue in
-                            if newValue {
-                                settings.fillColor = settings.strokeColor
-                            } else {
-                                settings.fillColor = nil
-                            }
-                        }
-                }
-
-                if hasFill {
-                    PropertyDivider()
-
-                    PropertyRow(label: "Fill Color") {
-                        ColorPicker("", selection: Binding(
-                            get: { settings.fillColor ?? .clear },
-                            set: { settings.fillColor = $0 }
-                        ), supportsOpacity: true)
-                            .labelsHidden()
-                            .frame(height: 24)
-                    }
                 }
             }
             .padding(.horizontal, 8)
             .padding(.vertical, 10)
-        }
-        .onAppear {
-            hasFill = settings.fillColor != nil
         }
     }
 }

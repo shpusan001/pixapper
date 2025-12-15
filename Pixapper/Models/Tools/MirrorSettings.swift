@@ -11,9 +11,6 @@ import SwiftUI
 struct MirrorSettings: ToolSettings {
     var toolType: DrawingTool { .mirror }
 
-    /// 그리기 색상
-    var color: Color = .black
-
     /// 브러시 크기
     var brushSize: Int = 1
 

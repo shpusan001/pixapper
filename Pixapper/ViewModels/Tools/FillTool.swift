@@ -15,7 +15,7 @@ class FillTool: BaseTool, CanvasTool {
         floodFill(
             x: x,
             y: y,
-            fillColor: toolSettingsManager.fillSettings.color,
+            fillColor: toolSettingsManager.colorManager.primaryColor,
             tolerance: toolSettingsManager.fillSettings.tolerance
         )
     }

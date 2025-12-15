@@ -11,12 +11,6 @@ import SwiftUI
 struct DitheringSettings: ToolSettings {
     var toolType: DrawingTool { .dithering }
 
-    /// 기본 색상
-    var color: Color = .black
-
-    /// 보조 색상 (패턴에서 교차로 사용)
-    var secondaryColor: Color = .white
-
     /// 브러시 크기
     var brushSize: Int = 3
 

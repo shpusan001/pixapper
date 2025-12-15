@@ -76,7 +76,7 @@ class PencilEraserTool: BaseTool, CanvasTool {
 
         switch toolSettingsManager.selectedTool {
         case .pencil:
-            color = toolSettingsManager.pencilSettings.color
+            color = toolSettingsManager.colorManager.primaryColor
             brushSize = toolSettingsManager.pencilSettings.brushSize
         case .eraser:
             color = nil

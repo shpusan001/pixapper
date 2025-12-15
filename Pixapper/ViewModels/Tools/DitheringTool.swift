@@ -72,8 +72,8 @@ class DitheringTool: BaseTool, CanvasTool {
               let layerId = currentLayerId else { return }
 
         let pattern = settings.pattern
-        let color1 = settings.color
-        let color2 = settings.secondaryColor
+        let color1 = toolSettingsManager.colorManager.primaryColor
+        let color2 = toolSettingsManager.colorManager.secondaryColor
         let brushSize = settings.brushSize
         let density = settings.density
 

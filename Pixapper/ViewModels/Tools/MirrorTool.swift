@@ -102,7 +102,7 @@ class MirrorTool: BaseTool, CanvasTool {
 
         let mode = settings.mode
         let axisPos = settings.axisPosition
-        let color = settings.color
+        let color = toolSettingsManager.colorManager.primaryColor
         let brushSize = settings.brushSize
 
         // 원본 위치 그리기

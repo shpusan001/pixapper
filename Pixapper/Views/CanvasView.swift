@@ -184,7 +184,7 @@ struct CanvasView: View {
         // Mirror 툴은 다중 프리뷰 사용
         if viewModel.toolSettingsManager.selectedTool == .mirror && !viewModel.brushPreviewPositions.isEmpty {
             let brushSize = viewModel.toolSettingsManager.mirrorSettings.brushSize
-            let brushColor = viewModel.toolSettingsManager.mirrorSettings.color
+            let brushColor = viewModel.toolSettingsManager.colorManager.primaryColor
 
             ForEach(viewModel.brushPreviewPositions.indices, id: \.self) { index in
                 BrushPreviewView(
@@ -202,7 +202,7 @@ struct CanvasView: View {
         } else if let brushPos = viewModel.brushPreviewPosition {
             if viewModel.toolSettingsManager.selectedTool == .pencil {
                 let brushSize = viewModel.toolSettingsManager.pencilSettings.brushSize
-                let brushColor = viewModel.toolSettingsManager.pencilSettings.color
+                let brushColor = viewModel.toolSettingsManager.colorManager.primaryColor
 
                 BrushPreviewView(
                     brushPos: brushPos,
@@ -231,7 +231,7 @@ struct CanvasView: View {
                 )
             } else if viewModel.toolSettingsManager.selectedTool == .dithering {
                 let brushSize = viewModel.toolSettingsManager.ditheringSettings.brushSize
-                let brushColor = viewModel.toolSettingsManager.ditheringSettings.color
+                let brushColor = viewModel.toolSettingsManager.colorManager.primaryColor
 
                 BrushPreviewView(
                     brushPos: brushPos,

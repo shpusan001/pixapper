@@ -298,6 +298,14 @@ struct ContentView: View {
                 }
                 return .handled
             }
+            // Color shortcuts
+            else if keyPress.characters == "x" || keyPress.characters == "X" {
+                appViewModel.colorManager.swapColors()
+                return .handled
+            } else if keyPress.characters == "d" || keyPress.characters == "D" {
+                appViewModel.colorManager.resetToDefaults()
+                return .handled
+            }
             // Timeline controls
             else if keyPress.characters == " " {
                 timelineViewModel.togglePlayback()

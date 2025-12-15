@@ -39,29 +39,31 @@ class ShapeTool: BaseTool, CanvasTool {
 
         var pixels: [(x: Int, y: Int, Color)] = []
 
+        let primaryColor = toolSettingsManager.colorManager.primaryColor
+
         switch toolSettingsManager.selectedTool {
         case .rectangle:
             let settings = toolSettingsManager.rectangleSettings
             pixels = getRectanglePixels(
                 x1: start.x, y1: start.y, x2: endX, y2: endY,
                 strokeWidth: settings.strokeWidth,
-                strokeColor: settings.strokeColor,
-                fillColor: settings.fillColor
+                strokeColor: primaryColor,
+                fillColor: settings.isFilled ? primaryColor : nil
             )
         case .circle:
             let settings = toolSettingsManager.circleSettings
             pixels = getCirclePixels(
                 centerX: start.x, centerY: start.y, toX: endX, toY: endY,
                 strokeWidth: settings.strokeWidth,
-                strokeColor: settings.strokeColor,
-                fillColor: settings.fillColor
+                strokeColor: primaryColor,
+                fillColor: settings.isFilled ? primaryColor : nil
             )
         case .line:
             let settings = toolSettingsManager.lineSettings
             pixels = getLinePixels(
                 x1: start.x, y1: start.y, x2: endX, y2: endY,
                 strokeWidth: settings.strokeWidth,
-                strokeColor: settings.strokeColor
+                strokeColor: primaryColor
             )
         default:
             break

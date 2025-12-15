@@ -13,89 +13,97 @@ struct ToolPanel: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // Draw tools
-            VStack(spacing: 0) {
-                ToolIconButton(
-                    icon: "pencil",
-                    tooltip: "Pencil (B)",
-                    isSelected: toolSettingsManager.selectedTool == .pencil,
-                    action: { toolSettingsManager.selectTool(.pencil) }
-                )
+            // Scrollable tools section
+            ScrollView {
+                VStack(spacing: 0) {
+                    // Draw tools
+                    VStack(spacing: 0) {
+                        ToolIconButton(
+                            icon: "pencil",
+                            tooltip: "Pencil (B)",
+                            isSelected: toolSettingsManager.selectedTool == .pencil,
+                            action: { toolSettingsManager.selectTool(.pencil) }
+                        )
 
-                ToolIconButton(
-                    icon: "eraser",
-                    tooltip: "Eraser (E)",
-                    isSelected: toolSettingsManager.selectedTool == .eraser,
-                    action: { toolSettingsManager.selectTool(.eraser) }
-                )
+                        ToolIconButton(
+                            icon: "eraser",
+                            tooltip: "Eraser (E)",
+                            isSelected: toolSettingsManager.selectedTool == .eraser,
+                            action: { toolSettingsManager.selectTool(.eraser) }
+                        )
 
-                ToolIconButton(
-                    icon: "paintbrush.fill",
-                    tooltip: "Fill (G)",
-                    isSelected: toolSettingsManager.selectedTool == .fill,
-                    action: { toolSettingsManager.selectTool(.fill) }
-                )
+                        ToolIconButton(
+                            icon: "paintbrush.fill",
+                            tooltip: "Fill (G)",
+                            isSelected: toolSettingsManager.selectedTool == .fill,
+                            action: { toolSettingsManager.selectTool(.fill) }
+                        )
 
-                ToolIconButton(
-                    icon: "square.lefthalf.filled",
-                    tooltip: "Mirror (M)",
-                    isSelected: toolSettingsManager.selectedTool == .mirror,
-                    action: { toolSettingsManager.selectTool(.mirror) }
-                )
+                        ToolIconButton(
+                            icon: "square.lefthalf.filled",
+                            tooltip: "Mirror (M)",
+                            isSelected: toolSettingsManager.selectedTool == .mirror,
+                            action: { toolSettingsManager.selectTool(.mirror) }
+                        )
 
-                ToolIconButton(
-                    icon: "circle.grid.cross",
-                    tooltip: "Dithering (D)",
-                    isSelected: toolSettingsManager.selectedTool == .dithering,
-                    action: { toolSettingsManager.selectTool(.dithering) }
-                )
+                        ToolIconButton(
+                            icon: "circle.grid.cross",
+                            tooltip: "Dithering (D)",
+                            isSelected: toolSettingsManager.selectedTool == .dithering,
+                            action: { toolSettingsManager.selectTool(.dithering) }
+                        )
+                    }
+
+                    Rectangle()
+                        .fill(Constants.Theme.divider)
+                        .frame(height: 1)
+                        .padding(.vertical, 4)
+
+                    // Shape tools
+                    VStack(spacing: 0) {
+                        ToolIconButton(
+                            icon: "rectangle",
+                            tooltip: "Rectangle (U)",
+                            isSelected: toolSettingsManager.selectedTool == .rectangle,
+                            action: { toolSettingsManager.selectTool(.rectangle) }
+                        )
+
+                        ToolIconButton(
+                            icon: "circle",
+                            tooltip: "Circle (O)",
+                            isSelected: toolSettingsManager.selectedTool == .circle,
+                            action: { toolSettingsManager.selectTool(.circle) }
+                        )
+
+                        ToolIconButton(
+                            icon: "line.diagonal",
+                            tooltip: "Line (L)",
+                            isSelected: toolSettingsManager.selectedTool == .line,
+                            action: { toolSettingsManager.selectTool(.line) }
+                        )
+                    }
+
+                    Rectangle()
+                        .fill(Constants.Theme.divider)
+                        .frame(height: 1)
+                        .padding(.vertical, 4)
+
+                    // Selection tool
+                    VStack(spacing: 0) {
+                        ToolIconButton(
+                            icon: "selection.pin.in.out",
+                            tooltip: "Selection (V)",
+                            isSelected: toolSettingsManager.selectedTool == .selection,
+                            action: { toolSettingsManager.selectTool(.selection) }
+                        )
+                    }
+                }
+                .frame(width: 50)
             }
 
-            Rectangle()
-                .fill(Constants.Theme.divider)
-                .frame(height: 1)
-                .padding(.vertical, 4)
-
-            // Shape tools
-            VStack(spacing: 0) {
-                ToolIconButton(
-                    icon: "rectangle",
-                    tooltip: "Rectangle (U)",
-                    isSelected: toolSettingsManager.selectedTool == .rectangle,
-                    action: { toolSettingsManager.selectTool(.rectangle) }
-                )
-
-                ToolIconButton(
-                    icon: "circle",
-                    tooltip: "Circle (O)",
-                    isSelected: toolSettingsManager.selectedTool == .circle,
-                    action: { toolSettingsManager.selectTool(.circle) }
-                )
-
-                ToolIconButton(
-                    icon: "line.diagonal",
-                    tooltip: "Line (L)",
-                    isSelected: toolSettingsManager.selectedTool == .line,
-                    action: { toolSettingsManager.selectTool(.line) }
-                )
-            }
-
-            Rectangle()
-                .fill(Constants.Theme.divider)
-                .frame(height: 1)
-                .padding(.vertical, 4)
-
-            // Selection tool
-            VStack(spacing: 0) {
-                ToolIconButton(
-                    icon: "selection.pin.in.out",
-                    tooltip: "Selection (V)",
-                    isSelected: toolSettingsManager.selectedTool == .selection,
-                    action: { toolSettingsManager.selectTool(.selection) }
-                )
-            }
-
-            Spacer()
+            // Color swatch (항상 하단에 고정)
+            CompactColorSwatchView(colorManager: toolSettingsManager.colorManager)
+                .padding(.bottom, 10)
         }
         .frame(width: 50)
         .background(Constants.Theme.panelBackground)

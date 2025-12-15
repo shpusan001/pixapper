@@ -12,21 +12,17 @@ struct ShapeSettings: ToolSettings {
     /// 도형 타입 (rectangle, circle, line)
     let toolType: DrawingTool
 
-    /// 선 색상
-    var strokeColor: Color = .black
-
     /// 선 굵기 (픽셀 단위)
     var strokeWidth: Int = 1
 
-    /// 채우기 색상 (nil이면 채우지 않음)
-    var fillColor: Color? = nil
+    /// 도형 채우기 여부
+    var isFilled: Bool = false
 
     func copy() -> ShapeSettings {
         ShapeSettings(
             toolType: toolType,
-            strokeColor: strokeColor,
             strokeWidth: strokeWidth,
-            fillColor: fillColor
+            isFilled: isFilled
         )
     }
 }

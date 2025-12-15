@@ -16,6 +16,7 @@ class AppViewModel: ObservableObject {
     @Published private(set) var isDirty: Bool = false
 
     // MARK: - ViewModels (내부 관리)
+    let colorManager: ColorManager
     let layerViewModel: LayerViewModel
     let timelineViewModel: TimelineViewModel
     let canvasViewModel: CanvasViewModel
@@ -26,9 +27,10 @@ class AppViewModel: ObservableObject {
 
     init(width: Int = 32, height: Int = 32) {
         // ViewModels 초기화 (기존 ContentView와 동일)
+        let colorMgr = ColorManager()
         let layerVM = LayerViewModel(width: width, height: height)
         let cmdManager = CommandManager()
-        let toolManager = ToolSettingsManager()
+        let toolManager = ToolSettingsManager(colorManager: colorMgr)
 
         let canvasVM = CanvasViewModel(
             width: width,
@@ -44,6 +46,7 @@ class AppViewModel: ObservableObject {
             layerViewModel: layerVM
         )
 
+        self.colorManager = colorMgr
         self.layerViewModel = layerVM
         self.commandManager = cmdManager
         self.toolSettingsManager = toolManager
@@ -181,6 +184,9 @@ class AppViewModel: ObservableObject {
 
         let toolSettings = SerializableToolSettings(from: toolSettingsManager)
 
+        // 현재 색상 팔레트 저장
+        let colorPalette = colorManager.palette.map { SerializableColor(from: $0) }
+
         return ProjectDocument(
             metadata: ProjectMetadata(),
             canvasWidth: canvasViewModel.canvas.width,
@@ -189,7 +195,8 @@ class AppViewModel: ObservableObject {
             selectedLayerIndex: layerViewModel.selectedLayerIndex,
             timeline: timelineState,
             toolSettings: toolSettings,
-            zoomLevel: canvasViewModel.zoomLevel
+            zoomLevel: canvasViewModel.zoomLevel,
+            colorPalette: colorPalette
         )
     }
 
@@ -216,6 +223,9 @@ class AppViewModel: ObservableObject {
 
         // 툴 설정 복원
         document.toolSettings.applyTo(manager: toolSettingsManager)
+
+        // 색상 팔레트 복원
+        colorManager.palette = document.colorPalette.map { $0.toColor() }
 
         // 현재 프레임 로드
         timelineViewModel.loadFrame(at: timelineViewModel.currentFrameIndex)

@@ -8,34 +8,27 @@
 import SwiftUI
 
 /// 직렬화 가능한 도구 설정 모음
+/// 색상은 ColorManager에서 별도로 관리됨
 struct SerializableToolSettings: Codable {
     var selectedTool: String  // DrawingTool.rawValue
-    var pencilColor: SerializableColor
     var pencilBrushSize: Int
     var eraserBrushSize: Int
-    var fillColor: SerializableColor
-    var rectangleStrokeColor: SerializableColor
+    var fillTolerance: Double
     var rectangleStrokeWidth: Int
-    var rectangleFillColor: SerializableColor?
-    var circleStrokeColor: SerializableColor
+    var rectangleIsFilled: Bool
     var circleStrokeWidth: Int
-    var circleFillColor: SerializableColor?
-    var lineStrokeColor: SerializableColor
+    var circleIsFilled: Bool
     var lineStrokeWidth: Int
 
     init(from manager: ToolSettingsManager) {
         self.selectedTool = manager.selectedTool.rawValue
-        self.pencilColor = SerializableColor(from: manager.pencilSettings.color)
         self.pencilBrushSize = manager.pencilSettings.brushSize
         self.eraserBrushSize = manager.eraserSettings.brushSize
-        self.fillColor = SerializableColor(from: manager.fillSettings.color)
-        self.rectangleStrokeColor = SerializableColor(from: manager.rectangleSettings.strokeColor)
+        self.fillTolerance = manager.fillSettings.tolerance
         self.rectangleStrokeWidth = manager.rectangleSettings.strokeWidth
-        self.rectangleFillColor = manager.rectangleSettings.fillColor.map { SerializableColor(from: $0) }
-        self.circleStrokeColor = SerializableColor(from: manager.circleSettings.strokeColor)
+        self.rectangleIsFilled = manager.rectangleSettings.isFilled
         self.circleStrokeWidth = manager.circleSettings.strokeWidth
-        self.circleFillColor = manager.circleSettings.fillColor.map { SerializableColor(from: $0) }
-        self.lineStrokeColor = SerializableColor(from: manager.lineSettings.strokeColor)
+        self.circleIsFilled = manager.circleSettings.isFilled
         self.lineStrokeWidth = manager.lineSettings.strokeWidth
     }
 
@@ -44,17 +37,13 @@ struct SerializableToolSettings: Codable {
         if let tool = DrawingTool(rawValue: selectedTool) {
             manager.selectedTool = tool
         }
-        manager.pencilSettings.color = pencilColor.toColor()
         manager.pencilSettings.brushSize = pencilBrushSize
         manager.eraserSettings.brushSize = eraserBrushSize
-        manager.fillSettings.color = fillColor.toColor()
-        manager.rectangleSettings.strokeColor = rectangleStrokeColor.toColor()
+        manager.fillSettings.tolerance = fillTolerance
         manager.rectangleSettings.strokeWidth = rectangleStrokeWidth
-        manager.rectangleSettings.fillColor = rectangleFillColor?.toColor()
-        manager.circleSettings.strokeColor = circleStrokeColor.toColor()
+        manager.rectangleSettings.isFilled = rectangleIsFilled
         manager.circleSettings.strokeWidth = circleStrokeWidth
-        manager.circleSettings.fillColor = circleFillColor?.toColor()
-        manager.lineSettings.strokeColor = lineStrokeColor.toColor()
+        manager.circleSettings.isFilled = circleIsFilled
         manager.lineSettings.strokeWidth = lineStrokeWidth
     }
 }

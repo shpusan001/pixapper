@@ -13,6 +13,9 @@ class ToolSettingsManager: ObservableObject {
     /// 현재 선택된 도구
     @Published var selectedTool: DrawingTool = .pencil
 
+    /// 공통 색상 관리자
+    let colorManager: ColorManager
+
     /// 연필 설정
     @Published var pencilSettings = PencilSettings()
 
@@ -40,49 +43,27 @@ class ToolSettingsManager: ObservableObject {
     /// 디더링 설정
     @Published var ditheringSettings = DitheringSettings()
 
-    /// 현재 선택된 도구의 기본 색상 (UI 표시용)
+    init(colorManager: ColorManager = ColorManager()) {
+        self.colorManager = colorManager
+    }
+
+    /// 현재 도구에서 사용할 색상 (모든 도구가 공통 색상 사용)
     var currentColor: Color {
         get {
-            switch selectedTool {
-            case .pencil:
-                return pencilSettings.color
-            case .eraser:
+            // 지우개는 항상 clear
+            if selectedTool == .eraser {
                 return .clear
-            case .fill:
-                return fillSettings.color
-            case .rectangle:
-                return rectangleSettings.strokeColor
-            case .circle:
-                return circleSettings.strokeColor
-            case .line:
-                return lineSettings.strokeColor
-            case .selection:
-                return .blue
-            case .mirror:
-                return mirrorSettings.color
-            case .dithering:
-                return ditheringSettings.color
             }
+            // 나머지 모든 도구는 공통 Primary 색상 사용
+            return colorManager.primaryColor
         }
         set {
-            switch selectedTool {
-            case .pencil:
-                pencilSettings.color = newValue
-            case .fill:
-                fillSettings.color = newValue
-            case .rectangle:
-                rectangleSettings.strokeColor = newValue
-            case .circle:
-                circleSettings.strokeColor = newValue
-            case .line:
-                lineSettings.strokeColor = newValue
-            case .mirror:
-                mirrorSettings.color = newValue
-            case .dithering:
-                ditheringSettings.color = newValue
-            default:
-                break
+            // 지우개는 색상 설정 불가
+            if selectedTool == .eraser {
+                return
             }
+            // Primary 색상 업데이트 (자동으로 최근 색상에 추가됨)
+            colorManager.setPrimaryColor(newValue)
         }
     }
 
