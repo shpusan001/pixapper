@@ -340,8 +340,6 @@ struct ToolbarTextButton: View {
     var isDisabled: Bool = false
     let action: () -> Void
 
-    @State private var isHovered = false
-
     var body: some View {
         Button(action: action) {
             HStack(spacing: 4) {
@@ -358,13 +356,7 @@ struct ToolbarTextButton: View {
         .foregroundColor(isDisabled ? Constants.Theme.textDisabled : Constants.Theme.textPrimary)
         .disabled(isDisabled)
         .help(tooltip)
-        .background(
-            RoundedRectangle(cornerRadius: 3)
-                .fill(isHovered && !isDisabled ? Constants.Theme.hoverBackground : Color.clear)
-        )
-        .onHover { hovering in
-            isHovered = hovering
-        }
+        .hoverEffect()
     }
 }
 
@@ -373,8 +365,6 @@ struct ToolbarIconButton: View {
     let tooltip: String
     var isDisabled: Bool = false
     let action: () -> Void
-
-    @State private var isHovered = false
 
     var body: some View {
         Button(action: action) {
@@ -387,13 +377,7 @@ struct ToolbarIconButton: View {
         .foregroundColor(isDisabled ? Constants.Theme.textDisabled : Constants.Theme.textSecondary)
         .disabled(isDisabled)
         .help(tooltip)
-        .background(
-            RoundedRectangle(cornerRadius: 3)
-                .fill(isHovered && !isDisabled ? Constants.Theme.hoverBackground : Color.clear)
-        )
-        .onHover { hovering in
-            isHovered = hovering
-        }
+        .hoverEffect()
     }
 }
 

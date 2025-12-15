@@ -15,8 +15,8 @@ struct ColorPaletteView: View {
     @State private var editingColor: Color = .black
     @State private var deleteMode: Bool = false
 
-    private let colorSize: CGFloat = 24
-    private let spacing: CGFloat = 4
+    private let colorSize: CGFloat = Constants.Layout.UI.ColorSwatch.cellSize
+    private let spacing: CGFloat = Constants.Layout.UI.ColorSwatch.spacing
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -185,9 +185,7 @@ private struct PaletteColorCell: View {
 
     var body: some View {
         ZStack {
-            // 체크보드 배경
-            checkerboardBackground
-
+            CheckerboardBackground()
             Rectangle()
                 .fill(color)
 
@@ -256,29 +254,5 @@ private struct PaletteColorCell: View {
             Button("Remove from Palette", role: .destructive) { onDelete() }
         }
         .help(deleteMode ? "Click to remove" : "Click: Primary | Ctrl+Click: Secondary | Double-click: Edit")
-    }
-
-    private var checkerboardBackground: some View {
-        GeometryReader { geometry in
-            Canvas { context, size in
-                let squareSize: CGFloat = 4
-                let columns = Int(ceil(size.width / squareSize))
-                let rows = Int(ceil(size.height / squareSize))
-
-                for row in 0..<rows {
-                    for col in 0..<columns {
-                        let isLight = (row + col) % 2 == 0
-                        let color = isLight ? Color.white.opacity(0.2) : Color.black.opacity(0.2)
-                        let rect = CGRect(
-                            x: CGFloat(col) * squareSize,
-                            y: CGFloat(row) * squareSize,
-                            width: squareSize,
-                            height: squareSize
-                        )
-                        context.fill(Path(rect), with: .color(color))
-                    }
-                }
-            }
-        }
     }
 }

@@ -11,8 +11,8 @@ import SwiftUI
 struct RecentColorsView: View {
     @ObservedObject var colorManager: ColorManager
 
-    private let colorSize: CGFloat = 24
-    private let spacing: CGFloat = 4
+    private let colorSize: CGFloat = Constants.Layout.UI.ColorSwatch.cellSize
+    private let spacing: CGFloat = Constants.Layout.UI.ColorSwatch.spacing
 
     var body: some View {
         GeometryReader { geometry in
@@ -57,9 +57,7 @@ private struct ColorCell: View {
 
     var body: some View {
         ZStack {
-            // 체크보드 배경 (투명도 표시)
-            checkerboardBackground
-
+            CheckerboardBackground()
             Rectangle()
                 .fill(color)
         }
@@ -87,29 +85,5 @@ private struct ColorCell: View {
             isHovered = hovering
         }
         .help("Click: Set Primary | Ctrl+Click: Set Secondary")
-    }
-
-    private var checkerboardBackground: some View {
-        GeometryReader { geometry in
-            Canvas { context, size in
-                let squareSize: CGFloat = 4
-                let columns = Int(ceil(size.width / squareSize))
-                let rows = Int(ceil(size.height / squareSize))
-
-                for row in 0..<rows {
-                    for col in 0..<columns {
-                        let isLight = (row + col) % 2 == 0
-                        let color = isLight ? Color.white.opacity(0.2) : Color.black.opacity(0.2)
-                        let rect = CGRect(
-                            x: CGFloat(col) * squareSize,
-                            y: CGFloat(row) * squareSize,
-                            width: squareSize,
-                            height: squareSize
-                        )
-                        context.fill(Path(rect), with: .color(color))
-                    }
-                }
-            }
-        }
     }
 }

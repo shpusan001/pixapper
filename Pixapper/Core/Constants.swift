@@ -118,6 +118,24 @@ enum Constants {
             /// 도구 버튼 크기
             static let buttonSize: CGFloat = 44
         }
+
+        /// UI 요소 크기
+        enum UI {
+            /// 체커보드 패턴 사각형 크기
+            static let checkerboardSquareSize: CGFloat = 4
+
+            /// 색상 관련 크기
+            enum ColorSwatch {
+                /// 기본 색상 셀 크기 (Recent, Palette)
+                static let cellSize: CGFloat = 24
+                /// 작은 색상 셀 크기 (Secondary)
+                static let smallCellSize: CGFloat = 16
+                /// Primary 색상 스와치 크기
+                static let primarySize: CGFloat = 36
+                /// 색상 간 간격
+                static let spacing: CGFloat = 4
+            }
+        }
     }
 
     /// 애니메이션 설정

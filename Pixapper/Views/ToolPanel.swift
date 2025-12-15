@@ -117,8 +117,6 @@ struct ToolIconButton: View {
     let isSelected: Bool
     let action: () -> Void
 
-    @State private var isHovered = false
-
     var body: some View {
         Button(action: action) {
             Image(systemName: icon)
@@ -129,7 +127,7 @@ struct ToolIconButton: View {
         .buttonStyle(.plain)
         .background(
             Rectangle()
-                .fill(isSelected ? Constants.Theme.sectionBackground : (isHovered ? Constants.Theme.hoverBackground : Color.clear))
+                .fill(isSelected ? Constants.Theme.sectionBackground : Color.clear)
         )
         .overlay(
             Rectangle()
@@ -139,9 +137,7 @@ struct ToolIconButton: View {
         )
         .foregroundColor(isSelected ? Constants.Theme.accentBlue : Constants.Theme.textSecondary)
         .help(tooltip)
-        .onHover { hovering in
-            isHovered = hovering
-        }
+        .hoverEffect(cornerRadius: 0)
     }
 }
 

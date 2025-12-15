@@ -93,13 +93,11 @@ struct CompactColorSwatchView: View {
                     showingPrimaryPicker = true
                 }) {
                     ZStack {
-                        // 체크보드 배경 (투명도 표시용)
-                        checkerboardBackground
-
+                        CheckerboardBackground()
                         Rectangle()
                             .fill(colorManager.primaryColor)
                     }
-                    .frame(width: 36, height: 36)
+                    .frame(width: Constants.Layout.UI.ColorSwatch.primarySize, height: Constants.Layout.UI.ColorSwatch.primarySize)
                     .overlay(
                         Rectangle()
                             .strokeBorder(Constants.Theme.textPrimary, lineWidth: 1)
@@ -120,14 +118,11 @@ struct CompactColorSwatchView: View {
                     colorManager.swapColors()
                 }) {
                     ZStack {
-                        // 체크보드 배경
-                        checkerboardBackground
-                            .frame(width: 16, height: 16)
-
+                        CheckerboardBackground()
                         Rectangle()
                             .fill(colorManager.secondaryColor)
-                            .frame(width: 16, height: 16)
                     }
+                    .frame(width: Constants.Layout.UI.ColorSwatch.smallCellSize, height: Constants.Layout.UI.ColorSwatch.smallCellSize)
                     .overlay(
                         Rectangle()
                             .strokeBorder(Constants.Theme.textPrimary, lineWidth: 1)
@@ -136,30 +131,6 @@ struct CompactColorSwatchView: View {
                 .buttonStyle(.plain)
                 .offset(x: 2, y: 2)
                 .help("Click to swap colors")
-            }
-        }
-    }
-
-    private var checkerboardBackground: some View {
-        GeometryReader { geometry in
-            Canvas { context, size in
-                let squareSize: CGFloat = 4
-                let columns = Int(ceil(size.width / squareSize))
-                let rows = Int(ceil(size.height / squareSize))
-
-                for row in 0..<rows {
-                    for col in 0..<columns {
-                        let isLight = (row + col) % 2 == 0
-                        let color = isLight ? Color.white.opacity(0.2) : Color.black.opacity(0.2)
-                        let rect = CGRect(
-                            x: CGFloat(col) * squareSize,
-                            y: CGFloat(row) * squareSize,
-                            width: squareSize,
-                            height: squareSize
-                        )
-                        context.fill(Path(rect), with: .color(color))
-                    }
-                }
             }
         }
     }

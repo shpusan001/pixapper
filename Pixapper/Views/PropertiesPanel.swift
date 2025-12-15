@@ -560,8 +560,6 @@ struct TransformButton: View {
     let tooltip: String
     let action: () -> Void
 
-    @State private var isHovered = false
-
     var body: some View {
         Button(action: action) {
             Image(systemName: icon)
@@ -572,13 +570,11 @@ struct TransformButton: View {
         .buttonStyle(.plain)
         .background(
             RoundedRectangle(cornerRadius: 2)
-                .fill(isHovered ? Constants.Theme.hoverBackground : Constants.Theme.sectionBackground)
+                .fill(Constants.Theme.sectionBackground)
         )
         .foregroundColor(Constants.Theme.textPrimary)
         .help(tooltip)
-        .onHover { hovering in
-            isHovered = hovering
-        }
+        .hoverEffect(cornerRadius: 2)
     }
 }
 
