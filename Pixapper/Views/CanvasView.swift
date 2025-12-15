@@ -274,7 +274,8 @@ struct CanvasView: View {
                 selectionMode: viewModel.selectionMode,
                 hoveredHandle: viewModel.hoveredHandle,
                 marginX: marginX,
-                marginY: marginY
+                marginY: marginY,
+                freeformMask: viewModel.freeformMask
             )
         }
     }
@@ -732,41 +733,52 @@ struct FreeformPathView: View {
 
     var body: some View {
         Canvas { context, size in
-            guard path.count > 1 else { return }
+            guard path.count > 0 else { return }
 
-            // Draw the freeform path as connected lines
-            var linePath = Path()
+            // 드래그 중: 경로 픽셀들의 외곽선 그리기
+            var borderPath = Path()
 
-            for (index, point) in path.enumerated() {
-                let screenPoint = CGPoint(
-                    x: marginX + (CGFloat(point.x) + 0.5) * pixelSize,
-                    y: marginY + (CGFloat(point.y) + 0.5) * pixelSize
-                )
+            // 경로에 포함된 픽셀을 Set으로 변환
+            var pixelSet: Set<String> = []
+            for point in path {
+                pixelSet.insert("\(point.x),\(point.y)")
+            }
 
-                if index == 0 {
-                    linePath.move(to: screenPoint)
-                } else {
-                    linePath.addLine(to: screenPoint)
+            // 각 픽셀의 4방향 가장자리 체크하여 외곽선 그리기
+            for point in path {
+                let pixelX = marginX + CGFloat(point.x) * pixelSize
+                let pixelY = marginY + CGFloat(point.y) * pixelSize
+
+                // 위쪽 가장자리 (위에 픽셀 없으면 그리기)
+                if !pixelSet.contains("\(point.x),\(point.y - 1)") {
+                    borderPath.move(to: CGPoint(x: pixelX, y: pixelY))
+                    borderPath.addLine(to: CGPoint(x: pixelX + pixelSize, y: pixelY))
+                }
+
+                // 아래쪽 가장자리
+                if !pixelSet.contains("\(point.x),\(point.y + 1)") {
+                    borderPath.move(to: CGPoint(x: pixelX, y: pixelY + pixelSize))
+                    borderPath.addLine(to: CGPoint(x: pixelX + pixelSize, y: pixelY + pixelSize))
+                }
+
+                // 왼쪽 가장자리
+                if !pixelSet.contains("\(point.x - 1),\(point.y)") {
+                    borderPath.move(to: CGPoint(x: pixelX, y: pixelY))
+                    borderPath.addLine(to: CGPoint(x: pixelX, y: pixelY + pixelSize))
+                }
+
+                // 오른쪽 가장자리
+                if !pixelSet.contains("\(point.x + 1),\(point.y)") {
+                    borderPath.move(to: CGPoint(x: pixelX + pixelSize, y: pixelY))
+                    borderPath.addLine(to: CGPoint(x: pixelX + pixelSize, y: pixelY + pixelSize))
                 }
             }
 
-            // Draw the path with accent color
             context.stroke(
-                linePath,
+                borderPath,
                 with: .color(Color.accentColor),
                 style: StrokeStyle(lineWidth: 2.0, dash: [4, 2])
             )
-
-            // Draw dots at each point for clarity
-            for point in path {
-                let dotRect = CGRect(
-                    x: marginX + (CGFloat(point.x) + 0.5) * pixelSize - 2,
-                    y: marginY + (CGFloat(point.y) + 0.5) * pixelSize - 2,
-                    width: 4,
-                    height: 4
-                )
-                context.fill(Path(ellipseIn: dotRect), with: .color(Color.accentColor))
-            }
         }
     }
 }
@@ -783,6 +795,7 @@ struct SelectionRectView: View {
     let hoveredHandle: SelectionTool.ResizeHandle?
     let marginX: CGFloat
     let marginY: CGFloat
+    let freeformMask: [[Bool]]?
 
     var body: some View {
         Canvas { context, size in
@@ -819,6 +832,11 @@ struct SelectionRectView: View {
     private func drawPixels(context: GraphicsContext, pixels: [[Color?]], rect: CGRect, opacity: Double) {
         for y in 0..<pixels.count {
             for x in 0..<pixels[y].count {
+                // Freeform 마스크가 있으면 마스크 체크
+                if let mask = freeformMask {
+                    guard y < mask.count && x < mask[y].count && mask[y][x] else { continue }
+                }
+
                 if let color = pixels[y][x] {
                     let pixelRect = CGRect(
                         x: marginX + (rect.minX + CGFloat(x)) * pixelSize,
@@ -833,19 +851,76 @@ struct SelectionRectView: View {
     }
 
     private func drawSelectionBorder(context: GraphicsContext, rect: CGRect) {
+        // Freeform인 경우 마스크 외곽선 그리기
+        if let mask = freeformMask {
+            drawFreeformBorder(context: context, rect: rect, mask: mask)
+            return
+        }
+
+        // Rectangle: 픽셀 외곽을 따라 테두리 그리기
+        // stroke는 선의 중앙에 그려지므로 픽셀을 침범하지 않도록 바깥으로 이동
+        let borderWidth: CGFloat = 2
         let borderRect = CGRect(
-            x: marginX + rect.minX * pixelSize,
-            y: marginY + rect.minY * pixelSize,
-            width: rect.width * pixelSize,
-            height: rect.height * pixelSize
+            x: marginX + rect.minX * pixelSize - borderWidth / 2,
+            y: marginY + rect.minY * pixelSize - borderWidth / 2,
+            width: rect.width * pixelSize + borderWidth,
+            height: rect.height * pixelSize + borderWidth
         )
 
         var path = Path()
         path.addRect(borderRect)
+
         context.stroke(
             path,
             with: .color(Color.accentColor),
-            style: StrokeStyle(lineWidth: 2.5, dash: [6, 4])
+            style: StrokeStyle(lineWidth: borderWidth, dash: [6, 4])
+        )
+    }
+
+    private func drawFreeformBorder(context: GraphicsContext, rect: CGRect, mask: [[Bool]]) {
+        // 마스크 경계를 따라 외곽선 그리기
+        let borderWidth: CGFloat = 2
+
+        var path = Path()
+
+        // 각 마스크 픽셀의 4방향 가장자리 체크
+        for y in 0..<mask.count {
+            for x in 0..<mask[y].count {
+                guard mask[y][x] else { continue }
+
+                let pixelX = marginX + (rect.minX + CGFloat(x)) * pixelSize
+                let pixelY = marginY + (rect.minY + CGFloat(y)) * pixelSize
+
+                // 위쪽 가장자리
+                if y == 0 || !mask[y - 1][x] {
+                    path.move(to: CGPoint(x: pixelX, y: pixelY))
+                    path.addLine(to: CGPoint(x: pixelX + pixelSize, y: pixelY))
+                }
+
+                // 아래쪽 가장자리
+                if y == mask.count - 1 || !mask[y + 1][x] {
+                    path.move(to: CGPoint(x: pixelX, y: pixelY + pixelSize))
+                    path.addLine(to: CGPoint(x: pixelX + pixelSize, y: pixelY + pixelSize))
+                }
+
+                // 왼쪽 가장자리
+                if x == 0 || !mask[y][x - 1] {
+                    path.move(to: CGPoint(x: pixelX, y: pixelY))
+                    path.addLine(to: CGPoint(x: pixelX, y: pixelY + pixelSize))
+                }
+
+                // 오른쪽 가장자리
+                if x == mask[y].count - 1 || !mask[y][x + 1] {
+                    path.move(to: CGPoint(x: pixelX + pixelSize, y: pixelY))
+                    path.addLine(to: CGPoint(x: pixelX + pixelSize, y: pixelY + pixelSize))
+                }
+            }
+        }
+
+        context.stroke(
+            path,
+            with: .color(Color.accentColor),
+            style: StrokeStyle(lineWidth: borderWidth, dash: [6, 4])
         )
     }
 

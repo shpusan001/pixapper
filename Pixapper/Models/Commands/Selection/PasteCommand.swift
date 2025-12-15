@@ -21,6 +21,7 @@ class PasteCommand: LayerPixelApplicable {
     private let previousOriginalPixels: [[Color?]]?
     private let previousOriginalRect: CGRect?
     private let previousIsFloating: Bool
+    private let previousFreeformMask: [[Bool]]?
 
     // 붙여넣은 선택 상태
     private let pastedSelectionRect: CGRect
@@ -48,6 +49,7 @@ class PasteCommand: LayerPixelApplicable {
         previousOriginalPixels: [[Color?]]?,
         previousOriginalRect: CGRect?,
         previousIsFloating: Bool,
+        previousFreeformMask: [[Bool]]?,
         pastedSelectionRect: CGRect,
         pastedSelectionPixels: [[Color?]]
     ) {
@@ -60,6 +62,7 @@ class PasteCommand: LayerPixelApplicable {
         self.previousOriginalPixels = previousOriginalPixels
         self.previousOriginalRect = previousOriginalRect
         self.previousIsFloating = previousIsFloating
+        self.previousFreeformMask = previousFreeformMask
         self.pastedSelectionRect = pastedSelectionRect
         self.pastedSelectionPixels = pastedSelectionPixels
 
@@ -125,7 +128,8 @@ class PasteCommand: LayerPixelApplicable {
             pixels: previousSelectionPixels,
             originalPixels: previousOriginalPixels,
             originalRect: previousOriginalRect,
-            isFloating: previousIsFloating
+            isFloating: previousIsFloating,
+            freeformMask: previousFreeformMask
         )
     }
 }

@@ -20,10 +20,12 @@ class SelectionCaptureCommand: LayerPixelApplicable {
     private let oldPixels: [[Color?]]?
     private let oldOriginalRect: CGRect?
     private let oldOriginalPixels: [[Color?]]?
+    private let oldFreeformMask: [[Bool]]?
 
     // 선택 후 상태
     private let newRect: CGRect
     private let newPixels: [[Color?]]
+    private let newFreeformMask: [[Bool]]?
 
     // 레이어 픽셀 변경 (선택 영역에서 제거)
     private let layerOldPixels: [PixelChange]
@@ -43,8 +45,10 @@ class SelectionCaptureCommand: LayerPixelApplicable {
         oldPixels: [[Color?]]?,
         oldOriginalRect: CGRect?,
         oldOriginalPixels: [[Color?]]?,
+        oldFreeformMask: [[Bool]]?,
         newRect: CGRect,
         newPixels: [[Color?]],
+        newFreeformMask: [[Bool]]?,
         layerOldPixels: [PixelChange],
         layerNewPixels: [PixelChange]
     ) {
@@ -57,8 +61,10 @@ class SelectionCaptureCommand: LayerPixelApplicable {
         self.oldPixels = oldPixels
         self.oldOriginalRect = oldOriginalRect
         self.oldOriginalPixels = oldOriginalPixels
+        self.oldFreeformMask = oldFreeformMask
         self.newRect = newRect
         self.newPixels = newPixels
+        self.newFreeformMask = newFreeformMask
         self.layerOldPixels = layerOldPixels
         self.layerNewPixels = layerNewPixels
     }
@@ -72,6 +78,7 @@ class SelectionCaptureCommand: LayerPixelApplicable {
         canvasViewModel?.selectionPixels = newPixels
         canvasViewModel?.originalRect = newRect
         canvasViewModel?.originalPixels = newPixels
+        canvasViewModel?.freeformMask = newFreeformMask
         canvasViewModel?.isFloatingSelection = true
     }
 
@@ -84,6 +91,7 @@ class SelectionCaptureCommand: LayerPixelApplicable {
         canvasViewModel?.selectionPixels = oldPixels
         canvasViewModel?.originalRect = oldOriginalRect
         canvasViewModel?.originalPixels = oldOriginalPixels
+        canvasViewModel?.freeformMask = oldFreeformMask
         canvasViewModel?.isFloatingSelection = wasFloating
     }
 }

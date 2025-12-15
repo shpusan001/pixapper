@@ -69,6 +69,7 @@ class CanvasViewModel: ObservableObject {
     @Published var selectionMode: SelectionTool.SelectionMode = .idle
     @Published var hoveredHandle: SelectionTool.ResizeHandle?
     @Published var freeformPath: [(x: Int, y: Int)] = []
+    @Published var freeformMask: [[Bool]]?
 
     var isMovingSelection: Bool {
         if case .moving = selectionMode {
@@ -258,14 +259,16 @@ class CanvasViewModel: ObservableObject {
         pixels: [[Color?]]?,
         originalPixels: [[Color?]]?,
         originalRect: CGRect?,
-        isFloating: Bool
+        isFloating: Bool,
+        freeformMask: [[Bool]]? = nil
     ) {
         _selectionTool.restoreSelectionState(
             rect: rect,
             pixels: pixels,
             originalPixels: originalPixels,
             originalRect: originalRect,
-            isFloating: isFloating
+            isFloating: isFloating,
+            freeformMask: freeformMask
         )
     }
 

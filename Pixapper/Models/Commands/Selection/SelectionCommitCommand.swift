@@ -19,6 +19,7 @@ class SelectionCommitCommand: LayerPixelApplicable {
     private let oldPixels: [[Color?]]
     private let oldOriginalRect: CGRect
     private let oldOriginalPixels: [[Color?]]
+    private let oldFreeformMask: [[Bool]]?
 
     // 레이어 픽셀 변경 (새 위치에 배치)
     private let layerOldPixels: [PixelChange]
@@ -37,6 +38,7 @@ class SelectionCommitCommand: LayerPixelApplicable {
         oldPixels: [[Color?]],
         oldOriginalRect: CGRect,
         oldOriginalPixels: [[Color?]],
+        oldFreeformMask: [[Bool]]?,
         layerOldPixels: [PixelChange],
         layerNewPixels: [PixelChange]
     ) {
@@ -48,6 +50,7 @@ class SelectionCommitCommand: LayerPixelApplicable {
         self.oldPixels = oldPixels
         self.oldOriginalRect = oldOriginalRect
         self.oldOriginalPixels = oldOriginalPixels
+        self.oldFreeformMask = oldFreeformMask
         self.layerOldPixels = layerOldPixels
         self.layerNewPixels = layerNewPixels
     }
@@ -69,6 +72,7 @@ class SelectionCommitCommand: LayerPixelApplicable {
         canvasViewModel?.selectionPixels = oldPixels
         canvasViewModel?.originalRect = oldOriginalRect
         canvasViewModel?.originalPixels = oldOriginalPixels
+        canvasViewModel?.freeformMask = oldFreeformMask
         canvasViewModel?.isFloatingSelection = true
     }
 }

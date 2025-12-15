@@ -38,13 +38,14 @@ class SelectionTool: BaseTool, CanvasTool {
     private var clipboard: SelectionClipboard?
     private var shiftPressed: Bool = false
 
-    // Freeform selection state
-    private var freeformMask: [[Bool]]?
-
     // MARK: - State Accessors (CanvasViewModel의 상태에 접근)
     private var freeformPath: [(x: Int, y: Int)] {
         get { canvasViewModel?.freeformPath ?? [] }
         set { canvasViewModel?.freeformPath = newValue }
+    }
+    private var freeformMask: [[Bool]]? {
+        get { canvasViewModel?.freeformMask }
+        set { canvasViewModel?.freeformMask = newValue }
     }
     private var selectionRect: CGRect? {
         get { canvasViewModel?.selectionRect }
@@ -134,16 +135,19 @@ class SelectionTool: BaseTool, CanvasTool {
             // 선택 영역 밖을 클릭: 기존 선택 커밋하고 새 선택 준비
             if isFloatingSelection {
                 commitSelection()
-            } else if selectionRect != nil {
-                clearSelection()
             }
+            // floating 여부와 관계없이 선택 상태를 완전히 초기화
+            clearSelection()
+
             // 새 선택 영역 시작
             shapeStartPoint = (x, y)
+            lastDrawPoint = nil
 
             // Freeform 모드면 경로 추적 시작
             if toolSettingsManager.selectionSettings.selectionType == .freeform {
                 freeformPath = []
                 freeformPath.append((x, y))
+                lastDrawPoint = (x, y)
             }
         }
     }
@@ -191,11 +195,13 @@ class SelectionTool: BaseTool, CanvasTool {
             // 선택 완료
             shapeStartPoint = nil
 
+            // Freeform이면 경로 닫기
             if toolSettingsManager.selectionSettings.selectionType == .freeform {
-                captureFreeformSelection()
-            } else {
-                captureSelection()
+                closeFreeformPath()
             }
+
+            // Rectangle/Freeform 모두 동일한 워크플로우
+            captureSelection()
         }
     }
 
@@ -254,89 +260,107 @@ class SelectionTool: BaseTool, CanvasTool {
     }
 
     /// 선택 영역의 픽셀 데이터를 캡처하고 레이어에서 즉시 제거
+    /// Rectangle과 Freeform 모두 동일한 워크플로우 사용
     func captureSelection() {
         guard let rect = selectionRect,
               currentLayerIndex < layerViewModel.layers.count else {
             selectionPixels = nil
             originalPixels = nil
+            freeformPath = []
             return
         }
 
         // 이미 floating 상태면 중복 호출 방지
         guard !isFloatingSelection else { return }
 
-        // 이전 선택 상태 백업
-        let wasFloating = isFloatingSelection
-        let oldRect = selectionRect
-        let oldPixels = selectionPixels
-        let oldOriginalRect = originalRect
-        let oldOriginalPixels = originalPixels
-
         let startX = Int(rect.minX)
         let startY = Int(rect.minY)
         let width = Int(rect.width)
         let height = Int(rect.height)
 
-        // 1. 선택 영역의 픽셀 데이터 복사
-        var pixels: [[Color?]] = []
+        // 1. 선택 타입에 따라 마스크 생성
+        var mask: [[Bool]]
+
+        if toolSettingsManager.selectionSettings.selectionType == .freeform {
+            // Freeform: 경로 기반 마스크 생성
+            mask = Array(repeating: Array(repeating: false, count: width), count: height)
+
+            // 경로 경계선 표시
+            for point in freeformPath {
+                let x = point.x - startX
+                let y = point.y - startY
+                if x >= 0 && x < width && y >= 0 && y < height {
+                    mask[y][x] = true
+                }
+            }
+
+            // Scanline Fill로 내부 채우기
+            fillPathInterior(&mask, startX: startX, startY: startY)
+        } else {
+            // Rectangle: 전체 영역 마스크
+            mask = Array(repeating: Array(repeating: true, count: width), count: height)
+        }
+
+        // 2. 마스크 기반으로 픽셀 복사 및 레이어에서 제거
+        var pixels: [[Color?]] = Array(repeating: Array(repeating: nil, count: width), count: height)
         var layerOldPixels: [PixelChange] = []
         var layerNewPixels: [PixelChange] = []
 
         let layerId = layerViewModel.layers[currentLayerIndex].id
 
         for y in 0..<height {
-            var row: [Color?] = []
             for x in 0..<width {
-                let pixelX = startX + x
-                let pixelY = startY + y
-                if let canvas = canvasViewModel,
-                   pixelX >= 0 && pixelX < canvas.canvas.width && pixelY >= 0 && pixelY < canvas.canvas.height {
-                    let color = timelineViewModel?.getCurrentFramePixels(layerId: layerId)?[pixelY][pixelX]
-                    row.append(color)
+                if mask[y][x] {
+                    let pixelX = startX + x
+                    let pixelY = startY + y
+                    if let canvas = canvasViewModel,
+                       pixelX >= 0 && pixelX < canvas.canvas.width &&
+                       pixelY >= 0 && pixelY < canvas.canvas.height {
+                        let color = timelineViewModel?.getCurrentFramePixels(layerId: layerId)?[pixelY][pixelX]
+                        pixels[y][x] = color
 
-                    // 색칠된 픽셀만 제거
-                    if color != nil {
-                        layerOldPixels.append(PixelChange(x: pixelX, y: pixelY, color: color))
-                        layerNewPixels.append(PixelChange(x: pixelX, y: pixelY, color: nil))
+                        // 색칠된 픽셀만 제거
+                        if color != nil {
+                            layerOldPixels.append(PixelChange(x: pixelX, y: pixelY, color: color))
+                            layerNewPixels.append(PixelChange(x: pixelX, y: pixelY, color: nil))
+                        }
                     }
-                } else {
-                    row.append(nil)
                 }
             }
-            pixels.append(row)
         }
 
-        // 2. 레이어에서 픽셀 제거 (TimelineViewModel 사용)
+        // 3. 레이어에서 픽셀 제거
         for change in layerNewPixels {
             timelineViewModel?.setPixel(layerId: layerId, x: change.x, y: change.y, color: change.color)
         }
 
-        // 3. 선택 상태 설정
+        // 4. 선택 상태 설정
         selectionPixels = pixels
         originalPixels = pixels
         originalRect = rect
         isFloatingSelection = true
+        freeformMask = mask
 
-        // 4. Command 생성
+        // 5. Command 생성
         if !layerOldPixels.isEmpty {
             let command = SelectionCaptureCommand(
                 canvasViewModel: canvasViewModel!,
                 layerViewModel: layerViewModel,
                 timelineViewModel: timelineViewModel,
                 layerIndex: currentLayerIndex,
-                wasFloating: wasFloating,
-                oldRect: oldRect,
-                oldPixels: oldPixels,
-                oldOriginalRect: oldOriginalRect,
-                oldOriginalPixels: oldOriginalPixels,
+                wasFloating: false,
+                oldRect: nil,
+                oldPixels: nil,
+                oldOriginalRect: nil,
+                oldOriginalPixels: nil,
+                oldFreeformMask: nil,
                 newRect: rect,
                 newPixels: pixels,
+                newFreeformMask: mask,
                 layerOldPixels: layerOldPixels,
                 layerNewPixels: layerNewPixels
             )
             commandManager.addExecutedCommand(command)
-
-            // 선택 캡처 완료 시 timeline에 즉시 동기화
             timelineViewModel?.pixelStateManager?.syncToTimeline()
         }
     }
@@ -360,13 +384,15 @@ class SelectionTool: BaseTool, CanvasTool {
         pixels: [[Color?]]?,
         originalPixels: [[Color?]]?,
         originalRect: CGRect?,
-        isFloating: Bool
+        isFloating: Bool,
+        freeformMask: [[Bool]]? = nil
     ) {
         selectionRect = rect
         selectionPixels = pixels
         self.originalPixels = originalPixels
         self.originalRect = originalRect
         isFloatingSelection = isFloating
+        self.freeformMask = freeformMask
         selectionOffset = .zero
         selectionMode = .idle
     }
@@ -423,6 +449,7 @@ class SelectionTool: BaseTool, CanvasTool {
                 oldPixels: pixels,
                 oldOriginalRect: origRect,
                 oldOriginalPixels: origPixels,
+                oldFreeformMask: freeformMask,
                 layerOldPixels: layerOldPixels,
                 layerNewPixels: layerNewPixels
             )
@@ -490,13 +517,23 @@ class SelectionTool: BaseTool, CanvasTool {
 
     private func startResizingSelection(handle: ResizeHandle, at point: (x: Int, y: Int)) {
         guard let rect = selectionRect,
-              let pixels = selectionPixels else { return }
+              var pixels = selectionPixels else { return }
+
+        let hadMask = freeformMask != nil
+
+        // 마스크가 있으면 픽셀에 "구워넣기" (마스크 밖은 nil로)
+        if let mask = freeformMask {
+            bakeMaskIntoPixels(&pixels, mask: mask)
+            selectionPixels = pixels
+        }
+
         selectionMode = .resizing(handle: handle)
         resizeStartRect = rect
         resizeStartPixels = pixels
         lastDrawPoint = point
 
-        if originalPixels == nil {
+        // originalPixels도 마스크 구워진 버전으로 설정
+        if originalPixels == nil || hadMask {
             originalPixels = pixels
             originalRect = rect
         }
@@ -578,7 +615,11 @@ class SelectionTool: BaseTool, CanvasTool {
         // 실시간 스케일링
         let newWidth = Int(newRect.width)
         let newHeight = Int(newRect.height)
-        selectionPixels = scalePixels(origPixels, toWidth: newWidth, toHeight: newHeight)
+        let scaledPixels = scalePixels(origPixels, toWidth: newWidth, toHeight: newHeight)
+        selectionPixels = scaledPixels
+
+        // 마스크도 스케일링 후 재생성
+        freeformMask = createMaskFromPixels(scaledPixels)
     }
 
     private func commitSelectionResize() {
@@ -612,7 +653,16 @@ class SelectionTool: BaseTool, CanvasTool {
 
     private func startRotatingSelection(at point: (x: Int, y: Int)) {
         guard let rect = selectionRect,
-              let pixels = selectionPixels else { return }
+              var pixels = selectionPixels else { return }
+
+        let hadMask = freeformMask != nil
+
+        // 마스크가 있으면 픽셀에 "구워넣기" (마스크 밖은 nil로)
+        if let mask = freeformMask {
+            bakeMaskIntoPixels(&pixels, mask: mask)
+            selectionPixels = pixels
+        }
+
         selectionMode = .rotating
         rotateStartPixels = pixels
         lastDrawPoint = point
@@ -622,7 +672,8 @@ class SelectionTool: BaseTool, CanvasTool {
         rotateStartAngle = atan2(Double(point.y) - Double(centerY), Double(point.x) - Double(centerX))
         currentRotationAngle = 0
 
-        if originalPixels == nil {
+        // originalPixels도 마스크 구워진 버전으로 설정
+        if originalPixels == nil || hadMask {
             originalPixels = pixels
             originalRect = rect
         }
@@ -660,6 +711,9 @@ class SelectionTool: BaseTool, CanvasTool {
 
         selectionPixels = rotatedPixels
         selectionRect = newRect
+
+        // 회전 후 마스크 재생성
+        freeformMask = createMaskFromPixels(rotatedPixels)
     }
 
     private func commitSelectionRotation() {
@@ -736,34 +790,76 @@ class SelectionTool: BaseTool, CanvasTool {
 
     private func applyTransformedSelection(_ transformedPixels: [[Color?]]) {
         guard let oldRect = selectionRect,
-              let oldPixels = selectionPixels else { return }
+              var oldPixels = selectionPixels else { return }
 
-        let (croppedPixels, _) = cropToContent(transformedPixels)
+        let hadMask = freeformMask != nil
 
-        let startX = Int(oldRect.minX)
-        let startY = Int(oldRect.minY)
-        let oldWidth = Int(oldRect.width)
-        let oldHeight = Int(oldRect.height)
-        let newHeight = croppedPixels.count
-        let newWidth = croppedPixels[0].count
+        // 마스크가 있으면 픽셀에 "구워넣기" (마스크 밖은 nil로)
+        if let mask = freeformMask {
+            bakeMaskIntoPixels(&oldPixels, mask: mask)
+            selectionPixels = oldPixels
+        }
 
-        let offsetX = (oldWidth - newWidth) / 2
-        let offsetY = (oldHeight - newHeight) / 2
+        // 마스크가 있었으면 crop하지 않음 (nil 패턴이 마스크 형태)
+        let finalPixels: [[Color?]]
+        let newRect: CGRect
 
-        let newRect = CGRect(
-            x: startX + offsetX,
-            y: startY + offsetY,
-            width: newWidth,
-            height: newHeight
-        )
+        if hadMask {
+            // 마스크 있을 때: 변형된 픽셀 그대로 사용 (nil 패턴 유지)
+            finalPixels = transformedPixels
 
-        selectionPixels = croppedPixels
+            let startX = Int(oldRect.minX)
+            let startY = Int(oldRect.minY)
+            let oldWidth = Int(oldRect.width)
+            let oldHeight = Int(oldRect.height)
+            let newHeight = transformedPixels.count
+            let newWidth = transformedPixels[0].count
+
+            let offsetX = (oldWidth - newWidth) / 2
+            let offsetY = (oldHeight - newHeight) / 2
+
+            newRect = CGRect(
+                x: startX + offsetX,
+                y: startY + offsetY,
+                width: newWidth,
+                height: newHeight
+            )
+        } else {
+            // 마스크 없을 때: 기존처럼 crop
+            let (croppedPixels, _) = cropToContent(transformedPixels)
+
+            let startX = Int(oldRect.minX)
+            let startY = Int(oldRect.minY)
+            let oldWidth = Int(oldRect.width)
+            let oldHeight = Int(oldRect.height)
+            let newHeight = croppedPixels.count
+            let newWidth = croppedPixels[0].count
+
+            let offsetX = (oldWidth - newWidth) / 2
+            let offsetY = (oldHeight - newHeight) / 2
+
+            newRect = CGRect(
+                x: startX + offsetX,
+                y: startY + offsetY,
+                width: newWidth,
+                height: newHeight
+            )
+
+            finalPixels = croppedPixels
+        }
+
+        selectionPixels = finalPixels
         selectionRect = newRect
+
+        // 마스크 재생성 (nil 패턴에서)
+        if hadMask {
+            freeformMask = createMaskFromPixels(finalPixels)
+        }
 
         let command = SelectionTransformCommand(
             canvasViewModel: canvasViewModel!,
             oldPixels: oldPixels,
-            newPixels: croppedPixels,
+            newPixels: finalPixels,
             oldRect: oldRect,
             newRect: newRect
         )
@@ -843,6 +939,7 @@ class SelectionTool: BaseTool, CanvasTool {
             previousOriginalPixels: prevOriginalPixels,
             previousOriginalRect: prevOriginalRect,
             previousIsFloating: prevIsFloating,
+            previousFreeformMask: freeformMask,
             pastedSelectionRect: newRect,
             pastedSelectionPixels: clipboardData.pixels
         )
@@ -955,6 +1052,41 @@ class SelectionTool: BaseTool, CanvasTool {
     }
 
     // MARK: - Pixel Manipulation
+
+    /// 마스크를 픽셀에 구워넣기 (마스크 밖 픽셀을 nil로)
+    private func bakeMaskIntoPixels(_ pixels: inout [[Color?]], mask: [[Bool]]) {
+        guard !pixels.isEmpty && !pixels[0].isEmpty else { return }
+        guard !mask.isEmpty && !mask[0].isEmpty else { return }
+
+        let height = min(pixels.count, mask.count)
+        let width = min(pixels[0].count, mask[0].count)
+
+        for y in 0..<height {
+            for x in 0..<width {
+                if !mask[y][x] {
+                    pixels[y][x] = nil
+                }
+            }
+        }
+    }
+
+    /// pixels에서 nil이 아닌 부분을 마스크로 생성
+    private func createMaskFromPixels(_ pixels: [[Color?]]) -> [[Bool]] {
+        guard !pixels.isEmpty && !pixels[0].isEmpty else { return [] }
+
+        let height = pixels.count
+        let width = pixels[0].count
+
+        var mask: [[Bool]] = Array(repeating: Array(repeating: false, count: width), count: height)
+
+        for y in 0..<height {
+            for x in 0..<width {
+                mask[y][x] = (pixels[y][x] != nil)
+            }
+        }
+
+        return mask
+    }
 
     private func scalePixels(_ pixels: [[Color?]], toWidth newWidth: Int, toHeight newHeight: Int) -> [[Color?]] {
         let oldHeight = pixels.count
@@ -1147,10 +1279,19 @@ class SelectionTool: BaseTool, CanvasTool {
     private func updateFreeformPath(x: Int, y: Int) {
         guard let canvas = canvasViewModel else { return }
 
+        // 범위 체크
+        guard x >= 0 && x < canvas.canvas.width &&
+              y >= 0 && y < canvas.canvas.height else { return }
+
         // 이전 점과 현재 점 사이를 브레센햄 알고리즘으로 채움
         if let last = lastDrawPoint {
+            // 같은 점이면 스킵
+            if last.x == x && last.y == y { return }
+
             let points = bresenhamLine(x0: last.x, y0: last.y, x1: x, y1: y)
-            for point in points {
+            // 첫 점은 이미 경로에 있으므로 제외
+            for i in 1..<points.count {
+                let point = points[i]
                 if point.x >= 0 && point.x < canvas.canvas.width &&
                    point.y >= 0 && point.y < canvas.canvas.height {
                     freeformPath.append(point)
@@ -1158,10 +1299,7 @@ class SelectionTool: BaseTool, CanvasTool {
             }
         } else {
             // 첫 점
-            if x >= 0 && x < canvas.canvas.width &&
-               y >= 0 && y < canvas.canvas.height {
-                freeformPath.append((x, y))
-            }
+            freeformPath.append((x, y))
         }
 
         lastDrawPoint = (x, y)
@@ -1189,99 +1327,55 @@ class SelectionTool: BaseTool, CanvasTool {
         }
     }
 
-    /// Freeform 선택을 캡처합니다
-    private func captureFreeformSelection() {
-        guard let rect = selectionRect,
-              freeformPath.count > 0,
-              currentLayerIndex < layerViewModel.layers.count else {
-            selectionPixels = nil
-            originalPixels = nil
-            freeformPath = []
-            return
+    /// Freeform 경로 닫기 (시작점과 끝점을 직선으로 연결)
+    private func closeFreeformPath() {
+        guard let canvas = canvasViewModel else { return }
+        guard freeformPath.count >= 2 else { return }
+
+        let first = freeformPath.first!
+        let last = freeformPath.last!
+
+        // 시작점과 끝점이 이미 가까우면 연결하지 않음 (이미 닫힌 것으로 간주)
+        let distance = abs(first.x - last.x) + abs(first.y - last.y)
+        if distance <= 2 { return }
+
+        // 끝점에서 시작점으로 직선 연결
+        let closingLine = bresenhamLine(x0: last.x, y0: last.y, x1: first.x, y1: first.y)
+        // 첫 점은 이미 경로에 있으므로 제외
+        for i in 1..<closingLine.count {
+            let point = closingLine[i]
+            if point.x >= 0 && point.x < canvas.canvas.width &&
+               point.y >= 0 && point.y < canvas.canvas.height {
+                freeformPath.append(point)
+            }
         }
 
-        // 이미 floating 상태면 중복 호출 방지
-        guard !isFloatingSelection else { return }
+        // 경로가 업데이트되었으므로 selectionRect 다시 계산
+        updateSelectionRectFromPath()
+    }
 
-        let startX = Int(rect.minX)
-        let startY = Int(rect.minY)
-        let width = Int(rect.width)
-        let height = Int(rect.height)
+    /// 경로로부터 selectionRect 업데이트
+    private func updateSelectionRectFromPath() {
+        guard freeformPath.count > 0 else { return }
 
-        // 선택된 픽셀만 마스크로 표시
-        var mask: [[Bool]] = Array(repeating: Array(repeating: false, count: width), count: height)
+        var minX = Int.max
+        var maxX = Int.min
+        var minY = Int.max
+        var maxY = Int.min
+
         for point in freeformPath {
-            let x = point.x - startX
-            let y = point.y - startY
-            if x >= 0 && x < width && y >= 0 && y < height {
-                mask[y][x] = true
-            }
+            minX = min(minX, point.x)
+            maxX = max(maxX, point.x)
+            minY = min(minY, point.y)
+            maxY = max(maxY, point.y)
         }
 
-        // 마스크된 영역의 픽셀 데이터 복사 및 레이어에서 제거
-        var pixels: [[Color?]] = Array(repeating: Array(repeating: nil, count: width), count: height)
-        var layerOldPixels: [PixelChange] = []
-        var layerNewPixels: [PixelChange] = []
-
-        let layerId = layerViewModel.layers[currentLayerIndex].id
-
-        for y in 0..<height {
-            for x in 0..<width {
-                if mask[y][x] {
-                    let pixelX = startX + x
-                    let pixelY = startY + y
-                    if let canvas = canvasViewModel,
-                       pixelX >= 0 && pixelX < canvas.canvas.width &&
-                       pixelY >= 0 && pixelY < canvas.canvas.height {
-                        let color = timelineViewModel?.getCurrentFramePixels(layerId: layerId)?[pixelY][pixelX]
-                        pixels[y][x] = color
-
-                        // 색칠된 픽셀만 제거
-                        if color != nil {
-                            layerOldPixels.append(PixelChange(x: pixelX, y: pixelY, color: color))
-                            layerNewPixels.append(PixelChange(x: pixelX, y: pixelY, color: nil))
-                        }
-                    }
-                }
-            }
-        }
-
-        // 레이어에서 픽셀 제거
-        for change in layerNewPixels {
-            timelineViewModel?.setPixel(layerId: layerId, x: change.x, y: change.y, color: change.color)
-        }
-
-        // 선택 상태 설정
-        selectionPixels = pixels
-        originalPixels = pixels
-        originalRect = rect
-        isFloatingSelection = true
-        freeformMask = mask
-
-        // Command 생성
-        if !layerOldPixels.isEmpty {
-            let command = SelectionCaptureCommand(
-                canvasViewModel: canvasViewModel!,
-                layerViewModel: layerViewModel,
-                timelineViewModel: timelineViewModel,
-                layerIndex: currentLayerIndex,
-                wasFloating: false,
-                oldRect: nil,
-                oldPixels: nil,
-                oldOriginalRect: nil,
-                oldOriginalPixels: nil,
-                newRect: rect,
-                newPixels: pixels,
-                layerOldPixels: layerOldPixels,
-                layerNewPixels: layerNewPixels
-            )
-            commandManager.addExecutedCommand(command)
-            timelineViewModel?.pixelStateManager?.syncToTimeline()
-        }
-
-        // 정리
-        freeformPath = []
-        lastDrawPoint = nil
+        selectionRect = CGRect(
+            x: minX,
+            y: minY,
+            width: maxX - minX + 1,
+            height: maxY - minY + 1
+        )
     }
 
     /// 브레센햄 직선 알고리즘
@@ -1315,6 +1409,62 @@ class SelectionTool: BaseTool, CanvasTool {
         }
 
         return points
+    }
+
+    /// Scanline Fill 알고리즘 (업계 표준: Photoshop/Aseprite 방식)
+    /// Even-Odd Rule로 폴리곤 내부를 채웁니다
+    private func fillPathInterior(_ mask: inout [[Bool]], startX: Int, startY: Int) {
+        let width = mask[0].count
+        let height = mask.count
+
+        guard !freeformPath.isEmpty else { return }
+        guard freeformPath.count >= 3 else { return }
+
+        // 캔버스 절대 좌표 → 로컬 좌표 변환
+        var localPath: [(x: Int, y: Int)] = []
+        for point in freeformPath {
+            localPath.append((x: point.x - startX, y: point.y - startY))
+        }
+
+        // 각 스캔라인(y 좌표)에 대해 처리
+        for y in 0..<height {
+            var intersections: [Int] = []
+
+            // 폴리곤의 각 엣지와 스캔라인의 교차점 찾기
+            for i in 0..<localPath.count {
+                let p1 = localPath[i]
+                let p2 = localPath[(i + 1) % localPath.count]
+
+                let minY = min(p1.y, p2.y)
+                let maxY = max(p1.y, p2.y)
+
+                // 스캔라인이 엣지의 y 범위 내에 있는지 확인
+                // maxY는 포함 안 함 (중복 교차점 방지)
+                if y >= minY && y < maxY {
+                    let dx = p2.x - p1.x
+                    let dy = p2.y - p1.y
+
+                    if dy != 0 {
+                        // 선형 보간으로 교차점의 x 좌표 계산
+                        let x = p1.x + (y - p1.y) * dx / dy
+                        intersections.append(x)
+                    }
+                }
+            }
+
+            // 교차점을 x 좌표로 정렬
+            intersections.sort()
+
+            // Even-Odd Rule: 홀수/짝수 번째 교차점 쌍 사이를 채움
+            for i in stride(from: 0, to: intersections.count - 1, by: 2) {
+                let x1 = max(0, intersections[i])
+                let x2 = min(width - 1, intersections[i + 1])
+
+                for x in x1...x2 {
+                    mask[y][x] = true
+                }
+            }
+        }
     }
 }
 

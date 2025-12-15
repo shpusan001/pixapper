@@ -184,7 +184,7 @@ enum Constants {
     /// 선택 도구 설정
     enum Selection {
         /// 리사이즈 핸들 크기 (픽셀)
-        static let handleSize: CGFloat = 1
+        static let handleSize: CGFloat = 4
         /// 회전 핸들 크기 (픽셀)
         static let rotateHandleSize: CGFloat = 2
         /// 회전 핸들과 선택 영역 간 거리 (픽셀)
