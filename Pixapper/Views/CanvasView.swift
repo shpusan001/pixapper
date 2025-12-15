@@ -806,10 +806,6 @@ struct SelectionRectView: View {
                 height: rect.height
             )
 
-            if shouldShowGhost, let origPixels = originalPixels, let origRect = originalRect {
-                drawPixels(context: context, pixels: origPixels, rect: origRect, opacity: 0.3)
-            }
-
             if let pixels = selectionPixels {
                 let opacity = (isMoving || isResizing) ? 0.6 : 1.0
                 drawPixels(context: context, pixels: pixels, rect: effectiveRect, opacity: opacity)
@@ -830,12 +826,12 @@ struct SelectionRectView: View {
     }
 
     private func drawPixels(context: GraphicsContext, pixels: [[Color?]], rect: CGRect, opacity: Double) {
+        // 항상 마스크 기반으로 렌더링 (Rectangle도 마스크 사용)
+        guard let mask = freeformMask else { return }
+
         for y in 0..<pixels.count {
             for x in 0..<pixels[y].count {
-                // Freeform 마스크가 있으면 마스크 체크
-                if let mask = freeformMask {
-                    guard y < mask.count && x < mask[y].count && mask[y][x] else { continue }
-                }
+                guard y < mask.count && x < mask[y].count && mask[y][x] else { continue }
 
                 if let color = pixels[y][x] {
                     let pixelRect = CGRect(
@@ -851,30 +847,9 @@ struct SelectionRectView: View {
     }
 
     private func drawSelectionBorder(context: GraphicsContext, rect: CGRect) {
-        // Freeform인 경우 마스크 외곽선 그리기
-        if let mask = freeformMask {
-            drawFreeformBorder(context: context, rect: rect, mask: mask)
-            return
-        }
-
-        // Rectangle: 픽셀 외곽을 따라 테두리 그리기
-        // stroke는 선의 중앙에 그려지므로 픽셀을 침범하지 않도록 바깥으로 이동
-        let borderWidth: CGFloat = 2
-        let borderRect = CGRect(
-            x: marginX + rect.minX * pixelSize - borderWidth / 2,
-            y: marginY + rect.minY * pixelSize - borderWidth / 2,
-            width: rect.width * pixelSize + borderWidth,
-            height: rect.height * pixelSize + borderWidth
-        )
-
-        var path = Path()
-        path.addRect(borderRect)
-
-        context.stroke(
-            path,
-            with: .color(Color.accentColor),
-            style: StrokeStyle(lineWidth: borderWidth, dash: [6, 4])
-        )
+        // 항상 마스크 외곽선 그리기 (Rectangle도 마스크 사용)
+        guard let mask = freeformMask else { return }
+        drawFreeformBorder(context: context, rect: rect, mask: mask)
     }
 
     private func drawFreeformBorder(context: GraphicsContext, rect: CGRect, mask: [[Bool]]) {

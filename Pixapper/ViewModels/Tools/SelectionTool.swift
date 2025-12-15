@@ -31,9 +31,11 @@ class SelectionTool: BaseTool, CanvasTool {
     private var lastDrawPoint: (x: Int, y: Int)?
     private var resizeStartRect: CGRect?
     private var resizeStartPixels: [[Color?]]?
+    private var resizeStartMask: [[Bool]]?
     private var moveStartRect: CGRect?
     private var rotateStartAngle: Double = 0
     private var rotateStartPixels: [[Color?]]?
+    private var rotateStartMask: [[Bool]]?
     private var currentRotationAngle: Double = 0
     private var clipboard: SelectionClipboard?
     private var shiftPressed: Bool = false
@@ -505,7 +507,9 @@ class SelectionTool: BaseTool, CanvasTool {
                 oldPixels: pixels,
                 newPixels: pixels,
                 oldRect: oldRect,
-                newRect: newRect
+                newRect: newRect,
+                oldMask: freeformMask,
+                newMask: freeformMask
             )
             commandManager.addExecutedCommand(command)
         }
@@ -517,23 +521,21 @@ class SelectionTool: BaseTool, CanvasTool {
 
     private func startResizingSelection(handle: ResizeHandle, at point: (x: Int, y: Int)) {
         guard let rect = selectionRect,
-              var pixels = selectionPixels else { return }
+              var pixels = selectionPixels,
+              let mask = freeformMask else { return }
 
-        let hadMask = freeformMask != nil
-
-        // 마스크가 있으면 픽셀에 "구워넣기" (마스크 밖은 nil로)
-        if let mask = freeformMask {
-            bakeMaskIntoPixels(&pixels, mask: mask)
-            selectionPixels = pixels
-        }
+        // 항상 마스크를 픽셀에 "구워넣기" (마스크 밖은 nil로)
+        bakeMaskIntoPixels(&pixels, mask: mask)
+        selectionPixels = pixels
 
         selectionMode = .resizing(handle: handle)
         resizeStartRect = rect
         resizeStartPixels = pixels
+        resizeStartMask = mask
         lastDrawPoint = point
 
-        // originalPixels도 마스크 구워진 버전으로 설정
-        if originalPixels == nil || hadMask {
+        // originalPixels 설정
+        if originalPixels == nil {
             originalPixels = pixels
             originalRect = rect
         }
@@ -625,11 +627,14 @@ class SelectionTool: BaseTool, CanvasTool {
     private func commitSelectionResize() {
         guard let oldRect = resizeStartRect,
               let oldPixels = resizeStartPixels,
+              let oldMask = resizeStartMask,
               let newRect = selectionRect,
-              let newPixels = selectionPixels else {
+              let newPixels = selectionPixels,
+              let newMask = freeformMask else {
             selectionMode = .idle
             resizeStartRect = nil
             resizeStartPixels = nil
+            resizeStartMask = nil
             lastDrawPoint = nil
             return
         }
@@ -640,7 +645,9 @@ class SelectionTool: BaseTool, CanvasTool {
                 oldPixels: oldPixels,
                 newPixels: newPixels,
                 oldRect: oldRect,
-                newRect: newRect
+                newRect: newRect,
+                oldMask: oldMask,
+                newMask: newMask
             )
             commandManager.addExecutedCommand(command)
         }
@@ -648,23 +655,22 @@ class SelectionTool: BaseTool, CanvasTool {
         selectionMode = .idle
         resizeStartRect = nil
         resizeStartPixels = nil
+        resizeStartMask = nil
         lastDrawPoint = nil
     }
 
     private func startRotatingSelection(at point: (x: Int, y: Int)) {
         guard let rect = selectionRect,
-              var pixels = selectionPixels else { return }
+              var pixels = selectionPixels,
+              let mask = freeformMask else { return }
 
-        let hadMask = freeformMask != nil
-
-        // 마스크가 있으면 픽셀에 "구워넣기" (마스크 밖은 nil로)
-        if let mask = freeformMask {
-            bakeMaskIntoPixels(&pixels, mask: mask)
-            selectionPixels = pixels
-        }
+        // 항상 마스크를 픽셀에 "구워넣기" (마스크 밖은 nil로)
+        bakeMaskIntoPixels(&pixels, mask: mask)
+        selectionPixels = pixels
 
         selectionMode = .rotating
         rotateStartPixels = pixels
+        rotateStartMask = mask
         lastDrawPoint = point
 
         let centerX = rect.midX
@@ -672,8 +678,8 @@ class SelectionTool: BaseTool, CanvasTool {
         rotateStartAngle = atan2(Double(point.y) - Double(centerY), Double(point.x) - Double(centerX))
         currentRotationAngle = 0
 
-        // originalPixels도 마스크 구워진 버전으로 설정
-        if originalPixels == nil || hadMask {
+        // originalPixels 설정
+        if originalPixels == nil {
             originalPixels = pixels
             originalRect = rect
         }
@@ -718,11 +724,14 @@ class SelectionTool: BaseTool, CanvasTool {
 
     private func commitSelectionRotation() {
         guard let oldPixels = rotateStartPixels,
+              let oldMask = rotateStartMask,
               let newRect = selectionRect,
               let newPixels = selectionPixels,
+              let newMask = freeformMask,
               originalRect != nil else {
             selectionMode = .idle
             rotateStartPixels = nil
+            rotateStartMask = nil
             lastDrawPoint = nil
             return
         }
@@ -744,13 +753,16 @@ class SelectionTool: BaseTool, CanvasTool {
                 oldPixels: oldPixels,
                 newPixels: newPixels,
                 oldRect: oldRect,
-                newRect: newRect
+                newRect: newRect,
+                oldMask: oldMask,
+                newMask: newMask
             )
             commandManager.addExecutedCommand(command)
         }
 
         selectionMode = .idle
         rotateStartPixels = nil
+        rotateStartMask = nil
         rotateStartAngle = 0
         currentRotationAngle = 0
         lastDrawPoint = nil
@@ -790,78 +802,48 @@ class SelectionTool: BaseTool, CanvasTool {
 
     private func applyTransformedSelection(_ transformedPixels: [[Color?]]) {
         guard let oldRect = selectionRect,
-              var oldPixels = selectionPixels else { return }
+              var oldPixels = selectionPixels,
+              let oldMask = freeformMask else { return }
 
-        let hadMask = freeformMask != nil
+        // 항상 마스크를 픽셀에 "구워넣기" (마스크 밖은 nil로)
+        bakeMaskIntoPixels(&oldPixels, mask: oldMask)
+        selectionPixels = oldPixels
 
-        // 마스크가 있으면 픽셀에 "구워넣기" (마스크 밖은 nil로)
-        if let mask = freeformMask {
-            bakeMaskIntoPixels(&oldPixels, mask: mask)
-            selectionPixels = oldPixels
-        }
+        // 변형된 픽셀 그대로 사용 (nil 패턴이 마스크 형태)
+        let finalPixels = transformedPixels
 
-        // 마스크가 있었으면 crop하지 않음 (nil 패턴이 마스크 형태)
-        let finalPixels: [[Color?]]
-        let newRect: CGRect
+        let startX = Int(oldRect.minX)
+        let startY = Int(oldRect.minY)
+        let oldWidth = Int(oldRect.width)
+        let oldHeight = Int(oldRect.height)
+        let newHeight = transformedPixels.count
+        let newWidth = transformedPixels[0].count
 
-        if hadMask {
-            // 마스크 있을 때: 변형된 픽셀 그대로 사용 (nil 패턴 유지)
-            finalPixels = transformedPixels
+        let offsetX = (oldWidth - newWidth) / 2
+        let offsetY = (oldHeight - newHeight) / 2
 
-            let startX = Int(oldRect.minX)
-            let startY = Int(oldRect.minY)
-            let oldWidth = Int(oldRect.width)
-            let oldHeight = Int(oldRect.height)
-            let newHeight = transformedPixels.count
-            let newWidth = transformedPixels[0].count
-
-            let offsetX = (oldWidth - newWidth) / 2
-            let offsetY = (oldHeight - newHeight) / 2
-
-            newRect = CGRect(
-                x: startX + offsetX,
-                y: startY + offsetY,
-                width: newWidth,
-                height: newHeight
-            )
-        } else {
-            // 마스크 없을 때: 기존처럼 crop
-            let (croppedPixels, _) = cropToContent(transformedPixels)
-
-            let startX = Int(oldRect.minX)
-            let startY = Int(oldRect.minY)
-            let oldWidth = Int(oldRect.width)
-            let oldHeight = Int(oldRect.height)
-            let newHeight = croppedPixels.count
-            let newWidth = croppedPixels[0].count
-
-            let offsetX = (oldWidth - newWidth) / 2
-            let offsetY = (oldHeight - newHeight) / 2
-
-            newRect = CGRect(
-                x: startX + offsetX,
-                y: startY + offsetY,
-                width: newWidth,
-                height: newHeight
-            )
-
-            finalPixels = croppedPixels
-        }
+        let newRect = CGRect(
+            x: startX + offsetX,
+            y: startY + offsetY,
+            width: newWidth,
+            height: newHeight
+        )
 
         selectionPixels = finalPixels
         selectionRect = newRect
 
         // 마스크 재생성 (nil 패턴에서)
-        if hadMask {
-            freeformMask = createMaskFromPixels(finalPixels)
-        }
+        let newMask = createMaskFromPixels(finalPixels)
+        freeformMask = newMask
 
         let command = SelectionTransformCommand(
             canvasViewModel: canvasViewModel!,
             oldPixels: oldPixels,
             newPixels: finalPixels,
             oldRect: oldRect,
-            newRect: newRect
+            newRect: newRect,
+            oldMask: oldMask,
+            newMask: newMask
         )
         commandManager.addExecutedCommand(command)
     }

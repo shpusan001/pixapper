@@ -19,10 +19,12 @@ class SelectionMoveCommand: LayerPixelApplicable {
     private let oldPixels: [[Color?]]
     private let oldOriginalRect: CGRect
     private let oldOriginalPixels: [[Color?]]
+    private let oldMask: [[Bool]]?
 
     // 이동 후 상태
     private let newRect: CGRect
     private let newPixels: [[Color?]]
+    private let newMask: [[Bool]]?
 
     // 레이어 픽셀 변경 정보
     private var layerOldPixels: [PixelChange] = []
@@ -41,8 +43,10 @@ class SelectionMoveCommand: LayerPixelApplicable {
         oldPixels: [[Color?]],
         oldOriginalRect: CGRect,
         oldOriginalPixels: [[Color?]],
+        oldMask: [[Bool]]?,
         newRect: CGRect,
-        newPixels: [[Color?]]
+        newPixels: [[Color?]],
+        newMask: [[Bool]]?
     ) {
         self.canvasViewModel = canvasViewModel
         self.layerViewModel = layerViewModel
@@ -52,8 +56,10 @@ class SelectionMoveCommand: LayerPixelApplicable {
         self.oldPixels = oldPixels
         self.oldOriginalRect = oldOriginalRect
         self.oldOriginalPixels = oldOriginalPixels
+        self.oldMask = oldMask
         self.newRect = newRect
         self.newPixels = newPixels
+        self.newMask = newMask
 
         // 레이어 픽셀 변경 계산
         let changes = canvasViewModel.calculatePixelChanges(
@@ -76,6 +82,7 @@ class SelectionMoveCommand: LayerPixelApplicable {
         canvasViewModel?.selectionPixels = newPixels
         canvasViewModel?.originalRect = newRect
         canvasViewModel?.originalPixels = newPixels
+        canvasViewModel?.freeformMask = newMask
     }
 
     func undo() {
@@ -87,5 +94,6 @@ class SelectionMoveCommand: LayerPixelApplicable {
         canvasViewModel?.selectionPixels = oldPixels
         canvasViewModel?.originalRect = oldOriginalRect
         canvasViewModel?.originalPixels = oldOriginalPixels
+        canvasViewModel?.freeformMask = oldMask
     }
 }

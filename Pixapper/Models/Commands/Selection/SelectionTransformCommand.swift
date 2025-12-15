@@ -14,24 +14,40 @@ class SelectionTransformCommand: Command {
     private let newPixels: [[Color?]]
     private let oldRect: CGRect
     private let newRect: CGRect
+    private let oldMask: [[Bool]]?
+    private let newMask: [[Bool]]?
 
     var description: String {
         return "Selection Transform"
     }
 
-    init(canvasViewModel: CanvasViewModel, oldPixels: [[Color?]], newPixels: [[Color?]], oldRect: CGRect, newRect: CGRect) {
+    init(
+        canvasViewModel: CanvasViewModel,
+        oldPixels: [[Color?]],
+        newPixels: [[Color?]],
+        oldRect: CGRect,
+        newRect: CGRect,
+        oldMask: [[Bool]]?,
+        newMask: [[Bool]]?
+    ) {
         self.canvasViewModel = canvasViewModel
         self.oldPixels = oldPixels
         self.newPixels = newPixels
         self.oldRect = oldRect
         self.newRect = newRect
+        self.oldMask = oldMask
+        self.newMask = newMask
     }
 
     func execute() {
-        canvasViewModel?.applyTransformFromCommand(pixels: newPixels, rect: newRect)
+        canvasViewModel?.selectionPixels = newPixels
+        canvasViewModel?.selectionRect = newRect
+        canvasViewModel?.freeformMask = newMask
     }
 
     func undo() {
-        canvasViewModel?.applyTransformFromCommand(pixels: oldPixels, rect: oldRect)
+        canvasViewModel?.selectionPixels = oldPixels
+        canvasViewModel?.selectionRect = oldRect
+        canvasViewModel?.freeformMask = oldMask
     }
 }
