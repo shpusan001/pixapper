@@ -1,0 +1,120 @@
+{
+  "source": "/Users/sanghoon/Desktop/MacApps/Pixapper/Pixapper/Views/Components/ColorPaletteView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Palette",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 25
+        }
+      },
+      {
+        "comment": "",
+        "key": "Done",
+        "location": {
+          "startingColumn": 40,
+          "startingLine": 44
+        }
+      },
+      {
+        "comment": "",
+        "key": "Remove Colors",
+        "location": {
+          "startingColumn": 49,
+          "startingLine": 44
+        }
+      },
+      {
+        "comment": "",
+        "key": "Add Current Color to Palette",
+        "location": {
+          "startingColumn": 27,
+          "startingLine": 60
+        }
+      },
+      {
+        "comment": "",
+        "key": "Edit Palette Color",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 124
+        }
+      },
+      {
+        "comment": "",
+        "key": "Color",
+        "location": {
+          "startingColumn": 29,
+          "startingLine": 128
+        }
+      },
+      {
+        "comment": "",
+        "key": "Cancel",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 133
+        }
+      },
+      {
+        "comment": "",
+        "key": "Done",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 143
+        }
+      },
+      {
+        "comment": "",
+        "key": "Click to remove",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 256
+        }
+      },
+      {
+        "comment": "",
+        "key": "Click: Primary | Ctrl+Click: Secondary | Double-click: Edit",
+        "location": {
+          "startingColumn": 48,
+          "startingLine": 256
+        }
+      },
+      {
+        "comment": "",
+        "key": "Set as Primary",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 249
+        }
+      },
+      {
+        "comment": "",
+        "key": "Set as Secondary",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 250
+        }
+      },
+      {
+        "comment": "",
+        "key": "Edit Color",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 251
+        }
+      },
+      {
+        "comment": "",
+        "key": "Remove from Palette",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 254
+        }
+      }
+    ]
+  },
+  "version": 1
+}

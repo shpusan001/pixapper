@@ -1,0 +1,80 @@
+{
+  "source": "/Users/sanghoon/Desktop/MacApps/Pixapper/Pixapper/Views/ToolPanel.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "RESIZE CANVAS",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 157
+        }
+      },
+      {
+        "comment": "",
+        "key": "Width:",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 173
+        }
+      },
+      {
+        "comment": "",
+        "key": "px",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 185
+        }
+      },
+      {
+        "comment": "",
+        "key": "Width",
+        "location": {
+          "startingColumn": 31,
+          "startingLine": 177
+        }
+      },
+      {
+        "comment": "",
+        "key": "Height:",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 192
+        }
+      },
+      {
+        "comment": "",
+        "key": "px",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 204
+        }
+      },
+      {
+        "comment": "",
+        "key": "Height",
+        "location": {
+          "startingColumn": 31,
+          "startingLine": 196
+        }
+      },
+      {
+        "comment": "",
+        "key": "Cancel",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 219
+        }
+      },
+      {
+        "comment": "",
+        "key": "Resize",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 231
+        }
+      }
+    ]
+  },
+  "version": 1
+}

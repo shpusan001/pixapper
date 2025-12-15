@@ -1,0 +1,48 @@
+{
+  "source": "/Users/sanghoon/Desktop/MacApps/Pixapper/Pixapper/Views/Components/ColorSwatchView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Swap Colors (X)",
+        "location": {
+          "startingColumn": 19,
+          "startingLine": 74
+        }
+      },
+      {
+        "comment": "",
+        "key": "Secondary Color",
+        "location": {
+          "startingColumn": 29,
+          "startingLine": 34
+        }
+      },
+      {
+        "comment": "",
+        "key": "Primary Color",
+        "location": {
+          "startingColumn": 29,
+          "startingLine": 53
+        }
+      },
+      {
+        "comment": "",
+        "key": "Click to swap colors",
+        "location": {
+          "startingColumn": 23,
+          "startingLine": 133
+        }
+      },
+      {
+        "comment": "",
+        "key": "Primary Color",
+        "location": {
+          "startingColumn": 33,
+          "startingLine": 108
+        }
+      }
+    ]
+  },
+  "version": 1
+}

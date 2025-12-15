@@ -26,6 +26,9 @@ class ColorManager: ObservableObject {
     /// 최근 색상 최대 개수
     private let maxRecentColors = 8
 
+    /// 팔레트 최대 개수
+    let maxPaletteColors = 64
+
     /// UserDefaults 키
     private let recentColorsKey = "ColorManager.RecentColors"
 
@@ -106,10 +109,16 @@ class ColorManager: ObservableObject {
 
     /// 팔레트에 색상 추가
     /// - Parameter color: 추가할 색상
-    func addToPalette(_ color: Color) {
-        if !palette.contains(where: { $0.isEqual(to: color, tolerance: 0.01) }) {
-            palette.append(color)
+    /// - Returns: 추가 성공 여부 (최대 개수 초과 시 false)
+    @discardableResult
+    func addToPalette(_ color: Color) -> Bool {
+        // 최대 개수 체크만 수행 (중복 체크 제거 - 사용자가 원하면 같은 색 여러 번 추가 가능)
+        guard palette.count < maxPaletteColors else {
+            return false
         }
+
+        palette.append(color)
+        return true
     }
 
     /// 팔레트에서 색상 제거

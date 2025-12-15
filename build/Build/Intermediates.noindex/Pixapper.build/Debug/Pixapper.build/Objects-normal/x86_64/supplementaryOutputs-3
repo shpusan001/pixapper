@@ -1,0 +1,58 @@
+{
+  "/Users/sanghoon/Desktop/MacApps/Pixapper/Pixapper/Models/Commands/Timeline/AddBlankKeyframeCommand.swift" : {
+    "const-values" : "/Users/sanghoon/Desktop/MacApps/Pixapper/build/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/AddBlankKeyframeCommand.swiftconstvalues",
+    "dependencies" : "/Users/sanghoon/Desktop/MacApps/Pixapper/build/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/AddBlankKeyframeCommand.d",
+    "diagnostics" : "/Users/sanghoon/Desktop/MacApps/Pixapper/build/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/AddBlankKeyframeCommand.dia",
+    "object" : "/Users/sanghoon/Desktop/MacApps/Pixapper/build/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/AddBlankKeyframeCommand.o",
+    "swift-dependencies" : "/Users/sanghoon/Desktop/MacApps/Pixapper/build/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/AddBlankKeyframeCommand.swiftdeps"
+  },
+  "/Users/sanghoon/Desktop/MacApps/Pixapper/Pixapper/Models/Commands/Timeline/AddKeyframeWithContentCommand.swift" : {
+    "const-values" : "/Users/sanghoon/Desktop/MacApps/Pixapper/build/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/AddKeyframeWithContentCommand.swiftconstvalues",
+    "dependencies" : "/Users/sanghoon/Desktop/MacApps/Pixapper/build/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/AddKeyframeWithContentCommand.d",
+    "diagnostics" : "/Users/sanghoon/Desktop/MacApps/Pixapper/build/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/AddKeyframeWithContentCommand.dia",
+    "object" : "/Users/sanghoon/Desktop/MacApps/Pixapper/build/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/AddKeyframeWithContentCommand.o",
+    "swift-dependencies" : "/Users/sanghoon/Desktop/MacApps/Pixapper/build/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/AddKeyframeWithContentCommand.swiftdeps"
+  },
+  "/Users/sanghoon/Desktop/MacApps/Pixapper/Pixapper/Models/Commands/Timeline/BatchKeyframeCommand.swift" : {
+    "const-values" : "/Users/sanghoon/Desktop/MacApps/Pixapper/build/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/BatchKeyframeCommand.swiftconstvalues",
+    "dependencies" : "/Users/sanghoon/Desktop/MacApps/Pixapper/build/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/BatchKeyframeCommand.d",
+    "diagnostics" : "/Users/sanghoon/Desktop/MacApps/Pixapper/build/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/BatchKeyframeCommand.dia",
+    "object" : "/Users/sanghoon/Desktop/MacApps/Pixapper/build/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/BatchKeyframeCommand.o",
+    "swift-dependencies" : "/Users/sanghoon/Desktop/MacApps/Pixapper/build/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/BatchKeyframeCommand.swiftdeps"
+  },
+  "/Users/sanghoon/Desktop/MacApps/Pixapper/Pixapper/Models/Commands/Timeline/ClearFrameContentCommand.swift" : {
+    "const-values" : "/Users/sanghoon/Desktop/MacApps/Pixapper/build/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/ClearFrameContentCommand.swiftconstvalues",
+    "dependencies" : "/Users/sanghoon/Desktop/MacApps/Pixapper/build/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/ClearFrameContentCommand.d",
+    "diagnostics" : "/Users/sanghoon/Desktop/MacApps/Pixapper/build/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/ClearFrameContentCommand.dia",
+    "object" : "/Users/sanghoon/Desktop/MacApps/Pixapper/build/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/ClearFrameContentCommand.o",
+    "swift-dependencies" : "/Users/sanghoon/Desktop/MacApps/Pixapper/build/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/ClearFrameContentCommand.swiftdeps"
+  },
+  "/Users/sanghoon/Desktop/MacApps/Pixapper/Pixapper/Models/Commands/Timeline/DeleteFrameCommand.swift" : {
+    "const-values" : "/Users/sanghoon/Desktop/MacApps/Pixapper/build/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/DeleteFrameCommand.swiftconstvalues",
+    "dependencies" : "/Users/sanghoon/Desktop/MacApps/Pixapper/build/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/DeleteFrameCommand.d",
+    "diagnostics" : "/Users/sanghoon/Desktop/MacApps/Pixapper/build/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/DeleteFrameCommand.dia",
+    "object" : "/Users/sanghoon/Desktop/MacApps/Pixapper/build/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/DeleteFrameCommand.o",
+    "swift-dependencies" : "/Users/sanghoon/Desktop/MacApps/Pixapper/build/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/DeleteFrameCommand.swiftdeps"
+  },
+  "/Users/sanghoon/Desktop/MacApps/Pixapper/Pixapper/Models/Commands/Timeline/DeleteFrameInLayerCommand.swift" : {
+    "const-values" : "/Users/sanghoon/Desktop/MacApps/Pixapper/build/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/DeleteFrameInLayerCommand.swiftconstvalues",
+    "dependencies" : "/Users/sanghoon/Desktop/MacApps/Pixapper/build/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/DeleteFrameInLayerCommand.d",
+    "diagnostics" : "/Users/sanghoon/Desktop/MacApps/Pixapper/build/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/DeleteFrameInLayerCommand.dia",
+    "object" : "/Users/sanghoon/Desktop/MacApps/Pixapper/build/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/DeleteFrameInLayerCommand.o",
+    "swift-dependencies" : "/Users/sanghoon/Desktop/MacApps/Pixapper/build/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/DeleteFrameInLayerCommand.swiftdeps"
+  },
+  "/Users/sanghoon/Desktop/MacApps/Pixapper/Pixapper/Models/Commands/Timeline/ExtendFrameCommand.swift" : {
+    "const-values" : "/Users/sanghoon/Desktop/MacApps/Pixapper/build/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/ExtendFrameCommand.swiftconstvalues",
+    "dependencies" : "/Users/sanghoon/Desktop/MacApps/Pixapper/build/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/ExtendFrameCommand.d",
+    "diagnostics" : "/Users/sanghoon/Desktop/MacApps/Pixapper/build/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/ExtendFrameCommand.dia",
+    "object" : "/Users/sanghoon/Desktop/MacApps/Pixapper/build/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/ExtendFrameCommand.o",
+    "swift-dependencies" : "/Users/sanghoon/Desktop/MacApps/Pixapper/build/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/ExtendFrameCommand.swiftdeps"
+  },
+  "/Users/sanghoon/Desktop/MacApps/Pixapper/Pixapper/Models/Commands/Timeline/InsertBlankKeyframeCommand.swift" : {
+    "const-values" : "/Users/sanghoon/Desktop/MacApps/Pixapper/build/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/InsertBlankKeyframeCommand.swiftconstvalues",
+    "dependencies" : "/Users/sanghoon/Desktop/MacApps/Pixapper/build/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/InsertBlankKeyframeCommand.d",
+    "diagnostics" : "/Users/sanghoon/Desktop/MacApps/Pixapper/build/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/InsertBlankKeyframeCommand.dia",
+    "object" : "/Users/sanghoon/Desktop/MacApps/Pixapper/build/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/InsertBlankKeyframeCommand.o",
+    "swift-dependencies" : "/Users/sanghoon/Desktop/MacApps/Pixapper/build/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/InsertBlankKeyframeCommand.swiftdeps"
+  }
+}

@@ -1,0 +1,160 @@
+{
+  "source": "/Users/sanghoon/Desktop/MacApps/Pixapper/Pixapper/Views/ColorPanel.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "COLOR",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 18
+        }
+      },
+      {
+        "comment": "",
+        "key": "RECENT",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 48
+        }
+      },
+      {
+        "comment": "",
+        "key": "No colors in palette",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 131
+        }
+      },
+      {
+        "comment": "",
+        "key": "PALETTE",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 78
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld/%lld",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 86
+        }
+      },
+      {
+        "comment": "",
+        "key": "Palette full (max %lld)",
+        "location": {
+          "startingColumn": 35,
+          "startingLine": 109
+        }
+      },
+      {
+        "comment": "",
+        "key": "Add current color to palette",
+        "location": {
+          "startingColumn": 35,
+          "startingLine": 110
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 29,
+          "startingLine": 171
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 33,
+          "startingLine": 195
+        }
+      },
+      {
+        "comment": "",
+        "key": "Swap Colors (X)",
+        "location": {
+          "startingColumn": 27,
+          "startingLine": 212
+        }
+      },
+      {
+        "comment": "",
+        "key": "Reset to Defaults (D)",
+        "location": {
+          "startingColumn": 27,
+          "startingLine": 224
+        }
+      },
+      {
+        "comment": "",
+        "key": "Set as Primary",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 318
+        }
+      },
+      {
+        "comment": "",
+        "key": "Set as Secondary",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 321
+        }
+      },
+      {
+        "comment": "",
+        "key": "Edit Color...",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 324
+        }
+      },
+      {
+        "comment": "",
+        "key": "Remove",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 329
+        }
+      },
+      {
+        "comment": "",
+        "key": "Edit Color",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 335
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 29,
+          "startingLine": 339
+        }
+      },
+      {
+        "comment": "",
+        "key": "Cancel",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 344
+        }
+      },
+      {
+        "comment": "",
+        "key": "Done",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 354
+        }
+      }
+    ]
+  },
+  "version": 1
+}

@@ -1,0 +1,58 @@
+{
+  "/Users/sanghoon/Desktop/MacApps/Pixapper/Pixapper/Models/Commands/Layer/MoveLayerCommand.swift" : {
+    "const-values" : "/Users/sanghoon/Desktop/MacApps/Pixapper/build/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/MoveLayerCommand.swiftconstvalues",
+    "dependencies" : "/Users/sanghoon/Desktop/MacApps/Pixapper/build/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/MoveLayerCommand.d",
+    "diagnostics" : "/Users/sanghoon/Desktop/MacApps/Pixapper/build/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/MoveLayerCommand.dia",
+    "object" : "/Users/sanghoon/Desktop/MacApps/Pixapper/build/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/MoveLayerCommand.o",
+    "swift-dependencies" : "/Users/sanghoon/Desktop/MacApps/Pixapper/build/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/MoveLayerCommand.swiftdeps"
+  },
+  "/Users/sanghoon/Desktop/MacApps/Pixapper/Pixapper/Models/Commands/Layer/RenameLayerCommand.swift" : {
+    "const-values" : "/Users/sanghoon/Desktop/MacApps/Pixapper/build/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/RenameLayerCommand.swiftconstvalues",
+    "dependencies" : "/Users/sanghoon/Desktop/MacApps/Pixapper/build/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/RenameLayerCommand.d",
+    "diagnostics" : "/Users/sanghoon/Desktop/MacApps/Pixapper/build/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/RenameLayerCommand.dia",
+    "object" : "/Users/sanghoon/Desktop/MacApps/Pixapper/build/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/RenameLayerCommand.o",
+    "swift-dependencies" : "/Users/sanghoon/Desktop/MacApps/Pixapper/build/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/RenameLayerCommand.swiftdeps"
+  },
+  "/Users/sanghoon/Desktop/MacApps/Pixapper/Pixapper/Models/Commands/Layer/SetLayerOpacityCommand.swift" : {
+    "const-values" : "/Users/sanghoon/Desktop/MacApps/Pixapper/build/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/SetLayerOpacityCommand.swiftconstvalues",
+    "dependencies" : "/Users/sanghoon/Desktop/MacApps/Pixapper/build/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/SetLayerOpacityCommand.d",
+    "diagnostics" : "/Users/sanghoon/Desktop/MacApps/Pixapper/build/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/SetLayerOpacityCommand.dia",
+    "object" : "/Users/sanghoon/Desktop/MacApps/Pixapper/build/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/SetLayerOpacityCommand.o",
+    "swift-dependencies" : "/Users/sanghoon/Desktop/MacApps/Pixapper/build/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/SetLayerOpacityCommand.swiftdeps"
+  },
+  "/Users/sanghoon/Desktop/MacApps/Pixapper/Pixapper/Models/Commands/Selection/PasteCommand.swift" : {
+    "const-values" : "/Users/sanghoon/Desktop/MacApps/Pixapper/build/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/PasteCommand.swiftconstvalues",
+    "dependencies" : "/Users/sanghoon/Desktop/MacApps/Pixapper/build/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/PasteCommand.d",
+    "diagnostics" : "/Users/sanghoon/Desktop/MacApps/Pixapper/build/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/PasteCommand.dia",
+    "object" : "/Users/sanghoon/Desktop/MacApps/Pixapper/build/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/PasteCommand.o",
+    "swift-dependencies" : "/Users/sanghoon/Desktop/MacApps/Pixapper/build/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/PasteCommand.swiftdeps"
+  },
+  "/Users/sanghoon/Desktop/MacApps/Pixapper/Pixapper/Models/Commands/Selection/SelectionCaptureCommand.swift" : {
+    "const-values" : "/Users/sanghoon/Desktop/MacApps/Pixapper/build/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/SelectionCaptureCommand.swiftconstvalues",
+    "dependencies" : "/Users/sanghoon/Desktop/MacApps/Pixapper/build/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/SelectionCaptureCommand.d",
+    "diagnostics" : "/Users/sanghoon/Desktop/MacApps/Pixapper/build/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/SelectionCaptureCommand.dia",
+    "object" : "/Users/sanghoon/Desktop/MacApps/Pixapper/build/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/SelectionCaptureCommand.o",
+    "swift-dependencies" : "/Users/sanghoon/Desktop/MacApps/Pixapper/build/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/SelectionCaptureCommand.swiftdeps"
+  },
+  "/Users/sanghoon/Desktop/MacApps/Pixapper/Pixapper/Models/Commands/Selection/SelectionCommitCommand.swift" : {
+    "const-values" : "/Users/sanghoon/Desktop/MacApps/Pixapper/build/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/SelectionCommitCommand.swiftconstvalues",
+    "dependencies" : "/Users/sanghoon/Desktop/MacApps/Pixapper/build/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/SelectionCommitCommand.d",
+    "diagnostics" : "/Users/sanghoon/Desktop/MacApps/Pixapper/build/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/SelectionCommitCommand.dia",
+    "object" : "/Users/sanghoon/Desktop/MacApps/Pixapper/build/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/SelectionCommitCommand.o",
+    "swift-dependencies" : "/Users/sanghoon/Desktop/MacApps/Pixapper/build/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/SelectionCommitCommand.swiftdeps"
+  },
+  "/Users/sanghoon/Desktop/MacApps/Pixapper/Pixapper/Models/Commands/Selection/SelectionMoveCommand.swift" : {
+    "const-values" : "/Users/sanghoon/Desktop/MacApps/Pixapper/build/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/SelectionMoveCommand.swiftconstvalues",
+    "dependencies" : "/Users/sanghoon/Desktop/MacApps/Pixapper/build/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/SelectionMoveCommand.d",
+    "diagnostics" : "/Users/sanghoon/Desktop/MacApps/Pixapper/build/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/SelectionMoveCommand.dia",
+    "object" : "/Users/sanghoon/Desktop/MacApps/Pixapper/build/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/SelectionMoveCommand.o",
+    "swift-dependencies" : "/Users/sanghoon/Desktop/MacApps/Pixapper/build/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/SelectionMoveCommand.swiftdeps"
+  },
+  "/Users/sanghoon/Desktop/MacApps/Pixapper/Pixapper/Models/Commands/Selection/SelectionTransformCommand.swift" : {
+    "const-values" : "/Users/sanghoon/Desktop/MacApps/Pixapper/build/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/SelectionTransformCommand.swiftconstvalues",
+    "dependencies" : "/Users/sanghoon/Desktop/MacApps/Pixapper/build/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/SelectionTransformCommand.d",
+    "diagnostics" : "/Users/sanghoon/Desktop/MacApps/Pixapper/build/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/SelectionTransformCommand.dia",
+    "object" : "/Users/sanghoon/Desktop/MacApps/Pixapper/build/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/SelectionTransformCommand.o",
+    "swift-dependencies" : "/Users/sanghoon/Desktop/MacApps/Pixapper/build/Build/Intermediates.noindex/Pixapper.build/Debug/Pixapper.build/Objects-normal/x86_64/SelectionTransformCommand.swiftdeps"
+  }
+}

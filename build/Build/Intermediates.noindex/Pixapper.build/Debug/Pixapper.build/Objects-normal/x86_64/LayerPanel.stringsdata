@@ -1,0 +1,64 @@
+{
+  "source": "/Users/sanghoon/Desktop/MacApps/Pixapper/Pixapper/Views/LayerPanel.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "LAYERS",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 21
+        }
+      },
+      {
+        "comment": "",
+        "key": "Opacity",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 83
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld%%",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 87
+        }
+      },
+      {
+        "comment": "",
+        "key": "Layer name",
+        "location": {
+          "startingColumn": 27,
+          "startingLine": 190
+        }
+      },
+      {
+        "comment": "",
+        "key": "Rename",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 231
+        }
+      },
+      {
+        "comment": "",
+        "key": "Duplicate",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 232
+        }
+      },
+      {
+        "comment": "",
+        "key": "Delete",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 234
+        }
+      }
+    ]
+  },
+  "version": 1
+}

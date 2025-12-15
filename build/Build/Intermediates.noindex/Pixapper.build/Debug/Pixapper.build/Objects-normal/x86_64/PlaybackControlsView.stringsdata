@@ -1,0 +1,128 @@
+{
+  "source": "/Users/sanghoon/Desktop/MacApps/Pixapper/Pixapper/Views/Timeline/PlaybackControlsView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 75
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld/%lld",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 38
+        }
+      },
+      {
+        "comment": "",
+        "key": "FPS",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 70
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 55
+        }
+      },
+      {
+        "comment": "",
+        "key": "1",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 59
+        }
+      },
+      {
+        "comment": "",
+        "key": "6",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 60
+        }
+      },
+      {
+        "comment": "",
+        "key": "12",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 61
+        }
+      },
+      {
+        "comment": "",
+        "key": "24",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 62
+        }
+      },
+      {
+        "comment": "",
+        "key": "30",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 63
+        }
+      },
+      {
+        "comment": "",
+        "key": "60",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 64
+        }
+      },
+      {
+        "comment": "",
+        "key": "0.25×",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 79
+        }
+      },
+      {
+        "comment": "",
+        "key": "0.5×",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 80
+        }
+      },
+      {
+        "comment": "",
+        "key": "1×",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 81
+        }
+      },
+      {
+        "comment": "",
+        "key": "2×",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 82
+        }
+      },
+      {
+        "comment": "",
+        "key": "4×",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 83
+        }
+      }
+    ]
+  },
+  "version": 1
+}

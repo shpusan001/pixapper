@@ -1,0 +1,24 @@
+{
+  "source": "/Users/sanghoon/Desktop/MacApps/Pixapper/Pixapper/Views/Components/RecentColorsView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "No recent colors",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 37
+        }
+      },
+      {
+        "comment": "",
+        "key": "Click: Set Primary | Ctrl+Click: Set Secondary",
+        "location": {
+          "startingColumn": 15,
+          "startingLine": 87
+        }
+      }
+    ]
+  },
+  "version": 1
+}

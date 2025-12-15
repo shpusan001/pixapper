@@ -1,0 +1,16 @@
+{
+  "source": "/Users/sanghoon/Desktop/MacApps/Pixapper/Pixapper/Views/Timeline/TimelineComponents.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "%lld",
+        "location": {
+          "startingColumn": 14,
+          "startingLine": 219
+        }
+      }
+    ]
+  },
+  "version": 1
+}

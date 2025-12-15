@@ -1,0 +1,48 @@
+{
+  "source": "/Users/sanghoon/Desktop/MacApps/Pixapper/Pixapper/Views/Timeline/TimelineLayerInfoView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "%lld%%",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 118
+        }
+      },
+      {
+        "comment": "",
+        "key": "Name",
+        "location": {
+          "startingColumn": 31,
+          "startingLine": 52
+        }
+      },
+      {
+        "comment": "",
+        "key": "Rename",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 157
+        }
+      },
+      {
+        "comment": "",
+        "key": "Duplicate",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 161
+        }
+      },
+      {
+        "comment": "",
+        "key": "Delete",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 165
+        }
+      }
+    ]
+  },
+  "version": 1
+}

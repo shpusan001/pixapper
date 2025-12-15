@@ -19,13 +19,13 @@ struct LayerPanel: View {
             // Header
             HStack {
                 Text("LAYERS")
-                    .font(.system(size: 10, weight: .bold))
+                    .font(.system(size: 9, weight: .bold))
                     .foregroundColor(Constants.Theme.textSecondary)
                     .tracking(0.5)
                 Spacer()
             }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 8)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 6)
             .background(Constants.Theme.sectionBackground)
 
             Rectangle()
@@ -78,16 +78,16 @@ struct LayerPanel: View {
 
             // Selected layer controls
             if viewModel.selectedLayerIndex < viewModel.layers.count, !viewModel.layers.isEmpty {
-                VStack(alignment: .leading, spacing: 8) {
+                VStack(alignment: .leading, spacing: 6) {
                     HStack {
                         Text("Opacity")
-                            .font(.system(size: 10, weight: .medium))
+                            .font(.system(size: 9, weight: .medium))
                             .foregroundColor(Constants.Theme.textSecondary)
                         Spacer()
                         Text("\(Int(viewModel.layers[viewModel.selectedLayerIndex].opacity * 100))%")
-                            .font(.system(size: 10, design: .monospaced))
+                            .font(.system(size: 9, design: .monospaced))
                             .foregroundColor(Constants.Theme.textPrimary)
-                            .padding(.horizontal, 6)
+                            .padding(.horizontal, 5)
                             .padding(.vertical, 2)
                             .background(Constants.Theme.sectionBackground)
                             .cornerRadius(2)
@@ -126,8 +126,8 @@ struct LayerPanel: View {
                     )
                     .tint(Constants.Theme.accentBlue)
                 }
-                .padding(.horizontal, 10)
-                .padding(.vertical, 10)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 8)
             }
 
             Rectangle()
@@ -135,7 +135,7 @@ struct LayerPanel: View {
                 .frame(height: 1)
 
             // Layer operations
-            HStack(spacing: 6) {
+            HStack(spacing: 4) {
                 LayerActionButton(icon: "plus", tooltip: "Add Layer") {
                     let command = AddLayerCommand(layerViewModel: viewModel)
                     commandManager.performCommand(command)
@@ -152,8 +152,8 @@ struct LayerPanel: View {
                     viewModel.duplicateLayer(at: viewModel.selectedLayerIndex)
                 }
             }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 8)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 6)
         }
         .frame(width: Constants.Layout.Panel.layerPanelWidth)
         .background(Constants.Theme.panelBackground)
@@ -179,8 +179,8 @@ struct LayerRow: View {
             // Visibility toggle
             Button(action: onToggleVisibility) {
                 Image(systemName: layer.isVisible ? "eye.fill" : "eye.slash")
-                    .font(.system(size: 10))
-                    .frame(width: 18, height: 18)
+                    .font(.system(size: 9))
+                    .frame(width: 16, height: 16)
                     .foregroundColor(layer.isVisible ? Constants.Theme.textPrimary : Constants.Theme.textDisabled)
             }
             .buttonStyle(.plain)
@@ -189,7 +189,7 @@ struct LayerRow: View {
             if isEditing {
                 TextField("Layer name", text: $editingName, onCommit: onEndEditing)
                     .textFieldStyle(.plain)
-                    .font(.system(size: 11, weight: .medium))
+                    .font(.system(size: 10, weight: .medium))
                     .foregroundColor(Constants.Theme.textPrimary)
                     .padding(.horizontal, 4)
                     .padding(.vertical, 2)
@@ -197,7 +197,7 @@ struct LayerRow: View {
                     .cornerRadius(2)
             } else {
                 Text(layer.name)
-                    .font(.system(size: 11, weight: .medium))
+                    .font(.system(size: 10, weight: .medium))
                     .foregroundColor(Constants.Theme.textPrimary)
                     .lineLimit(1)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -207,7 +207,7 @@ struct LayerRow: View {
             }
         }
         .padding(.horizontal, 8)
-        .padding(.vertical, 6)
+        .padding(.vertical, 5)
         .background(
             Rectangle()
                 .fill(isSelected ? Constants.Theme.accentBlue.opacity(0.2) : (isHovered ? Constants.Theme.hoverBackground : Constants.Theme.panelBackground))
@@ -247,15 +247,15 @@ struct LayerActionButton: View {
     var body: some View {
         Button(action: action) {
             Image(systemName: icon)
-                .font(.system(size: 11))
+                .font(.system(size: 10))
                 .frame(maxWidth: .infinity)
-                .frame(height: 28)
+                .frame(height: 24)
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .foregroundColor(disabled ? Constants.Theme.textDisabled : Constants.Theme.textPrimary)
         .background(
-            RoundedRectangle(cornerRadius: 2)
+            Rectangle()
                 .fill(disabled ? Constants.Theme.panelBackground : (isHovered ? Constants.Theme.hoverBackground : Constants.Theme.sectionBackground))
         )
         .disabled(disabled)

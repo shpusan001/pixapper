@@ -189,20 +189,24 @@ struct ContentView: View {
                 .frame(height: 1)
 
             VSplitView {
-                // Top section: Tool + Canvas + Properties
+                // Top section: Tool + Canvas + Color + Properties (모두 별도 열)
                 HSplitView {
-                    // Tool panel on the left (fixed width)
+                    // Tool panel on the left - Adobe style (narrow)
                     ToolPanel(viewModel: canvasViewModel, toolSettingsManager: toolSettingsManager)
-                        .frame(width: 50)
+                        .frame(width: 48)
 
                     // Canvas in the center
                     CanvasView(viewModel: canvasViewModel, timelineViewModel: timelineViewModel)
                         .frame(minWidth: 400)
                         .background(Constants.Theme.backgroundDark)
 
-                    // Properties panel on the right
+                    // Color panel - 독립 열 (좁게)
+                    ColorPanel(colorManager: toolSettingsManager.colorManager)
+                        .frame(minWidth: 140, idealWidth: 160, maxWidth: 200)
+
+                    // Properties panel - 독립 열
                     PropertiesPanel(toolSettingsManager: toolSettingsManager, viewModel: canvasViewModel)
-                        .frame(minWidth: 200, idealWidth: 240, maxWidth: 300)
+                        .frame(minWidth: 180, idealWidth: 220, maxWidth: 280)
                 }
 
                 // Timeline panel at the bottom

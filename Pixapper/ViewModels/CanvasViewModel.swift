@@ -68,6 +68,7 @@ class CanvasViewModel: ObservableObject {
     @Published var originalRect: CGRect?
     @Published var selectionMode: SelectionTool.SelectionMode = .idle
     @Published var hoveredHandle: SelectionTool.ResizeHandle?
+    @Published var freeformPath: [(x: Int, y: Int)] = []
 
     var isMovingSelection: Bool {
         if case .moving = selectionMode {

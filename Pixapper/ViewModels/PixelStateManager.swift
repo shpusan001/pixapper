@@ -90,6 +90,9 @@ class PixelStateManager: ObservableObject {
         pixels[y][x] = color
         currentFramePixels[layerId] = pixels
 
+        // Force UI update (SwiftUI doesn't always detect nested array changes)
+        objectWillChange.send()
+
         // Dirty tracking
         dirtyLayers.insert(layerId)
 
@@ -115,6 +118,9 @@ class PixelStateManager: ObservableObject {
 
         // 캐시 업데이트
         currentFramePixels[layerId] = pixels
+
+        // Force UI update (SwiftUI doesn't always detect nested array changes)
+        objectWillChange.send()
 
         // Dirty tracking
         dirtyLayers.insert(layerId)

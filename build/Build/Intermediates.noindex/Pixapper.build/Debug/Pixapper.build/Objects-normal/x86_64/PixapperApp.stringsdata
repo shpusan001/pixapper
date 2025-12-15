@@ -1,0 +1,40 @@
+{
+  "source": "/Users/sanghoon/Desktop/MacApps/Pixapper/Pixapper/Core/PixapperApp.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Cut",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 30
+        }
+      },
+      {
+        "comment": "",
+        "key": "Copy",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 36
+        }
+      },
+      {
+        "comment": "",
+        "key": "Paste",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 42
+        }
+      },
+      {
+        "comment": "",
+        "key": "Delete",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 50
+        }
+      }
+    ]
+  },
+  "version": 1
+}

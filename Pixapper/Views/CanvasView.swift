@@ -251,6 +251,17 @@ struct CanvasView: View {
 
     @ViewBuilder
     private func renderSelection(marginX: CGFloat, marginY: CGFloat) -> some View {
+        // Freeform path preview (while drawing)
+        if !viewModel.freeformPath.isEmpty && viewModel.selectionPixels == nil {
+            FreeformPathView(
+                path: viewModel.freeformPath,
+                pixelSize: pixelSize,
+                marginX: marginX,
+                marginY: marginY
+            )
+        }
+
+        // Selection rect and pixels
         if let selectionRect = viewModel.selectionRect {
             SelectionRectView(
                 rect: selectionRect,
@@ -708,6 +719,53 @@ struct OnionSkinLayerView: View {
                         context.fill(Path(rect), with: .color(tint.opacity(opacity * 0.3)))
                     }
                 }
+            }
+        }
+    }
+}
+
+struct FreeformPathView: View {
+    let path: [(x: Int, y: Int)]
+    let pixelSize: CGFloat
+    let marginX: CGFloat
+    let marginY: CGFloat
+
+    var body: some View {
+        Canvas { context, size in
+            guard path.count > 1 else { return }
+
+            // Draw the freeform path as connected lines
+            var linePath = Path()
+
+            for (index, point) in path.enumerated() {
+                let screenPoint = CGPoint(
+                    x: marginX + (CGFloat(point.x) + 0.5) * pixelSize,
+                    y: marginY + (CGFloat(point.y) + 0.5) * pixelSize
+                )
+
+                if index == 0 {
+                    linePath.move(to: screenPoint)
+                } else {
+                    linePath.addLine(to: screenPoint)
+                }
+            }
+
+            // Draw the path with accent color
+            context.stroke(
+                linePath,
+                with: .color(Color.accentColor),
+                style: StrokeStyle(lineWidth: 2.0, dash: [4, 2])
+            )
+
+            // Draw dots at each point for clarity
+            for point in path {
+                let dotRect = CGRect(
+                    x: marginX + (CGFloat(point.x) + 0.5) * pixelSize - 2,
+                    y: marginY + (CGFloat(point.y) + 0.5) * pixelSize - 2,
+                    width: 4,
+                    height: 4
+                )
+                context.fill(Path(ellipseIn: dotRect), with: .color(Color.accentColor))
             }
         }
     }

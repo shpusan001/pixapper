@@ -38,7 +38,14 @@ class SelectionTool: BaseTool, CanvasTool {
     private var clipboard: SelectionClipboard?
     private var shiftPressed: Bool = false
 
+    // Freeform selection state
+    private var freeformMask: [[Bool]]?
+
     // MARK: - State Accessors (CanvasViewModel의 상태에 접근)
+    private var freeformPath: [(x: Int, y: Int)] {
+        get { canvasViewModel?.freeformPath ?? [] }
+        set { canvasViewModel?.freeformPath = newValue }
+    }
     private var selectionRect: CGRect? {
         get { canvasViewModel?.selectionRect }
         set { canvasViewModel?.selectionRect = newValue }
@@ -130,8 +137,14 @@ class SelectionTool: BaseTool, CanvasTool {
             } else if selectionRect != nil {
                 clearSelection()
             }
-            // 새 선택 영역 시작점만 저장
+            // 새 선택 영역 시작
             shapeStartPoint = (x, y)
+
+            // Freeform 모드면 경로 추적 시작
+            if toolSettingsManager.selectionSettings.selectionType == .freeform {
+                freeformPath = []
+                freeformPath.append((x, y))
+            }
         }
     }
 
@@ -147,7 +160,13 @@ class SelectionTool: BaseTool, CanvasTool {
             if shapeStartPoint == nil {
                 hoveredHandle = getResizeHandle(x: x, y: y)
             } else {
-                updateSelectionRect(endX: x, endY: y)
+                // Freeform 모드일 때 경로 추적
+                if toolSettingsManager.selectionSettings.selectionType == .freeform {
+                    updateFreeformPath(x: x, y: y)
+                } else {
+                    // Rectangle 모드
+                    updateSelectionRect(endX: x, endY: y)
+                }
             }
         }
     }
@@ -165,12 +184,18 @@ class SelectionTool: BaseTool, CanvasTool {
             if let start = shapeStartPoint, start.x == x && start.y == y {
                 shapeStartPoint = nil
                 selectionRect = nil
+                freeformPath = []
                 return
             }
 
             // 선택 완료
             shapeStartPoint = nil
-            captureSelection()
+
+            if toolSettingsManager.selectionSettings.selectionType == .freeform {
+                captureFreeformSelection()
+            } else {
+                captureSelection()
+            }
         }
     }
 
@@ -325,6 +350,8 @@ class SelectionTool: BaseTool, CanvasTool {
         selectionOffset = .zero
         isFloatingSelection = false
         selectionMode = .idle
+        freeformPath = []
+        freeformMask = nil
     }
 
     /// 선택 상태를 복원 (undo/redo 지원)
@@ -1112,6 +1139,182 @@ class SelectionTool: BaseTool, CanvasTool {
         }
 
         return (cropped, (minX, minY))
+    }
+
+    // MARK: - Freeform Selection
+
+    /// Freeform 경로를 업데이트합니다 (드래그 중)
+    private func updateFreeformPath(x: Int, y: Int) {
+        guard let canvas = canvasViewModel else { return }
+
+        // 이전 점과 현재 점 사이를 브레센햄 알고리즘으로 채움
+        if let last = lastDrawPoint {
+            let points = bresenhamLine(x0: last.x, y0: last.y, x1: x, y1: y)
+            for point in points {
+                if point.x >= 0 && point.x < canvas.canvas.width &&
+                   point.y >= 0 && point.y < canvas.canvas.height {
+                    freeformPath.append(point)
+                }
+            }
+        } else {
+            // 첫 점
+            if x >= 0 && x < canvas.canvas.width &&
+               y >= 0 && y < canvas.canvas.height {
+                freeformPath.append((x, y))
+            }
+        }
+
+        lastDrawPoint = (x, y)
+
+        // 경로의 bounding box 계산
+        if freeformPath.count > 0 {
+            var minX = Int.max
+            var maxX = Int.min
+            var minY = Int.max
+            var maxY = Int.min
+
+            for point in freeformPath {
+                minX = min(minX, point.x)
+                maxX = max(maxX, point.x)
+                minY = min(minY, point.y)
+                maxY = max(maxY, point.y)
+            }
+
+            selectionRect = CGRect(
+                x: minX,
+                y: minY,
+                width: maxX - minX + 1,
+                height: maxY - minY + 1
+            )
+        }
+    }
+
+    /// Freeform 선택을 캡처합니다
+    private func captureFreeformSelection() {
+        guard let rect = selectionRect,
+              freeformPath.count > 0,
+              currentLayerIndex < layerViewModel.layers.count else {
+            selectionPixels = nil
+            originalPixels = nil
+            freeformPath = []
+            return
+        }
+
+        // 이미 floating 상태면 중복 호출 방지
+        guard !isFloatingSelection else { return }
+
+        let startX = Int(rect.minX)
+        let startY = Int(rect.minY)
+        let width = Int(rect.width)
+        let height = Int(rect.height)
+
+        // 선택된 픽셀만 마스크로 표시
+        var mask: [[Bool]] = Array(repeating: Array(repeating: false, count: width), count: height)
+        for point in freeformPath {
+            let x = point.x - startX
+            let y = point.y - startY
+            if x >= 0 && x < width && y >= 0 && y < height {
+                mask[y][x] = true
+            }
+        }
+
+        // 마스크된 영역의 픽셀 데이터 복사 및 레이어에서 제거
+        var pixels: [[Color?]] = Array(repeating: Array(repeating: nil, count: width), count: height)
+        var layerOldPixels: [PixelChange] = []
+        var layerNewPixels: [PixelChange] = []
+
+        let layerId = layerViewModel.layers[currentLayerIndex].id
+
+        for y in 0..<height {
+            for x in 0..<width {
+                if mask[y][x] {
+                    let pixelX = startX + x
+                    let pixelY = startY + y
+                    if let canvas = canvasViewModel,
+                       pixelX >= 0 && pixelX < canvas.canvas.width &&
+                       pixelY >= 0 && pixelY < canvas.canvas.height {
+                        let color = timelineViewModel?.getCurrentFramePixels(layerId: layerId)?[pixelY][pixelX]
+                        pixels[y][x] = color
+
+                        // 색칠된 픽셀만 제거
+                        if color != nil {
+                            layerOldPixels.append(PixelChange(x: pixelX, y: pixelY, color: color))
+                            layerNewPixels.append(PixelChange(x: pixelX, y: pixelY, color: nil))
+                        }
+                    }
+                }
+            }
+        }
+
+        // 레이어에서 픽셀 제거
+        for change in layerNewPixels {
+            timelineViewModel?.setPixel(layerId: layerId, x: change.x, y: change.y, color: change.color)
+        }
+
+        // 선택 상태 설정
+        selectionPixels = pixels
+        originalPixels = pixels
+        originalRect = rect
+        isFloatingSelection = true
+        freeformMask = mask
+
+        // Command 생성
+        if !layerOldPixels.isEmpty {
+            let command = SelectionCaptureCommand(
+                canvasViewModel: canvasViewModel!,
+                layerViewModel: layerViewModel,
+                timelineViewModel: timelineViewModel,
+                layerIndex: currentLayerIndex,
+                wasFloating: false,
+                oldRect: nil,
+                oldPixels: nil,
+                oldOriginalRect: nil,
+                oldOriginalPixels: nil,
+                newRect: rect,
+                newPixels: pixels,
+                layerOldPixels: layerOldPixels,
+                layerNewPixels: layerNewPixels
+            )
+            commandManager.addExecutedCommand(command)
+            timelineViewModel?.pixelStateManager?.syncToTimeline()
+        }
+
+        // 정리
+        freeformPath = []
+        lastDrawPoint = nil
+    }
+
+    /// 브레센햄 직선 알고리즘
+    private func bresenhamLine(x0: Int, y0: Int, x1: Int, y1: Int) -> [(x: Int, y: Int)] {
+        var points: [(x: Int, y: Int)] = []
+
+        let dx = abs(x1 - x0)
+        let dy = abs(y1 - y0)
+        let sx = x0 < x1 ? 1 : -1
+        let sy = y0 < y1 ? 1 : -1
+        var err = dx - dy
+        var x = x0
+        var y = y0
+
+        while true {
+            points.append((x, y))
+
+            if x == x1 && y == y1 {
+                break
+            }
+
+            let e2 = 2 * err
+            if e2 > -dy {
+                err -= dy
+                x += sx
+            }
+            if e2 < dx {
+                err += dx
+                y += sy
+            }
+        }
+
+        return points
     }
 }
 

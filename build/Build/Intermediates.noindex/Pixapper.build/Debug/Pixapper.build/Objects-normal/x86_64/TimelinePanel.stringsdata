@@ -1,0 +1,80 @@
+{
+  "source": "/Users/sanghoon/Desktop/MacApps/Pixapper/Pixapper/Views/TimelinePanel.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "LAYERS",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 83
+        }
+      },
+      {
+        "comment": "",
+        "key": "Copy",
+        "location": {
+          "startingColumn": 16,
+          "startingLine": 303
+        }
+      },
+      {
+        "comment": "",
+        "key": "Cut",
+        "location": {
+          "startingColumn": 16,
+          "startingLine": 308
+        }
+      },
+      {
+        "comment": "",
+        "key": "Paste",
+        "location": {
+          "startingColumn": 16,
+          "startingLine": 313
+        }
+      },
+      {
+        "comment": "",
+        "key": "Convert to Keyframe",
+        "location": {
+          "startingColumn": 16,
+          "startingLine": 321
+        }
+      },
+      {
+        "comment": "",
+        "key": "Add Keyframe with Current Drawing",
+        "location": {
+          "startingColumn": 16,
+          "startingLine": 327
+        }
+      },
+      {
+        "comment": "",
+        "key": "Add Blank Keyframe",
+        "location": {
+          "startingColumn": 16,
+          "startingLine": 337
+        }
+      },
+      {
+        "comment": "",
+        "key": "Extend Frame",
+        "location": {
+          "startingColumn": 16,
+          "startingLine": 351
+        }
+      },
+      {
+        "comment": "",
+        "key": "Delete Frame",
+        "location": {
+          "startingColumn": 16,
+          "startingLine": 362
+        }
+      }
+    ]
+  },
+  "version": 1
+}

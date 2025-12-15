@@ -7,46 +7,46 @@
 
 import SwiftUI
 
+/// Adobe 스타일 툴 패널 - 조밀하고 전문적
 struct ToolPanel: View {
     @ObservedObject var viewModel: CanvasViewModel
     @ObservedObject var toolSettingsManager: ToolSettingsManager
 
     var body: some View {
         VStack(spacing: 0) {
-            // Scrollable tools section
-            ScrollView {
-                VStack(spacing: 0) {
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: 2) {
                     // Draw tools
-                    VStack(spacing: 0) {
-                        ToolIconButton(
+                    VStack(spacing: 2) {
+                        AdobeToolButton(
                             icon: "pencil",
                             tooltip: "Pencil (B)",
                             isSelected: toolSettingsManager.selectedTool == .pencil,
                             action: { toolSettingsManager.selectTool(.pencil) }
                         )
 
-                        ToolIconButton(
+                        AdobeToolButton(
                             icon: "eraser",
                             tooltip: "Eraser (E)",
                             isSelected: toolSettingsManager.selectedTool == .eraser,
                             action: { toolSettingsManager.selectTool(.eraser) }
                         )
 
-                        ToolIconButton(
+                        AdobeToolButton(
                             icon: "paintbrush.fill",
                             tooltip: "Fill (G)",
                             isSelected: toolSettingsManager.selectedTool == .fill,
                             action: { toolSettingsManager.selectTool(.fill) }
                         )
 
-                        ToolIconButton(
+                        AdobeToolButton(
                             icon: "square.lefthalf.filled",
                             tooltip: "Mirror (M)",
                             isSelected: toolSettingsManager.selectedTool == .mirror,
                             action: { toolSettingsManager.selectTool(.mirror) }
                         )
 
-                        ToolIconButton(
+                        AdobeToolButton(
                             icon: "circle.grid.cross",
                             tooltip: "Dithering (D)",
                             isSelected: toolSettingsManager.selectedTool == .dithering,
@@ -60,22 +60,22 @@ struct ToolPanel: View {
                         .padding(.vertical, 4)
 
                     // Shape tools
-                    VStack(spacing: 0) {
-                        ToolIconButton(
+                    VStack(spacing: 2) {
+                        AdobeToolButton(
                             icon: "rectangle",
                             tooltip: "Rectangle (U)",
                             isSelected: toolSettingsManager.selectedTool == .rectangle,
                             action: { toolSettingsManager.selectTool(.rectangle) }
                         )
 
-                        ToolIconButton(
+                        AdobeToolButton(
                             icon: "circle",
                             tooltip: "Circle (O)",
                             isSelected: toolSettingsManager.selectedTool == .circle,
                             action: { toolSettingsManager.selectTool(.circle) }
                         )
 
-                        ToolIconButton(
+                        AdobeToolButton(
                             icon: "line.diagonal",
                             tooltip: "Line (L)",
                             isSelected: toolSettingsManager.selectedTool == .line,
@@ -89,8 +89,8 @@ struct ToolPanel: View {
                         .padding(.vertical, 4)
 
                     // Selection tool
-                    VStack(spacing: 0) {
-                        ToolIconButton(
+                    VStack(spacing: 2) {
+                        AdobeToolButton(
                             icon: "selection.pin.in.out",
                             tooltip: "Selection (V)",
                             isSelected: toolSettingsManager.selectedTool == .selection,
@@ -98,50 +98,50 @@ struct ToolPanel: View {
                         )
                     }
                 }
-                .frame(width: 50)
+                .padding(.vertical, 6)
             }
-
-            // Color swatch (항상 하단에 고정)
-            CompactColorSwatchView(colorManager: toolSettingsManager.colorManager)
-                .padding(.bottom, 10)
         }
-        .frame(width: 50)
+        .frame(width: 48)
         .background(Constants.Theme.panelBackground)
     }
 }
 
-// Adobe-style icon-only tool button
-struct ToolIconButton: View {
+// MARK: - Adobe Style Tool Button
+struct AdobeToolButton: View {
     let icon: String
     let tooltip: String
     let isSelected: Bool
     let action: () -> Void
 
+    @State private var isHovered = false
+
     var body: some View {
         Button(action: action) {
-            Image(systemName: icon)
-                .font(.system(size: 18))
-                .frame(width: 50, height: 40)
-                .contentShape(Rectangle())
+            ZStack {
+                // Background
+                if isSelected {
+                    Rectangle()
+                        .fill(Constants.Theme.sectionBackground)
+                } else if isHovered {
+                    Rectangle()
+                        .fill(Constants.Theme.hoverBackground)
+                }
+
+                Image(systemName: icon)
+                    .font(.system(size: 16, weight: .regular))
+                    .foregroundColor(isSelected ? Constants.Theme.textPrimary : Constants.Theme.textSecondary)
+            }
+            .frame(width: 48, height: 36)
         }
         .buttonStyle(.plain)
-        .background(
-            Rectangle()
-                .fill(isSelected ? Constants.Theme.sectionBackground : Color.clear)
-        )
-        .overlay(
-            Rectangle()
-                .fill(isSelected ? Constants.Theme.accentBlue : Color.clear)
-                .frame(width: 2)
-            , alignment: .leading
-        )
-        .foregroundColor(isSelected ? Constants.Theme.accentBlue : Constants.Theme.textSecondary)
         .help(tooltip)
-        .hoverEffect(cornerRadius: 0)
+        .onHover { hovering in
+            isHovered = hovering
+        }
     }
 }
 
-// MARK: - Canvas Size Sheet
+// MARK: - Canvas Size Sheet (Adobe Style)
 
 struct CanvasSizeSheet: View {
     @ObservedObject var viewModel: CanvasViewModel
@@ -151,61 +151,76 @@ struct CanvasSizeSheet: View {
     @State private var height: String = ""
 
     var body: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 0) {
             // Header
-            Text("Resize Canvas")
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundColor(Constants.Theme.textPrimary)
-                .frame(maxWidth: .infinity, alignment: .leading)
+            HStack {
+                Text("RESIZE CANVAS")
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundColor(Constants.Theme.textPrimary)
+                Spacer()
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+            .background(Constants.Theme.sectionBackground)
 
-            VStack(alignment: .leading, spacing: 10) {
+            Rectangle()
+                .fill(Constants.Theme.divider)
+                .frame(height: 1)
+
+            VStack(alignment: .leading, spacing: 8) {
                 // Width
                 HStack(spacing: 8) {
                     Text("Width:")
-                        .font(.system(size: 11))
+                        .font(.system(size: 10))
                         .foregroundColor(Constants.Theme.textSecondary)
-                        .frame(width: 55, alignment: .leading)
+                        .frame(width: 50, alignment: .leading)
                     TextField("Width", text: $width)
                         .textFieldStyle(.plain)
-                        .padding(6)
+                        .font(.system(size: 10))
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 5)
                         .background(Constants.Theme.sectionBackground)
                         .cornerRadius(2)
-                        .frame(width: 80)
+                        .frame(width: 70)
                     Text("px")
-                        .font(.system(size: 11))
+                        .font(.system(size: 10))
                         .foregroundColor(Constants.Theme.textSecondary)
                 }
 
                 // Height
                 HStack(spacing: 8) {
                     Text("Height:")
-                        .font(.system(size: 11))
+                        .font(.system(size: 10))
                         .foregroundColor(Constants.Theme.textSecondary)
-                        .frame(width: 55, alignment: .leading)
+                        .frame(width: 50, alignment: .leading)
                     TextField("Height", text: $height)
                         .textFieldStyle(.plain)
-                        .padding(6)
+                        .font(.system(size: 10))
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 5)
                         .background(Constants.Theme.sectionBackground)
                         .cornerRadius(2)
-                        .frame(width: 80)
+                        .frame(width: 70)
                     Text("px")
-                        .font(.system(size: 11))
+                        .font(.system(size: 10))
                         .foregroundColor(Constants.Theme.textSecondary)
                 }
             }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 12)
 
             Rectangle()
                 .fill(Constants.Theme.divider)
                 .frame(height: 1)
-                .padding(.vertical, 4)
 
             // Buttons
-            HStack(spacing: 8) {
+            HStack(spacing: 6) {
                 Spacer()
                 Button("Cancel") {
                     dismiss()
                 }
                 .buttonStyle(.plain)
+                .font(.system(size: 10))
                 .padding(.horizontal, 12)
                 .padding(.vertical, 6)
                 .background(Constants.Theme.sectionBackground)
@@ -219,7 +234,6 @@ struct CanvasSizeSheet: View {
                         let oldWidth = viewModel.canvas.width
                         let oldHeight = viewModel.canvas.height
 
-                        // CommandManager가 있으면 Command로 실행
                         if let commandManager = commandManager {
                             let command = ResizeCanvasCommand(
                                 canvasViewModel: viewModel,
@@ -230,13 +244,13 @@ struct CanvasSizeSheet: View {
                             )
                             commandManager.performCommand(command)
                         } else {
-                            // CommandManager가 없으면 직접 실행 (fallback)
                             viewModel.resizeCanvas(width: w, height: h)
                         }
                         dismiss()
                     }
                 }
                 .buttonStyle(.plain)
+                .font(.system(size: 10))
                 .padding(.horizontal, 12)
                 .padding(.vertical, 6)
                 .background(isValid ? Constants.Theme.accentBlue : Constants.Theme.sectionBackground)
@@ -245,9 +259,10 @@ struct CanvasSizeSheet: View {
                 .keyboardShortcut(.defaultAction)
                 .disabled(!isValid)
             }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
         }
-        .padding(20)
-        .frame(width: 280)
+        .frame(width: 240)
         .background(Constants.Theme.panelBackground)
         .onAppear {
             width = "\(viewModel.canvas.width)"
