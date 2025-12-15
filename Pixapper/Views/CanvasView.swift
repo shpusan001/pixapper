@@ -13,6 +13,7 @@ struct CanvasView: View {
     @State private var isDragging = false
     @State private var eventMonitor: Any?
     @State private var dragMonitor: Any?
+    @State private var scrollMonitor: Any?
     @State private var canvasGlobalFrame: CGRect = .zero
     @State private var currentMarginX: CGFloat = 0
     @State private var currentMarginY: CGFloat = 0
@@ -464,10 +465,25 @@ struct CanvasView: View {
             viewModel.shiftPressed = event.modifierFlags.contains(.shift)
             return event
         }
+
+        // Command + Scroll로 줌 조정
+        scrollMonitor = NSEvent.addLocalMonitorForEvents(matching: .scrollWheel) { event in
+            if event.modifierFlags.contains(.command) {
+                let delta = event.scrollingDeltaY
+                let zoomChange = delta * 10.0 // 스크롤 감도 조정
+                let newZoom = viewModel.zoomLevel + zoomChange
+                viewModel.zoomLevel = max(100, min(1600, newZoom))
+                return nil // 이벤트 소비 (스크롤 방지)
+            }
+            return event // 일반 스크롤은 그대로 전달
+        }
     }
 
     private func cleanupEventMonitor() {
         if let monitor = eventMonitor {
+            NSEvent.removeMonitor(monitor)
+        }
+        if let monitor = scrollMonitor {
             NSEvent.removeMonitor(monitor)
         }
     }
@@ -541,7 +557,8 @@ struct GridLinesView: View {
 
     var body: some View {
         Canvas { context, size in
-            let gridColor = Color(nsColor: .tertiaryLabelColor).opacity(0.4)
+            // 더 선명한 격자 색상 (밝은 회색)
+            let gridColor = Color.gray.opacity(0.5)
             var path = Path()
 
             for x in 0...width {

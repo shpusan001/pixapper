@@ -33,7 +33,6 @@ class CanvasViewModel: ObservableObject {
     // MARK: - View Toggle Methods
 
     func toggleGrid() {
-        objectWillChange.send()
         showGrid.toggle()
     }
 

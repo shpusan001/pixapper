@@ -69,7 +69,7 @@ struct PropertiesPanel: View {
             VStack(alignment: .leading, spacing: 16) {
                 // Primary/Secondary color swatch
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("CURRENT")
+                    Text("Current")
                         .font(.system(size: 10, weight: .medium))
                         .foregroundColor(Constants.Theme.textSecondary)
 
@@ -86,7 +86,7 @@ struct PropertiesPanel: View {
 
                 // Recent colors
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("RECENT")
+                    Text("Recent")
                         .font(.system(size: 10, weight: .medium))
                         .foregroundColor(Constants.Theme.textSecondary)
 

@@ -22,7 +22,7 @@ struct ColorPaletteView: View {
         VStack(alignment: .leading, spacing: 8) {
             // Header
             HStack {
-                Text("PALETTE")
+                Text("Palette")
                     .font(.system(size: 10, weight: .medium))
                     .foregroundColor(Constants.Theme.textSecondary)
 
@@ -47,7 +47,6 @@ struct ColorPaletteView: View {
 
                     // Add color button
                     Button(action: {
-                        print("+ 버튼 클릭됨, primaryColor: \(colorManager.primaryColor)")
                         colorManager.palette.append(colorManager.primaryColor)
                     }) {
                         Image(systemName: "plus")
