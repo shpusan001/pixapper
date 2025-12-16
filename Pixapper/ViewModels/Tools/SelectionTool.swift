@@ -40,6 +40,10 @@ class SelectionTool: BaseTool, CanvasTool {
     private var clipboard: SelectionClipboard?
     private var shiftPressed: Bool = false
 
+    // 누적 변환 상태 (originalPixels 기준)
+    private var accumulatedRotation: Double = 0  // 누적 회전 각도
+    private var accumulatedScale: CGSize = CGSize(width: 1.0, height: 1.0)  // 누적 스케일
+
     // MARK: - State Accessors (CanvasViewModel의 상태에 접근)
     private var freeformPath: [(x: Int, y: Int)] {
         get { canvasViewModel?.freeformPath ?? [] }
@@ -343,6 +347,10 @@ class SelectionTool: BaseTool, CanvasTool {
         isFloatingSelection = true
         freeformMask = mask
 
+        // 변환 상태 초기화 (새 캡처)
+        accumulatedRotation = 0
+        accumulatedScale = CGSize(width: 1.0, height: 1.0)
+
         // 5. Command 생성
         if !layerOldPixels.isEmpty {
             let command = SelectionCaptureCommand(
@@ -378,6 +386,10 @@ class SelectionTool: BaseTool, CanvasTool {
         selectionMode = .idle
         freeformPath = []
         freeformMask = nil
+
+        // 변환 상태 초기화
+        accumulatedRotation = 0
+        accumulatedScale = CGSize(width: 1.0, height: 1.0)
     }
 
     /// 선택 상태를 복원 (undo/redo 지원)
@@ -539,12 +551,16 @@ class SelectionTool: BaseTool, CanvasTool {
             originalPixels = pixels
             originalRect = rect
         }
+
+        // 현재 회전 각도 유지 (회전 후 크기 조절하는 경우 대비)
+        // accumulatedRotation은 이미 updateSelectionRotation에서 설정되어 있음
     }
 
     private func updateSelectionResize(handle: ResizeHandle, to point: (x: Int, y: Int)) {
         guard let startRect = resizeStartRect,
               let last = lastDrawPoint,
-              let origPixels = originalPixels else { return }
+              let origPixels = originalPixels,
+              let origRect = originalRect else { return }
 
         let dx = point.x - last.x
         let dy = point.y - last.y
@@ -614,14 +630,36 @@ class SelectionTool: BaseTool, CanvasTool {
 
         selectionRect = newRect
 
-        // 실시간 스케일링
-        let newWidth = Int(newRect.width)
-        let newHeight = Int(newRect.height)
-        let scaledPixels = scalePixels(origPixels, toWidth: newWidth, toHeight: newHeight)
-        selectionPixels = scaledPixels
+        // === 품질 유지: 항상 originalPixels 기준으로 변환 ===
 
-        // 마스크도 스케일링 후 재생성
-        freeformMask = createMaskFromPixels(scaledPixels)
+        // 1. 회전 후 바운딩 박스 크기 계산
+        let rotatedBoundingBox = calculateRotatedBoundingBox(
+            width: origRect.width,
+            height: origRect.height,
+            angle: accumulatedRotation
+        )
+
+        // 2. 스케일 비율 계산 (회전된 바운딩 박스 기준)
+        let scaleX = newRect.width / rotatedBoundingBox.width
+        let scaleY = newRect.height / rotatedBoundingBox.height
+
+        // 3. originalPixels에 스케일 적용
+        let targetWidth = Int(origRect.width * scaleX)
+        let targetHeight = Int(origRect.height * scaleY)
+        let scaledPixels = scalePixels(origPixels, toWidth: targetWidth, toHeight: targetHeight)
+
+        // 4. 스케일된 픽셀을 회전
+        let transformedPixels: [[Color?]]
+        if abs(accumulatedRotation) > 0.001 {
+            transformedPixels = rotatePixelsByAngle(scaledPixels, angle: accumulatedRotation)
+        } else {
+            transformedPixels = scaledPixels
+        }
+
+        selectionPixels = transformedPixels
+
+        // 마스크 재생성
+        freeformMask = createMaskFromPixels(transformedPixels)
     }
 
     private func commitSelectionResize() {
@@ -651,6 +689,14 @@ class SelectionTool: BaseTool, CanvasTool {
             )
             commandManager.addExecutedCommand(command)
         }
+
+        // 변환 커밋: 현재 결과를 새로운 원본으로 설정
+        originalPixels = newPixels
+        originalRect = newRect
+
+        // 변환 상태 초기화
+        accumulatedRotation = 0
+        accumulatedScale = CGSize(width: 1.0, height: 1.0)
 
         selectionMode = .idle
         resizeStartRect = nil
@@ -683,11 +729,19 @@ class SelectionTool: BaseTool, CanvasTool {
             originalPixels = pixels
             originalRect = rect
         }
+
+        // 현재 스케일 저장 (크기 조절 후 회전하는 경우 대비)
+        if let origRect = originalRect {
+            accumulatedScale = CGSize(
+                width: rect.width / origRect.width,
+                height: rect.height / origRect.height
+            )
+        }
     }
 
     private func updateSelectionRotation(to point: (x: Int, y: Int)) {
         guard let rect = selectionRect,
-              let origPixels = rotateStartPixels else { return }
+              let origPixels = originalPixels else { return }
 
         let centerX = rect.midX
         let centerY = rect.midY
@@ -703,7 +757,20 @@ class SelectionTool: BaseTool, CanvasTool {
             angle = snappedDegrees * .pi / 180.0
         }
 
-        let rotatedPixels = rotatePixelsByAngle(origPixels, angle: angle)
+        // === 품질 유지: 항상 originalPixels 기준으로 변환 ===
+
+        // 1. originalPixels를 스케일 (크기 조절 후 회전하는 경우)
+        let scaledPixels: [[Color?]]
+        if abs(accumulatedScale.width - 1.0) > 0.001 || abs(accumulatedScale.height - 1.0) > 0.001 {
+            let targetWidth = Int(Double(origPixels[0].count) * accumulatedScale.width)
+            let targetHeight = Int(Double(origPixels.count) * accumulatedScale.height)
+            scaledPixels = scalePixels(origPixels, toWidth: targetWidth, toHeight: targetHeight)
+        } else {
+            scaledPixels = origPixels
+        }
+
+        // 2. 스케일된 픽셀을 회전
+        let rotatedPixels = rotatePixelsByAngle(scaledPixels, angle: angle)
 
         let newHeight = rotatedPixels.count
         let newWidth = rotatedPixels.isEmpty ? 0 : rotatedPixels[0].count
@@ -720,6 +787,9 @@ class SelectionTool: BaseTool, CanvasTool {
 
         // 회전 후 마스크 재생성
         freeformMask = createMaskFromPixels(rotatedPixels)
+
+        // 누적 회전 각도 저장
+        accumulatedRotation = angle
     }
 
     private func commitSelectionRotation() {
@@ -759,6 +829,14 @@ class SelectionTool: BaseTool, CanvasTool {
             )
             commandManager.addExecutedCommand(command)
         }
+
+        // 변환 커밋: 현재 결과를 새로운 원본으로 설정
+        originalPixels = newPixels
+        originalRect = newRect
+
+        // 변환 상태 초기화
+        accumulatedRotation = 0
+        accumulatedScale = CGSize(width: 1.0, height: 1.0)
 
         selectionMode = .idle
         rotateStartPixels = nil
@@ -1253,6 +1331,42 @@ class SelectionTool: BaseTool, CanvasTool {
         }
 
         return (cropped, (minX, minY))
+    }
+
+    /// 회전 후 바운딩 박스 크기 계산
+    private func calculateRotatedBoundingBox(width: CGFloat, height: CGFloat, angle: Double) -> CGSize {
+        if abs(angle) < 0.001 {
+            return CGSize(width: width, height: height)
+        }
+
+        let corners = [
+            (0.0, 0.0),
+            (Double(width), 0.0),
+            (0.0, Double(height)),
+            (Double(width), Double(height))
+        ]
+
+        let pivotX = Double(width) / 2.0
+        let pivotY = Double(height) / 2.0
+
+        var minX = Double.infinity
+        var maxX = -Double.infinity
+        var minY = Double.infinity
+        var maxY = -Double.infinity
+
+        for (x, y) in corners {
+            let dx = x - pivotX
+            let dy = y - pivotY
+            let rotatedX = dx * cos(angle) - dy * sin(angle)
+            let rotatedY = dx * sin(angle) + dy * cos(angle)
+
+            minX = min(minX, rotatedX)
+            maxX = max(maxX, rotatedX)
+            minY = min(minY, rotatedY)
+            maxY = max(maxY, rotatedY)
+        }
+
+        return CGSize(width: maxX - minX, height: maxY - minY)
     }
 
     // MARK: - Freeform Selection
