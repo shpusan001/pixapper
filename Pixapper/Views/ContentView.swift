@@ -210,7 +210,7 @@ struct ContentView: View {
                 }
 
                 // Timeline panel at the bottom
-                TimelinePanel(viewModel: timelineViewModel, commandManager: commandManager)
+                TimelinePanelNew(viewModel: timelineViewModel, commandManager: commandManager)
                     .frame(minHeight: 150, idealHeight: 250, maxHeight: 500)
             }
         }
