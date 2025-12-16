@@ -7,6 +7,39 @@
 //
 
 import SwiftUI
+import AppKit
+
+// MARK: - Frame Click Handler NSView
+
+struct FrameClickHandler: NSViewRepresentable {
+    let frameIndex: Int
+    let layerIndex: Int
+    let onClick: (Int, Int, NSEvent.ModifierFlags) -> Void
+
+    func makeNSView(context: Context) -> FrameClickNSView {
+        let view = FrameClickNSView()
+        view.frameIndex = frameIndex
+        view.layerIndex = layerIndex
+        view.onClick = onClick
+        return view
+    }
+
+    func updateNSView(_ nsView: FrameClickNSView, context: Context) {
+        nsView.frameIndex = frameIndex
+        nsView.layerIndex = layerIndex
+        nsView.onClick = onClick
+    }
+}
+
+class FrameClickNSView: NSView {
+    var frameIndex: Int = 0
+    var layerIndex: Int = 0
+    var onClick: ((Int, Int, NSEvent.ModifierFlags) -> Void)?
+
+    override func mouseDown(with event: NSEvent) {
+        onClick?(frameIndex, layerIndex, event.modifierFlags)
+    }
+}
 
 // MARK: - Scroll Offset Preference Key
 
@@ -258,8 +291,8 @@ struct TimelinePanelNew: View {
     }
 
     private func frameCellView(layer: Layer, layerIndex: Int, frameIndex: Int) -> some View {
-        let isSelected = frameIndex == viewModel.currentFrameIndex &&
-                        layerIndex == viewModel.layerViewModel.selectedLayerIndex
+        let isMultiSelected = viewModel.selectedFrameIndices.contains(frameIndex) &&
+                             layerIndex == viewModel.layerViewModel.selectedLayerIndex
         let spanPosition = viewModel.getFrameSpanPosition(frameIndex: frameIndex, layerId: layer.id)
         let hasContent = viewModel.hasFrameContent(frameIndex: frameIndex, layerId: layer.id)
         let effectivePixels = viewModel.getEffectivePixels(frameIndex: frameIndex, layerId: layer.id)
@@ -267,6 +300,11 @@ struct TimelinePanelNew: View {
         return ZStack {
             // Background
             cellBackground(spanPosition: spanPosition, hasContent: hasContent)
+
+            // Multi-selection background
+            if isMultiSelected {
+                Constants.Theme.accentBlue.opacity(0.15)
+            }
 
             // Thumbnail for keyframes with content
             if spanPosition == .keyframeStart && hasContent, let pixels = effectivePixels {
@@ -290,14 +328,104 @@ struct TimelinePanelNew: View {
                 .strokeBorder(Constants.Theme.divider.opacity(0.3), lineWidth: 0.5)
         )
         .overlay(
-            // Selection border
+            // Multi-selection border (blue)
             RoundedRectangle(cornerRadius: 1)
-                .strokeBorder(Constants.Theme.accentBlue, lineWidth: isSelected ? 2 : 0)
+                .strokeBorder(Constants.Theme.accentBlue, lineWidth: isMultiSelected ? 2 : 0)
+        )
+        .overlay(
+            FrameClickHandler(
+                frameIndex: frameIndex,
+                layerIndex: layerIndex,
+                onClick: { fIndex, lIndex, modifiers in
+                    handleFrameClick(frameIndex: fIndex, layerIndex: lIndex, modifiers: modifiers)
+                }
+            )
         )
         .contentShape(Rectangle())
-        .onTapGesture {
-            viewModel.selectFrame(at: frameIndex)
-            viewModel.layerViewModel.selectedLayerIndex = layerIndex
+        .contextMenu {
+            frameContextMenu(frameIndex: frameIndex, layerId: layer.id)
+        }
+    }
+
+    // MARK: - Selection Handlers
+
+    private func handleFrameClick(frameIndex: Int, layerIndex: Int, modifiers: NSEvent.ModifierFlags) {
+        viewModel.layerViewModel.selectedLayerIndex = layerIndex
+
+        if modifiers.contains(.command) {
+            // Cmd+클릭: 토글 선택
+            if viewModel.selectedFrameIndices.contains(frameIndex) {
+                viewModel.selectedFrameIndices.remove(frameIndex)
+                if viewModel.selectedFrameIndices.isEmpty {
+                    viewModel.selectionAnchor = nil
+                }
+            } else {
+                viewModel.selectedFrameIndices.insert(frameIndex)
+                viewModel.selectionAnchor = frameIndex
+                viewModel.currentFrameIndex = frameIndex
+                viewModel.loadFrame(at: frameIndex)
+            }
+        } else if modifiers.contains(.shift) {
+            // Shift+클릭: 범위 선택
+            let anchor = viewModel.selectionAnchor ?? viewModel.currentFrameIndex
+            let range = min(anchor, frameIndex)...max(anchor, frameIndex)
+            viewModel.selectedFrameIndices = Set(range)
+            viewModel.currentFrameIndex = frameIndex
+            viewModel.loadFrame(at: frameIndex)
+        } else {
+            // 일반 클릭: 단일 선택
+            viewModel.selectedFrameIndices = [frameIndex]
+            viewModel.selectionAnchor = frameIndex
+            viewModel.currentFrameIndex = frameIndex
+            viewModel.loadFrame(at: frameIndex)
+        }
+    }
+
+    @ViewBuilder
+    private func frameContextMenu(frameIndex: Int, layerId: UUID) -> some View {
+        let selectedIndices = viewModel.selectedFrameIndices.isEmpty ? [frameIndex] : viewModel.selectedFrameIndices
+
+        Button("Copy") {
+            viewModel.copyFrames(frameIndices: selectedIndices, layerId: layerId)
+        }
+        .keyboardShortcut("c", modifiers: .command)
+
+        Button("Paste") {
+            let command = PasteFramesCommand(
+                timelineViewModel: viewModel,
+                startIndex: frameIndex,
+                layerId: layerId
+            )
+            commandManager.performCommand(command)
+        }
+        .keyboardShortcut("v", modifiers: .command)
+        .disabled(viewModel.frameClipboard.isEmpty)
+
+        Button("Cut") {
+            let command = CutFramesCommand(
+                timelineViewModel: viewModel,
+                frameIndices: selectedIndices,
+                layerId: layerId
+            )
+            commandManager.performCommand(command)
+        }
+        .keyboardShortcut("x", modifiers: .command)
+
+        Divider()
+
+        Button("Delete", role: .destructive) {
+            // 선택된 프레임 삭제 로직
+            for index in selectedIndices.sorted(by: >) {
+                if viewModel.layerViewModel.layers.first(where: { $0.id == layerId })?.timeline.isKeyframe(at: index) == true {
+                    let command = DeleteFrameInLayerCommand(
+                        timelineViewModel: viewModel,
+                        index: index,
+                        layerId: layerId
+                    )
+                    commandManager.performCommand(command)
+                }
+            }
+            viewModel.selectedFrameIndices.removeAll()
         }
     }
 

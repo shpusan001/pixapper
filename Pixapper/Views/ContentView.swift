@@ -329,6 +329,32 @@ struct ContentView: View {
                 timelineViewModel.toggleOnionSkin()
                 return .handled
             }
+            // Frame Copy/Paste/Cut (when frames are selected)
+            else if keyPress.characters == "c" && keyPress.modifiers.contains(.command) && !timelineViewModel.selectedFrameIndices.isEmpty {
+                let layerId = timelineViewModel.layerViewModel.layers[timelineViewModel.layerViewModel.selectedLayerIndex].id
+                timelineViewModel.copyFrames(frameIndices: timelineViewModel.selectedFrameIndices, layerId: layerId)
+                return .handled
+            }
+            else if keyPress.characters == "v" && keyPress.modifiers.contains(.command) && !timelineViewModel.frameClipboard.isEmpty {
+                let layerId = timelineViewModel.layerViewModel.layers[timelineViewModel.layerViewModel.selectedLayerIndex].id
+                let command = PasteFramesCommand(
+                    timelineViewModel: timelineViewModel,
+                    startIndex: timelineViewModel.currentFrameIndex,
+                    layerId: layerId
+                )
+                commandManager.performCommand(command)
+                return .handled
+            }
+            else if keyPress.characters == "x" && keyPress.modifiers.contains(.command) && !timelineViewModel.selectedFrameIndices.isEmpty {
+                let layerId = timelineViewModel.layerViewModel.layers[timelineViewModel.layerViewModel.selectedLayerIndex].id
+                let command = CutFramesCommand(
+                    timelineViewModel: timelineViewModel,
+                    frameIndices: timelineViewModel.selectedFrameIndices,
+                    layerId: layerId
+                )
+                commandManager.performCommand(command)
+                return .handled
+            }
             return .ignored
         }
         .focusedValue(\.canvasViewModel, canvasViewModel)
