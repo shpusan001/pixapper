@@ -8,6 +8,16 @@
 
 import SwiftUI
 
+// MARK: - Scroll Offset Preference Key
+
+struct ScrollOffsetPreferenceKey: PreferenceKey {
+    static var defaultValue: CGPoint = .zero
+
+    static func reduce(value: inout CGPoint, nextValue: () -> CGPoint) {
+        value = nextValue()
+    }
+}
+
 struct TimelinePanelNew: View {
     @ObservedObject var viewModel: TimelineViewModel
     @ObservedObject var commandManager: CommandManager
@@ -16,6 +26,9 @@ struct TimelinePanelNew: View {
     @State private var layerColumnWidth: CGFloat = 200
     @State private var isDraggingSplitter: Bool = false
     @State private var splitterDragStart: CGFloat = 0
+    @State private var cellSize: CGFloat = Constants.Layout.Timeline.cellSize
+    @State private var horizontalScrollOffset: CGFloat = 0
+    @State private var verticalScrollOffset: CGFloat = 0
 
     // 기존 State
     @State private var editingLayerIndex: Int?
@@ -26,7 +39,8 @@ struct TimelinePanelNew: View {
     private let minLayerColumnWidth: CGFloat = 150
     private let maxLayerColumnWidth: CGFloat = 400
     private let splitterWidth: CGFloat = 1
-    private let cellSize: CGFloat = Constants.Layout.Timeline.cellSize
+    private let minCellSize: CGFloat = 24
+    private let maxCellSize: CGFloat = 96
     private let headerHeight: CGFloat = Constants.Layout.Timeline.rowHeight
 
     var body: some View {
@@ -34,13 +48,44 @@ struct TimelinePanelNew: View {
             divider
             PlaybackControlsView(viewModel: viewModel)
             divider
-            TimelineToolbarView(viewModel: viewModel, commandManager: commandManager)
+
+            // Toolbar with zoom control
+            HStack(spacing: 12) {
+                TimelineToolbarView(viewModel: viewModel, commandManager: commandManager)
+
+                Spacer()
+
+                // Zoom controls
+                zoomControls
+            }
+            .frame(height: headerHeight)
+            .padding(.horizontal, 10)
+            .background(Constants.Theme.sectionBackground)
+
             divider
 
             // 메인 타임라인 영역
             mainTimelineArea
         }
         .background(Constants.Theme.panelBackground)
+        .background(
+            // Keyboard shortcuts for zoom
+            VStack {
+                Button("") {
+                    cellSize = min(maxCellSize, cellSize + 8)
+                }
+                .keyboardShortcut("+", modifiers: .command)
+                .opacity(0)
+                .frame(width: 0, height: 0)
+
+                Button("") {
+                    cellSize = max(minCellSize, cellSize - 8)
+                }
+                .keyboardShortcut("-", modifiers: .command)
+                .opacity(0)
+                .frame(width: 0, height: 0)
+            }
+        )
     }
 
     // MARK: - Main Timeline Area
@@ -74,13 +119,14 @@ struct TimelinePanelNew: View {
                 .frame(maxWidth: .infinity)
                 .background(Constants.Theme.sectionBackground)
 
-            // 레이어 리스트
-            ScrollView(.vertical, showsIndicators: true) {
+            // 레이어 리스트 (스크롤 오프셋으로 동기화)
+            GeometryReader { geometry in
                 VStack(spacing: 0) {
                     ForEach(viewModel.layerViewModel.layers.indices.reversed(), id: \.self) { index in
                         layerInfoRow(index: index)
                     }
                 }
+                .offset(y: verticalScrollOffset)
             }
         }
         .background(Constants.Theme.panelBackground)
@@ -128,50 +174,84 @@ struct TimelinePanelNew: View {
 
     private var frameGrid: some View {
         VStack(spacing: 0) {
-            // 프레임 번호 헤더
-            frameHeaderRow
+            // 프레임 번호 헤더 (스크롤 오프셋으로 동기화)
+            GeometryReader { headerGeometry in
+                HStack(spacing: 0) {
+                    ForEach(viewModel.frames) { frame in
+                        Text("\(frame.index + 1)")
+                            .font(.system(size: 9, design: .monospaced))
+                            .foregroundColor(Constants.Theme.textSecondary)
+                            .frame(width: cellSize, height: headerHeight)
+                            .background(frame.index == viewModel.currentFrameIndex ?
+                                      Constants.Theme.accentBlue.opacity(0.2) :
+                                      Constants.Theme.sectionBackground)
+                            .contentShape(Rectangle())
+                            .onTapGesture {
+                                viewModel.selectFrame(at: frame.index)
+                            }
+                    }
+                }
+                .offset(x: horizontalScrollOffset)
+                .background(Constants.Theme.sectionBackground)
+            }
+            .frame(height: headerHeight)
 
-            // 프레임 셀 그리드
-            GeometryReader { geometry in
-                ScrollView([.horizontal, .vertical], showsIndicators: true) {
-                    VStack(alignment: .leading, spacing: 0) {
-                        ForEach(viewModel.layerViewModel.layers.indices.reversed(), id: \.self) { layerIndex in
-                            frameRowForLayer(layerIndex: layerIndex)
+            // 프레임 셀 그리드 + Playhead
+            ZStack(alignment: .topLeading) {
+                // 프레임 셀 그리드
+                GeometryReader { geometry in
+                    ScrollViewReader { scrollProxy in
+                        ScrollView([.horizontal, .vertical], showsIndicators: true) {
+                            LazyVStack(alignment: .leading, spacing: 0, pinnedViews: []) {
+                                ForEach(viewModel.layerViewModel.layers.indices.reversed(), id: \.self) { layerIndex in
+                                    frameRowForLayer(layerIndex: layerIndex)
+                                }
+                            }
+                            .frame(minWidth: geometry.size.width, minHeight: geometry.size.height, alignment: .topLeading)
+                            .background(
+                                GeometryReader { contentGeometry in
+                                    Color.clear.preference(
+                                        key: ScrollOffsetPreferenceKey.self,
+                                        value: contentGeometry.frame(in: .named("frameScrollView")).origin
+                                    )
+                                }
+                            )
+                        }
+                        .coordinateSpace(name: "frameScrollView")
+                        .onPreferenceChange(ScrollOffsetPreferenceKey.self) { value in
+                            horizontalScrollOffset = value.x
+                            verticalScrollOffset = value.y
+                        }
+                        .onChange(of: viewModel.currentFrameIndex) { oldIndex, newIndex in
+                            // 재생 중이거나 프레임 변경 시 자동 스크롤
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                scrollProxy.scrollTo("frame_\(newIndex)", anchor: .center)
+                            }
                         }
                     }
-                    .frame(minWidth: geometry.size.width, minHeight: geometry.size.height, alignment: .topLeading)
                 }
-            }
-        }
-    }
 
-    private var frameHeaderRow: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 0) {
-                ForEach(viewModel.frames) { frame in
-                    Text("\(frame.index + 1)")
-                        .font(.system(size: 9, design: .monospaced))
-                        .foregroundColor(Constants.Theme.textSecondary)
-                        .frame(width: cellSize, height: headerHeight)
-                        .background(frame.index == viewModel.currentFrameIndex ?
-                                  Constants.Theme.accentBlue.opacity(0.2) :
-                                  Constants.Theme.sectionBackground)
-                        .contentShape(Rectangle())
-                        .onTapGesture {
-                            viewModel.selectFrame(at: frame.index)
-                        }
-                }
+                // Playhead 붉은 선 (프레임 왼쪽)
+                Rectangle()
+                    .fill(Constants.Theme.playheadRed)
+                    .frame(width: 2)
+                    .offset(
+                        x: CGFloat(viewModel.currentFrameIndex) * cellSize + horizontalScrollOffset,
+                        y: 0
+                    )
+                    .allowsHitTesting(false)
             }
         }
-        .background(Constants.Theme.sectionBackground)
     }
 
     private func frameRowForLayer(layerIndex: Int) -> some View {
         let layer = viewModel.layerViewModel.layers[layerIndex]
+        let isFirstLayer = layerIndex == viewModel.layerViewModel.layers.indices.first
 
         return HStack(spacing: 0) {
             ForEach(viewModel.frames) { frame in
                 frameCellView(layer: layer, layerIndex: layerIndex, frameIndex: frame.index)
+                    .id(isFirstLayer ? "frame_\(frame.index)" : nil)
             }
         }
         .frame(height: cellSize)
@@ -182,20 +262,38 @@ struct TimelinePanelNew: View {
                         layerIndex == viewModel.layerViewModel.selectedLayerIndex
         let spanPosition = viewModel.getFrameSpanPosition(frameIndex: frameIndex, layerId: layer.id)
         let hasContent = viewModel.hasFrameContent(frameIndex: frameIndex, layerId: layer.id)
+        let effectivePixels = viewModel.getEffectivePixels(frameIndex: frameIndex, layerId: layer.id)
 
         return ZStack {
             // Background
-            cellBackground(spanPosition: spanPosition, isSelected: isSelected)
+            cellBackground(spanPosition: spanPosition, hasContent: hasContent)
+
+            // Thumbnail for keyframes with content
+            if spanPosition == .keyframeStart && hasContent, let pixels = effectivePixels {
+                CellThumbnailView(pixels: pixels, size: cellSize - 8)
+                    .padding(4)
+            }
 
             // Keyframe indicator
-            if spanPosition == .keyframeStart && hasContent {
-                Diamond()
-                    .fill(Constants.Theme.textPrimary)
-                    .frame(width: 6, height: 6)
+            VStack {
+                HStack {
+                    keyframeMarker(spanPosition: spanPosition, hasContent: hasContent)
+                        .padding(4)
+                    Spacer()
+                }
+                Spacer()
             }
         }
         .frame(width: cellSize, height: cellSize)
-        .border(isSelected ? Constants.Theme.accentBlue : Color.clear, width: isSelected ? 2 : 0)
+        .overlay(
+            RoundedRectangle(cornerRadius: 1)
+                .strokeBorder(Constants.Theme.divider.opacity(0.3), lineWidth: 0.5)
+        )
+        .overlay(
+            // Selection border
+            RoundedRectangle(cornerRadius: 1)
+                .strokeBorder(Constants.Theme.accentBlue, lineWidth: isSelected ? 2 : 0)
+        )
         .contentShape(Rectangle())
         .onTapGesture {
             viewModel.selectFrame(at: frameIndex)
@@ -203,16 +301,46 @@ struct TimelinePanelNew: View {
         }
     }
 
-    private func cellBackground(spanPosition: TimelineViewModel.FrameSpanPosition, isSelected: Bool) -> Color {
-        if isSelected {
-            return Constants.Theme.accentBlue.opacity(0.3)
+    @ViewBuilder
+    private func keyframeMarker(spanPosition: TimelineViewModel.FrameSpanPosition, hasContent: Bool) -> some View {
+        switch spanPosition {
+        case .keyframeStart:
+            if hasContent {
+                // Filled diamond for keyframe with content
+                Diamond()
+                    .fill(Constants.Theme.textPrimary)
+                    .frame(width: 7, height: 7)
+            } else {
+                // Empty circle for blank keyframe
+                Circle()
+                    .stroke(Constants.Theme.textPrimary, lineWidth: 1.5)
+                    .frame(width: 7, height: 7)
+            }
+        case .extended:
+            // Small dot for extended frames
+            if hasContent {
+                Circle()
+                    .fill(Constants.Theme.textSecondary)
+                    .frame(width: 3, height: 3)
+            }
+        case .end:
+            // End marker
+            if hasContent {
+                Rectangle()
+                    .fill(Constants.Theme.textSecondary)
+                    .frame(width: 1.5, height: 6)
+            }
+        case .empty:
+            EmptyView()
         }
+    }
 
+    private func cellBackground(spanPosition: TimelineViewModel.FrameSpanPosition, hasContent: Bool) -> Color {
         switch spanPosition {
         case .keyframeStart:
             return Constants.Theme.sectionBackground
         case .extended, .end:
-            return Constants.Theme.sectionBackground.opacity(0.5)
+            return Constants.Theme.sectionBackground.opacity(0.3)
         case .empty:
             return Constants.Theme.backgroundDark
         }
@@ -246,6 +374,45 @@ struct TimelinePanelNew: View {
                         isDraggingSplitter = false
                     }
             )
+    }
+
+    // MARK: - Zoom Controls
+
+    private var zoomControls: some View {
+        HStack(spacing: 4) {
+            Text("ZOOM")
+                .font(.system(size: 9, weight: .bold))
+                .foregroundColor(Constants.Theme.textSecondary)
+
+            Button(action: {
+                cellSize = max(minCellSize, cellSize - 8)
+            }) {
+                Image(systemName: "minus.magnifyingglass")
+                    .font(.system(size: 10))
+                    .frame(width: 18, height: 18)
+            }
+            .buttonStyle(.plain)
+            .help("Zoom Out (Cmd -)")
+
+            Slider(value: $cellSize, in: minCellSize...maxCellSize, step: 4)
+                .frame(width: 80)
+                .tint(Constants.Theme.accentBlue)
+
+            Button(action: {
+                cellSize = min(maxCellSize, cellSize + 8)
+            }) {
+                Image(systemName: "plus.magnifyingglass")
+                    .font(.system(size: 10))
+                    .frame(width: 18, height: 18)
+            }
+            .buttonStyle(.plain)
+            .help("Zoom In (Cmd +)")
+
+            Text("\(Int((cellSize / maxCellSize) * 100))%")
+                .font(.system(size: 9, design: .monospaced))
+                .foregroundColor(Constants.Theme.textSecondary)
+                .frame(width: 32, alignment: .trailing)
+        }
     }
 
     // MARK: - Helpers
