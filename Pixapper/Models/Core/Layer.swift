@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct Layer: Identifiable {
-    let id = UUID()
+    var id: UUID
     var name: String
 
     /// 현재 프레임의 픽셀 캐시 (내부 전용 - 호환성 유지용)
@@ -31,7 +31,8 @@ struct Layer: Identifiable {
         return Array(repeating: Array(repeating: nil as Color?, count: width), count: height)
     }
 
-    init(name: String, width: Int, height: Int) {
+    init(id: UUID = UUID(), name: String, width: Int, height: Int) {
+        self.id = id
         self.name = name
         self.pixels = Layer.createEmptyPixels(width: width, height: height)
         self.timeline = LayerTimeline()
@@ -40,7 +41,8 @@ struct Layer: Identifiable {
         self.timeline.setKeyframe(at: 0, pixels: self.pixels)
     }
 
-    init(name: String, pixels: [[Color?]]) {
+    init(id: UUID = UUID(), name: String, pixels: [[Color?]]) {
+        self.id = id
         self.name = name
         self.pixels = pixels
         self.timeline = LayerTimeline()
@@ -50,7 +52,8 @@ struct Layer: Identifiable {
     }
 
     // Timeline을 포함한 완전 초기화
-    init(name: String, pixels: [[Color?]], timeline: LayerTimeline) {
+    init(id: UUID = UUID(), name: String, pixels: [[Color?]], timeline: LayerTimeline) {
+        self.id = id
         self.name = name
         self.pixels = pixels
         self.timeline = timeline

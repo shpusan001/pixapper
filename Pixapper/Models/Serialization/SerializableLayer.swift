@@ -11,6 +11,8 @@ import Foundation
 struct SerializableLayerTimeline: Codable {
     /// 키프레임 데이터: [프레임 인덱스: 픽셀 데이터]
     var keyframes: [Int: [[SerializableColor?]]]
+    /// Extended frame span의 끝 인덱스 (버전 1.1에서 추가, 하위 호환성을 위해 optional)
+    var spanEndIndex: Int?
 
     init(from timeline: LayerTimeline) {
         var serializedKeyframes: [Int: [[SerializableColor?]]] = [:]
@@ -22,6 +24,7 @@ struct SerializableLayerTimeline: Codable {
         }
 
         self.keyframes = serializedKeyframes
+        self.spanEndIndex = timeline.maxFrameIndex
     }
 
     /// LayerTimeline로 변환
@@ -31,6 +34,11 @@ struct SerializableLayerTimeline: Codable {
         for (frameIndex, serializedPixels) in keyframes {
             let pixels = serializedPixels.toColors()
             timeline.setKeyframe(at: frameIndex, pixels: pixels)
+        }
+
+        // Span 끝 인덱스 복원 (없으면 자동 계산됨)
+        if let spanEnd = spanEndIndex {
+            timeline.setSpanEnd(at: spanEnd)
         }
 
         return timeline
@@ -61,11 +69,9 @@ struct SerializableLayer: Codable, Identifiable {
         let currentPixels = layerTimeline.getEffectivePixels(at: 0)
             ?? Layer.createEmptyPixels(width: width, height: height)
 
-        // UUID 복원
-        var layer = Layer(name: name, pixels: currentPixels, timeline: layerTimeline)
-
-        // UUID를 원본으로 복원하려면 Layer 구조체를 수정해야 하지만,
-        // 현재는 새로운 UUID로 생성됨. 필요하면 Layer에 init(id:) 추가 가능
+        // UUID 복원 (저장된 ID 사용, 실패 시 새로운 UUID 생성)
+        let restoredId = UUID(uuidString: id) ?? UUID()
+        var layer = Layer(id: restoredId, name: name, pixels: currentPixels, timeline: layerTimeline)
 
         layer.isVisible = isVisible
         layer.opacity = opacity

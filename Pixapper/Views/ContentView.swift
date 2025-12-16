@@ -244,6 +244,11 @@ struct ContentView: View {
         } message: {
             Text("You have unsaved changes. Do you want to save before creating a new project?")
         }
+        .alert("Error", isPresented: $appViewModel.showingError) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(appViewModel.errorMessage ?? "An unknown error occurred")
+        }
         .onKeyPress { keyPress in
             // New Project (Cmd+N)
             if keyPress.characters == "n" && keyPress.modifiers.contains(.command) {

@@ -14,6 +14,8 @@ class AppViewModel: ObservableObject {
     // MARK: - 프로젝트 상태
     @Published private(set) var currentFileURL: URL?
     @Published private(set) var isDirty: Bool = false
+    @Published var errorMessage: String?
+    @Published var showingError: Bool = false
 
     // MARK: - ViewModels (내부 관리)
     let colorManager: ColorManager
@@ -147,6 +149,8 @@ class AppViewModel: ObservableObject {
             }
             return false
         } catch {
+            errorMessage = "Failed to save project: \(error.localizedDescription)"
+            showingError = true
             print("Failed to save project: \(error)")
             return false
         }
@@ -165,6 +169,8 @@ class AppViewModel: ObservableObject {
             markClean()
             return true
         } catch {
+            errorMessage = "Failed to load project: \(error.localizedDescription)"
+            showingError = true
             print("Failed to load project: \(error)")
             return false
         }
@@ -184,8 +190,10 @@ class AppViewModel: ObservableObject {
 
         let toolSettings = SerializableToolSettings(from: toolSettingsManager)
 
-        // 현재 색상 팔레트 저장
+        // 현재 색상 팔레트 및 Primary/Secondary 색상 저장
         let colorPalette = colorManager.palette.map { SerializableColor(from: $0) }
+        let primaryColor = SerializableColor(from: colorManager.primaryColor)
+        let secondaryColor = SerializableColor(from: colorManager.secondaryColor)
 
         return ProjectDocument(
             metadata: ProjectMetadata(),
@@ -196,7 +204,11 @@ class AppViewModel: ObservableObject {
             timeline: timelineState,
             toolSettings: toolSettings,
             zoomLevel: canvasViewModel.zoomLevel,
-            colorPalette: colorPalette
+            colorPalette: colorPalette,
+            primaryColor: primaryColor,
+            secondaryColor: secondaryColor,
+            canvasBackgroundMode: canvasViewModel.backgroundMode.rawValue,
+            showGrid: canvasViewModel.showGrid
         )
     }
 
@@ -215,17 +227,29 @@ class AppViewModel: ObservableObject {
         timelineViewModel.currentFrameIndex = min(document.timeline.currentFrameIndex, document.timeline.totalFrames - 1)
         timelineViewModel.settings = document.timeline.toAnimationSettings()
 
-        // 캔버스 크기 복원
+        // 캔버스 크기 및 설정 복원
         canvasViewModel.canvas.width = width
         canvasViewModel.canvas.height = height
         canvasViewModel.canvas.layers = restoredLayers
         canvasViewModel.zoomLevel = document.zoomLevel
+
+        // 캔버스 배경 모드 복원 (이제 항상 존재)
+        if let backgroundMode = CanvasBackgroundMode(rawValue: document.canvasBackgroundMode) {
+            canvasViewModel.backgroundMode = backgroundMode
+        }
+
+        // 그리드 표시 복원 (이제 항상 존재)
+        canvasViewModel.showGrid = document.showGrid
 
         // 툴 설정 복원
         document.toolSettings.applyTo(manager: toolSettingsManager)
 
         // 색상 팔레트 복원
         colorManager.palette = document.colorPalette.map { $0.toColor() }
+
+        // Primary/Secondary 색상 복원 (이제 항상 존재)
+        colorManager.primaryColor = document.primaryColor.toColor()
+        colorManager.secondaryColor = document.secondaryColor.toColor()
 
         // 현재 프레임 로드
         timelineViewModel.loadFrame(at: timelineViewModel.currentFrameIndex)
