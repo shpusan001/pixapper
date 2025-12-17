@@ -11,12 +11,12 @@ import UniformTypeIdentifiers
 /// 타임라인 레이어 정보 컬럼
 /// - 드래그 핸들, Visibility, 이름, Opacity 표시 및 편집
 struct TimelineLayerInfoView: View {
-    let layer: Layer
     let layerIndex: Int
     let layerColumnWidth: CGFloat
     let cellSize: CGFloat
 
     @ObservedObject var viewModel: TimelineViewModel
+    @ObservedObject var layerViewModel: LayerViewModel
     @ObservedObject var commandManager: CommandManager
 
     @Binding var editingLayerIndex: Int?
@@ -26,6 +26,11 @@ struct TimelineLayerInfoView: View {
     @Binding var currentOpacity: Double
     @Binding var draggingLayerIndex: Int?
 
+    // 레이어를 computed property로 변경하여 항상 최신 상태 반영
+    private var layer: Layer {
+        layerViewModel.layers[layerIndex]
+    }
+
     var body: some View {
         HStack(alignment: .center, spacing: 4) {
             // Drag handle
@@ -33,17 +38,26 @@ struct TimelineLayerInfoView: View {
                 .font(.system(size: 9))
                 .foregroundColor(Constants.Theme.textSecondary)
                 .frame(width: 14)
+                .fixedSize()
 
-            // Visibility toggle
+            // Visibility toggle - 더 명확한 UI
             Button(action: {
-                viewModel.layerViewModel.toggleVisibility(at: layerIndex)
+                layerViewModel.toggleVisibility(at: layerIndex)
             }) {
-                Image(systemName: layer.isVisible ? "eye.fill" : "eye.slash")
-                    .font(.system(size: 10))
-                    .frame(width: 18, height: 18)
-                    .foregroundColor(layer.isVisible ? Constants.Theme.textPrimary : Constants.Theme.textDisabled)
+                ZStack {
+                    RoundedRectangle(cornerRadius: 3)
+                        .fill(layer.isVisible ? Color.clear : Constants.Theme.textDisabled.opacity(0.2))
+                        .frame(width: 22, height: 22)
+
+                    Image(systemName: layer.isVisible ? "eye.fill" : "eye.slash.fill")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(layer.isVisible ? Color.gray : Constants.Theme.textDisabled)
+                }
             }
             .buttonStyle(.plain)
+            .frame(width: 22, height: 22)
+            .fixedSize()
+            .help(layer.isVisible ? "Hide layer" : "Show layer")
 
             // Layer name and opacity
             VStack(alignment: .leading, spacing: 1) {
@@ -52,7 +66,7 @@ struct TimelineLayerInfoView: View {
                     TextField("Name", text: $editingLayerName, onCommit: {
                         if !editingLayerName.isEmpty {
                             let oldName = layer.name
-                            let command = RenameLayerCommand(layerViewModel: viewModel.layerViewModel, index: layerIndex, oldName: oldName, newName: editingLayerName)
+                            let command = RenameLayerCommand(layerViewModel: layerViewModel, index: layerIndex, oldName: oldName, newName: editingLayerName)
                             commandManager.performCommand(command)
                         }
                         editingLayerIndex = nil
@@ -72,57 +86,61 @@ struct TimelineLayerInfoView: View {
                         }
                         .onTapGesture(count: 1) {
                             if editingLayerIndex == nil && editingOpacityLayerIndex == nil {
-                                viewModel.layerViewModel.selectedLayerIndex = layerIndex
+                                layerViewModel.selectedLayerIndex = layerIndex
                             }
                         }
                 }
 
-                // Opacity control - interactive
-                if editingOpacityLayerIndex == layerIndex {
-                    HStack(spacing: 2) {
-                        Slider(
-                            value: Binding(
-                                get: { currentOpacity },
-                                set: { newValue in
-                                    currentOpacity = newValue
-                                    viewModel.layerViewModel.setOpacity(at: layerIndex, opacity: newValue)
-                                }
-                            ),
-                            in: 0...1,
-                            onEditingChanged: { isEditing in
-                                if isEditing {
+                // Opacity control - always visible with better UI
+                HStack(spacing: 3) {
+                    // Opacity label
+                    Text("Opa")
+                        .font(.system(size: 8))
+                        .foregroundColor(Constants.Theme.textSecondary)
+                        .frame(width: 22, alignment: .leading)
+                        .fixedSize()
+
+                    // Slider
+                    Slider(
+                        value: Binding(
+                            get: { editingOpacityLayerIndex == layerIndex ? currentOpacity : layer.opacity },
+                            set: { newValue in
+                                if editingOpacityLayerIndex != layerIndex {
+                                    editingOpacityLayerIndex = layerIndex
                                     opacityBeforeDrag = layer.opacity
-                                } else {
-                                    if let oldOpacity = opacityBeforeDrag {
-                                        let newOpacity = currentOpacity
-                                        if abs(oldOpacity - newOpacity) > 0.001 {
-                                            let command = SetLayerOpacityCommand(
-                                                layerViewModel: viewModel.layerViewModel,
-                                                index: layerIndex,
-                                                oldOpacity: oldOpacity,
-                                                newOpacity: newOpacity
-                                            )
-                                            commandManager.addExecutedCommand(command)
-                                        }
-                                        opacityBeforeDrag = nil
-                                    }
-                                    editingOpacityLayerIndex = nil
                                 }
+                                currentOpacity = newValue
+                                layerViewModel.setOpacity(at: layerIndex, opacity: newValue)
                             }
-                        )
-                        .tint(Constants.Theme.accentBlue)
-                        .frame(height: 12)
-                    }
-                } else {
-                    // Percentage display (clickable to edit)
-                    Text("\(Int(layer.opacity * 100))%")
-                        .font(.system(size: 8, design: .monospaced))
-                        .foregroundColor(Constants.Theme.textSecondary.opacity(0.7))
-                        .frame(width: 28, alignment: .trailing)
-                        .onTapGesture {
-                            editingOpacityLayerIndex = layerIndex
-                            currentOpacity = layer.opacity
+                        ),
+                        in: 0...1,
+                        onEditingChanged: { isEditing in
+                            if !isEditing {
+                                if let oldOpacity = opacityBeforeDrag {
+                                    let newOpacity = currentOpacity
+                                    if abs(oldOpacity - newOpacity) > 0.001 {
+                                        let command = SetLayerOpacityCommand(
+                                            layerViewModel: layerViewModel,
+                                            index: layerIndex,
+                                            oldOpacity: oldOpacity,
+                                            newOpacity: newOpacity
+                                        )
+                                        commandManager.addExecutedCommand(command)
+                                    }
+                                    opacityBeforeDrag = nil
+                                }
+                                editingOpacityLayerIndex = nil
+                            }
                         }
+                    )
+                    .tint(Constants.Theme.accentBlue)
+
+                    // Percentage display
+                    Text("\(Int((editingOpacityLayerIndex == layerIndex ? currentOpacity : layer.opacity) * 100))%")
+                        .font(.system(size: 9, design: .monospaced))
+                        .foregroundColor(Constants.Theme.textPrimary)
+                        .frame(width: 32, alignment: .trailing)
+                        .fixedSize()
                 }
             }
             .frame(maxWidth: .infinity)
@@ -132,7 +150,7 @@ struct TimelineLayerInfoView: View {
         .frame(width: layerColumnWidth, height: cellSize)
         .background(
             Group {
-                if layerIndex == viewModel.layerViewModel.selectedLayerIndex {
+                if layerIndex == layerViewModel.selectedLayerIndex {
                     Constants.Theme.accentBlue.opacity(0.2)
                 } else if draggingLayerIndex == layerIndex {
                     Constants.Theme.accentBlue.opacity(0.3)
@@ -150,7 +168,7 @@ struct TimelineLayerInfoView: View {
         .onDrop(of: [.text], delegate: LayerDropDelegate(
             layerIndex: layerIndex,
             draggingLayerIndex: $draggingLayerIndex,
-            viewModel: viewModel.layerViewModel,
+            viewModel: layerViewModel,
             commandManager: commandManager
         ))
         .contextMenu {
@@ -159,16 +177,16 @@ struct TimelineLayerInfoView: View {
                 editingLayerName = layer.name
             }
             Button("Duplicate") {
-                viewModel.layerViewModel.duplicateLayer(at: layerIndex)
+                layerViewModel.duplicateLayer(at: layerIndex)
             }
             Divider()
             Button("Delete", role: .destructive) {
-                if viewModel.layerViewModel.layers.count > 1 {
-                    let command = DeleteLayerCommand(layerViewModel: viewModel.layerViewModel, index: layerIndex)
+                if layerViewModel.layers.count > 1 {
+                    let command = DeleteLayerCommand(layerViewModel: layerViewModel, index: layerIndex)
                     commandManager.performCommand(command)
                 }
             }
-            .disabled(viewModel.layerViewModel.layers.count <= 1)
+            .disabled(layerViewModel.layers.count <= 1)
         }
     }
 }

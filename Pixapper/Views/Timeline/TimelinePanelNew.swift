@@ -187,7 +187,7 @@ struct TimelinePanelNew: View {
 
             // Toolbar with zoom control
             HStack(spacing: 12) {
-                TimelineToolbarView(viewModel: viewModel, commandManager: commandManager)
+                TimelineToolbarView(viewModel: viewModel, commandManager: commandManager, cellSize: $cellSize)
 
                 Spacer()
 

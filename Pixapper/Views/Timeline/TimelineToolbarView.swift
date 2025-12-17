@@ -11,6 +11,10 @@ import SwiftUI
 struct TimelineToolbarView: View {
     @ObservedObject var viewModel: TimelineViewModel
     @ObservedObject var commandManager: CommandManager
+    @Binding var cellSize: CGFloat
+
+    let minCellSize: CGFloat = 48
+    let maxCellSize: CGFloat = 96
 
     var body: some View {
         HStack(spacing: 12) {
@@ -93,6 +97,27 @@ struct TimelineToolbarView: View {
             }
 
             Spacer()
+
+            // FRAME SIZE
+            HStack(spacing: 6) {
+                Image(systemName: "minus.magnifyingglass")
+                    .font(.system(size: 10))
+                    .foregroundColor(Constants.Theme.textSecondary)
+
+                Slider(value: $cellSize, in: minCellSize...maxCellSize, step: 4)
+                    .frame(width: 80)
+                    .tint(Constants.Theme.accentBlue)
+
+                Image(systemName: "plus.magnifyingglass")
+                    .font(.system(size: 10))
+                    .foregroundColor(Constants.Theme.textSecondary)
+
+                Text("\(Int(cellSize))px")
+                    .font(.system(size: 9, design: .monospaced))
+                    .foregroundColor(Constants.Theme.textSecondary)
+                    .frame(width: 32, alignment: .trailing)
+            }
+            .padding(.trailing, 4)
         }
         .frame(height: Constants.Layout.Timeline.rowHeight)
         .padding(.horizontal, 10)

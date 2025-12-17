@@ -94,11 +94,21 @@ class LayerViewModel: ObservableObject {
 
     func toggleVisibility(at index: Int) {
         guard index < layers.count else { return }
-        layers[index].isVisible.toggle()
+        var layer = layers[index]
+        layer.isVisible.toggle()
+        layers[index] = layer
+
+        // UI 즉시 업데이트 강제
+        objectWillChange.send()
     }
 
     func setOpacity(at index: Int, opacity: Double) {
         guard index < layers.count else { return }
-        layers[index].opacity = opacity
+        var layer = layers[index]
+        layer.opacity = opacity
+        layers[index] = layer
+
+        // UI 즉시 업데이트 강제
+        objectWillChange.send()
     }
 }

@@ -22,8 +22,16 @@ struct TimelinePanel: View {
     @State private var isDraggingFrames: Bool = false  // 프레임 드래그 중인지 판단
     @State private var clickModifierFlags: NSEvent.ModifierFlags = []  // 클릭 시점의 modifier 키
 
-    private let layerColumnWidth: CGFloat = Constants.Layout.Timeline.layerColumnWidth
-    private let cellSize: CGFloat = Constants.Layout.Timeline.cellSize
+    @State private var layerColumnWidth: CGFloat = Constants.Layout.Timeline.layerColumnWidth
+    @State private var isDraggingSplitter: Bool = false
+    @State private var splitterDragStart: CGFloat = 0
+    @State private var cellSize: CGFloat = Constants.Layout.Timeline.cellSize
+
+    private let minLayerColumnWidth: CGFloat = 150
+    private let maxLayerColumnWidth: CGFloat = 400
+    private let splitterWidth: CGFloat = 1
+    private let minCellSize: CGFloat = 48
+    private let maxCellSize: CGFloat = 96
 
     var body: some View {
         VStack(spacing: 0) {
@@ -39,7 +47,7 @@ struct TimelinePanel: View {
                 .frame(height: 1)
 
             // Operations toolbar
-            TimelineToolbarView(viewModel: viewModel, commandManager: commandManager)
+            TimelineToolbarView(viewModel: viewModel, commandManager: commandManager, cellSize: $cellSize)
 
             Rectangle()
                 .fill(Constants.Theme.divider)
@@ -47,28 +55,42 @@ struct TimelinePanel: View {
 
             // 2D Grid: Layers × Frames
             GeometryReader { geometry in
-                ScrollView([.horizontal, .vertical], showsIndicators: true) {
-                    VStack(alignment: .leading, spacing: 0) {
-                        // Header row: Frame numbers
-                        frameHeaderRow
+                ScrollViewReader { scrollProxy in
+                    ScrollView([.horizontal, .vertical], showsIndicators: true) {
+                        VStack(alignment: .leading, spacing: 0) {
+                            // Header row: Frame numbers
+                            frameHeaderRow
 
-                        // Layer rows (reversed for display: top = highest index)
-                        ForEach(viewModel.layerViewModel.layers.indices.reversed(), id: \.self) { layerIndex in
-                            let layer = viewModel.layerViewModel.layers[layerIndex]
-                            layerRow(layer: layer, layerIndex: layerIndex)
+                            // Layer rows (reversed for display: top = highest index)
+                            ForEach(Array(viewModel.layerViewModel.layers.indices.reversed()), id: \.self) { layerIndex in
+                                layerRow(layerIndex: layerIndex)
+                            }
+
+                            // Spacer to fill remaining height
+                            Spacer(minLength: 0)
+                        }
+                        .frame(
+                            minWidth: max(geometry.size.width, layerColumnWidth + splitterWidth + CGFloat(viewModel.totalFrames) * cellSize),
+                            minHeight: geometry.size.height,
+                            alignment: .topLeading
+                        )
+                        .overlay(
+                            // 현재 프레임 세로선 (전체 타임라인 관통)
+                            GeometryReader { contentGeometry in
+                                let lineX = layerColumnWidth + splitterWidth + CGFloat(viewModel.currentFrameIndex) * cellSize
+                                Rectangle()
+                                    .fill(Constants.Theme.playheadRed)
+                                    .frame(width: 2)
+                                    .offset(x: lineX, y: Constants.Layout.Timeline.rowHeight)
+                            }
+                        )
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                    .onChange(of: viewModel.currentFrameIndex) { newIndex in
+                        withAnimation(.easeOut(duration: 0.2)) {
+                            scrollProxy.scrollTo("frame_\(newIndex)", anchor: .center)
                         }
                     }
-                    .frame(minWidth: geometry.size.width, minHeight: geometry.size.height, alignment: .topLeading)
-                    .overlay(
-                        // 현재 프레임 세로선 (전체 타임라인 관통)
-                        GeometryReader { contentGeometry in
-                            let lineX = layerColumnWidth + CGFloat(viewModel.currentFrameIndex) * cellSize
-                            Rectangle()
-                                .fill(Constants.Theme.playheadRed)
-                                .frame(width: 2)
-                                .offset(x: lineX, y: Constants.Layout.Timeline.rowHeight)
-                        }
-                    )
                 }
             }
         }
@@ -80,17 +102,28 @@ struct TimelinePanel: View {
     private var frameHeaderRow: some View {
         HStack(spacing: 0) {
             // Layer column header
-            Text("LAYERS")
-                .font(.system(size: 9, weight: .bold))
-                .foregroundColor(Constants.Theme.textSecondary)
-                .frame(width: layerColumnWidth, height: Constants.Layout.Timeline.rowHeight)
-                .background(Constants.Theme.sectionBackground)
+            ZStack {
+                Constants.Theme.sectionBackground
+
+                Text("LAYERS")
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundColor(Constants.Theme.textSecondary)
+            }
+            .frame(width: layerColumnWidth, height: Constants.Layout.Timeline.rowHeight)
+            .fixedSize(horizontal: false, vertical: true)
+
+            // Splitter
+            splitterView
+                .frame(height: Constants.Layout.Timeline.rowHeight)
 
             // Frame numbers with drag selection support
             ForEach(viewModel.frames) { frame in
                 frameHeaderCell(frameIndex: frame.index)
+                    .id("frame_\(frame.index)")
             }
         }
+        .frame(height: Constants.Layout.Timeline.rowHeight)
+        .fixedSize(horizontal: false, vertical: true)
         .background(Constants.Theme.sectionBackground)
     }
 
@@ -103,6 +136,7 @@ struct TimelinePanel: View {
             viewModel: viewModel,
             calculateFrameIndex: calculateFrameIndex
         )
+        .frame(width: cellSize, height: Constants.Layout.Timeline.rowHeight)
     }
 
     // 마우스 위치로부터 프레임 인덱스 계산
@@ -112,15 +146,17 @@ struct TimelinePanel: View {
 
     // MARK: - Layer Row
 
-    private func layerRow(layer: Layer, layerIndex: Int) -> some View {
-        HStack(spacing: 0) {
+    private func layerRow(layerIndex: Int) -> some View {
+        let layer = viewModel.layerViewModel.layers[layerIndex]
+
+        return HStack(spacing: 0) {
             // Layer info column
             TimelineLayerInfoView(
-                layer: layer,
                 layerIndex: layerIndex,
                 layerColumnWidth: layerColumnWidth,
                 cellSize: cellSize,
                 viewModel: viewModel,
+                layerViewModel: viewModel.layerViewModel,
                 commandManager: commandManager,
                 editingLayerIndex: $editingLayerIndex,
                 editingLayerName: $editingLayerName,
@@ -129,6 +165,10 @@ struct TimelinePanel: View {
                 currentOpacity: $currentOpacity,
                 draggingLayerIndex: $draggingLayerIndex
             )
+
+            // Splitter
+            splitterView
+                .frame(height: cellSize)
 
             // Frame cells for this layer - viewModel.frames와 동기화
             ForEach(viewModel.frames) { frame in
@@ -139,6 +179,7 @@ struct TimelinePanel: View {
                 )
             }
         }
+        .frame(height: cellSize)
     }
 
     // MARK: - Cell View
@@ -370,6 +411,46 @@ struct TimelinePanel: View {
             )
             commandManager.performCommand(command)
         }
+    }
+
+    // MARK: - Splitter
+
+    private var splitterView: some View {
+        ZStack {
+            // Visual 1px line
+            Rectangle()
+                .fill(Constants.Theme.divider)
+                .frame(width: splitterWidth)
+
+            // Wider invisible hit area for dragging
+            Color.clear
+                .frame(width: 8)
+                .contentShape(Rectangle())
+        }
+        .frame(width: splitterWidth)
+        .onHover { hovering in
+            if hovering {
+                NSCursor.resizeLeftRight.push()
+            } else {
+                NSCursor.pop()
+            }
+        }
+        .simultaneousGesture(
+            DragGesture(minimumDistance: 0, coordinateSpace: .global)
+                .onChanged { value in
+                    if !isDraggingSplitter {
+                        isDraggingSplitter = true
+                        splitterDragStart = layerColumnWidth
+                    }
+                    // Use translation directly
+                    let delta = value.translation.width
+                    let newWidth = splitterDragStart + delta
+                    layerColumnWidth = min(max(newWidth, minLayerColumnWidth), maxLayerColumnWidth)
+                }
+                .onEnded { _ in
+                    isDraggingSplitter = false
+                }
+        )
     }
 
     // MARK: - Cell Components
