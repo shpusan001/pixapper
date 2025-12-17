@@ -433,9 +433,6 @@ class SelectionTool: BaseTool, CanvasTool {
         isFloating: Bool,
         freeformMask: [[Bool]]? = nil
     ) {
-        let pixelsInfo = pixels.map { "\($0.count)x\($0.first?.count ?? 0)" } ?? "nil"
-        print("🔵 SelectionTool.restoreSelectionState: rect=\(String(describing: rect)), pixels=\(pixelsInfo), isFloating=\(isFloating)")
-
         selectionRect = rect
         selectionPixels = pixels
         self.originalPixels = originalPixels
@@ -444,9 +441,6 @@ class SelectionTool: BaseTool, CanvasTool {
         self.freeformMask = freeformMask
         selectionOffset = .zero
         selectionMode = .idle
-
-        let afterInfo = selectionPixels.map { "\($0.count)x\($0.first?.count ?? 0)" } ?? "nil"
-        print("🔵 After setting: selectionPixels=\(afterInfo)")
     }
 
     /// 선택 영역을 최종 커밋
