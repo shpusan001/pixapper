@@ -54,7 +54,8 @@ struct ShortcutManager {
         if keyPress.key == .escape {
             return .deselect
         }
-        if keyPress.key == .delete || keyPress.key == .deleteForward {
+        // Delete/Backspace: \u{7F} (백스페이스) 또는 deleteForward key
+        if keyPress.characters == "\u{7F}" || keyPress.key == .delete || keyPress.key == .deleteForward {
             return .delete
         }
         if keyPress.key == .return {
@@ -181,7 +182,7 @@ struct ShortcutManager {
             break
 
         case .deselect:
-            canvasViewModel?.clearSelection()
+            canvasViewModel?.cancelSelection()
 
         // MARK: - View
         case .toggleGrid:
@@ -254,7 +255,7 @@ struct ShortcutManager {
             }
 
         case .cancelSelection:
-            canvasViewModel?.clearSelection()
+            canvasViewModel?.cancelSelection()
         }
     }
 

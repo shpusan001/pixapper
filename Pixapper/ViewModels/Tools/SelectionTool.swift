@@ -375,6 +375,38 @@ class SelectionTool: BaseTool, CanvasTool {
         }
     }
 
+    /// 선택을 취소 (floating selection이면 원래 위치로 복원)
+    func cancelSelection() {
+        // floating selection이면 원래 위치로 픽셀 복원
+        if isFloatingSelection,
+           let origPixels = originalPixels,
+           let origRect = originalRect,
+           let canvas = canvasViewModel,
+           currentLayerIndex < layerViewModel.layers.count {
+
+            let layerId = layerViewModel.layers[currentLayerIndex].id
+            let startX = Int(origRect.minX)
+            let startY = Int(origRect.minY)
+
+            // 원래 위치에 픽셀 복원
+            for y in 0..<origPixels.count {
+                for x in 0..<origPixels[y].count {
+                    let pixelX = startX + x
+                    let pixelY = startY + y
+
+                    if pixelX >= 0 && pixelX < canvas.canvas.width && pixelY >= 0 && pixelY < canvas.canvas.height {
+                        timelineViewModel?.setPixel(layerId: layerId, x: pixelX, y: pixelY, color: origPixels[y][x])
+                    }
+                }
+            }
+
+            timelineViewModel?.pixelStateManager?.syncToTimeline()
+        }
+
+        // 선택 상태 클리어
+        clearSelection()
+    }
+
     /// 선택 영역을 해제합니다
     func clearSelection() {
         selectionRect = nil
@@ -1019,17 +1051,6 @@ class SelectionTool: BaseTool, CanvasTool {
               let rect = selectionRect,
               let pixels = selectionPixels,
               currentLayerIndex < layerViewModel.layers.count else { return }
-
-        if isFloatingSelection {
-            var clearedPixels = pixels
-            for y in 0..<clearedPixels.count {
-                for x in 0..<clearedPixels[y].count {
-                    clearedPixels[y][x] = nil
-                }
-            }
-            selectionPixels = clearedPixels
-            return
-        }
 
         let startX = Int(rect.minX)
         let startY = Int(rect.minY)

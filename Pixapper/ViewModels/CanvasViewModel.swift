@@ -250,6 +250,10 @@ class CanvasViewModel: ObservableObject {
         _selectionTool.captureSelection()
     }
 
+    func cancelSelection() {
+        _selectionTool.cancelSelection()
+    }
+
     func clearSelection() {
         _selectionTool.clearSelection()
     }
