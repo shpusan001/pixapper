@@ -98,31 +98,41 @@ class PasteCommand: LayerPixelApplicable {
         // 1. 이전 floating selection이 있었다면, 레이어에 커밋
         if previousIsFloating, !newCommitPixels.isEmpty {
             applyPixelChanges(newCommitPixels)
+            timelineViewModel?.pixelStateManager?.syncToTimeline()
         }
 
-        // 2. 붙여넣기 픽셀을 레이어에 바로 적용
-        applyPixelChanges(newPastePixels)
-
-        // 3. TimelineViewModel에 동기화
-        timelineViewModel?.pixelStateManager?.syncToTimeline()
-
-        // 4. 선택 영역 클리어 (붙여넣기 후 floating selection을 만들지 않음)
+        // 2. 이전 selection 상태 완전히 클리어
         canvasViewModel?.clearSelection()
+
+        // 3. 붙여넣기를 floating selection으로 설정 (바로 커밋하지 않음)
+        // Debug: 픽셀 데이터 확인
+        guard !pastedSelectionPixels.isEmpty else {
+            print("⚠️ PasteCommand: pastedSelectionPixels is empty!")
+            return
+        }
+
+        print("✅ PasteCommand: pasting \(pastedSelectionPixels.count)x\(pastedSelectionPixels[0].count) pixels at \(pastedSelectionRect)")
+
+        // 붙여넣기는 모든 픽셀이 선택된 상태의 마스크 생성 (전부 true)
+        let mask = Array(repeating: Array(repeating: true, count: pastedSelectionPixels[0].count), count: pastedSelectionPixels.count)
+
+        canvasViewModel?.setFloatingSelection(
+            rect: pastedSelectionRect,
+            pixels: pastedSelectionPixels,
+            originalPixels: pastedSelectionPixels, // 붙여넣기는 원본과 동일
+            originalRect: pastedSelectionRect,
+            freeformMask: mask
+        )
     }
 
     func undo() {
-        // 1. 붙여넣기 픽셀을 레이어에서 제거
-        applyPixelChanges(oldPastePixels)
-
-        // 2. 이전 floating selection이 있었고 커밋되었다면, 커밋 전 레이어 상태로 복원
+        // 1. 이전 floating selection이 있었고 커밋되었다면, 커밋 전 레이어 상태로 복원
         if previousIsFloating, !oldCommitPixels.isEmpty {
             applyPixelChanges(oldCommitPixels)
+            timelineViewModel?.pixelStateManager?.syncToTimeline()
         }
 
-        // 3. TimelineViewModel에 동기화
-        timelineViewModel?.pixelStateManager?.syncToTimeline()
-
-        // 4. 이전 선택 상태 복원
+        // 2. 이전 선택 상태 복원
         canvasViewModel?.restoreSelectionState(
             rect: previousSelectionRect,
             pixels: previousSelectionPixels,

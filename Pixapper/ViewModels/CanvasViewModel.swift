@@ -272,6 +272,23 @@ class CanvasViewModel: ObservableObject {
         )
     }
 
+    func setFloatingSelection(
+        rect: CGRect,
+        pixels: [[Color?]],
+        originalPixels: [[Color?]],
+        originalRect: CGRect,
+        freeformMask: [[Bool]]?
+    ) {
+        _selectionTool.restoreSelectionState(
+            rect: rect,
+            pixels: pixels,
+            originalPixels: originalPixels,
+            originalRect: originalRect,
+            isFloating: true,
+            freeformMask: freeformMask
+        )
+    }
+
     func commitSelection() {
         _selectionTool.commitSelection()
     }
