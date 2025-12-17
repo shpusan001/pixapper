@@ -51,6 +51,109 @@ struct ScrollOffsetPreferenceKey: PreferenceKey {
     }
 }
 
+// MARK: - NSScrollView Wrapper for precise control
+
+struct PreciseScrollView<Content: View>: NSViewRepresentable {
+    let content: Content
+    @Binding var scrollOffset: CGPoint
+    let targetFrameIndex: Int
+    let cellSize: CGFloat
+    let viewportWidth: CGFloat
+    let isPlaying: Bool
+
+    init(
+        scrollOffset: Binding<CGPoint>,
+        targetFrameIndex: Int,
+        cellSize: CGFloat,
+        viewportWidth: CGFloat,
+        isPlaying: Bool,
+        @ViewBuilder content: () -> Content
+    ) {
+        self.content = content()
+        self._scrollOffset = scrollOffset
+        self.targetFrameIndex = targetFrameIndex
+        self.cellSize = cellSize
+        self.viewportWidth = viewportWidth
+        self.isPlaying = isPlaying
+    }
+
+    func makeNSView(context: Context) -> NSScrollView {
+        let scrollView = NSScrollView()
+        scrollView.hasHorizontalScroller = true
+        scrollView.hasVerticalScroller = true
+        scrollView.autohidesScrollers = false
+        scrollView.drawsBackground = false
+
+        let hostingView = NSHostingView(rootView: content)
+        hostingView.autoresizingMask = [.width, .height]
+        scrollView.documentView = hostingView
+
+        context.coordinator.scrollView = scrollView
+
+        NotificationCenter.default.addObserver(
+            context.coordinator,
+            selector: #selector(Coordinator.scrollViewDidScroll),
+            name: NSView.boundsDidChangeNotification,
+            object: scrollView.contentView
+        )
+
+        return scrollView
+    }
+
+    func updateNSView(_ scrollView: NSScrollView, context: Context) {
+        // Update content if needed
+        if let hostingView = scrollView.documentView as? NSHostingView<Content> {
+            hostingView.rootView = content
+        }
+
+        // 프레임 인덱스가 바뀌면 정확한 위치로 스크롤
+        let targetX = CGFloat(targetFrameIndex) * cellSize - (viewportWidth / 2) + (cellSize / 2)
+        let clampedX = max(0, targetX)
+        let currentX = scrollView.contentView.bounds.origin.x
+
+        if abs(currentX - clampedX) > 1 {
+            let targetPoint = NSPoint(x: clampedX, y: scrollView.contentView.bounds.origin.y)
+
+            if isPlaying {
+                // 재생 중: 즉시 스크롤
+                scrollView.contentView.scroll(to: targetPoint)
+                scrollView.reflectScrolledClipView(scrollView.contentView)
+                // 즉시 offset 동기화 (깜빡임 방지)
+                DispatchQueue.main.async {
+                    context.coordinator.scrollOffset = scrollView.contentView.bounds.origin
+                }
+            } else {
+                // 수동 이동: 부드러운 애니메이션
+                NSAnimationContext.runAnimationGroup({ ctx in
+                    ctx.duration = 0.15
+                    ctx.timingFunction = CAMediaTimingFunction(name: .easeOut)
+                    scrollView.contentView.animator().setBoundsOrigin(targetPoint)
+                }, completionHandler: nil)
+            }
+        }
+    }
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(scrollOffset: $scrollOffset)
+    }
+
+    class Coordinator: NSObject {
+        @Binding var scrollOffset: CGPoint
+        weak var scrollView: NSScrollView?
+
+        init(scrollOffset: Binding<CGPoint>) {
+            self._scrollOffset = scrollOffset
+        }
+
+        @objc func scrollViewDidScroll(_ notification: Notification) {
+            guard let scrollView = scrollView else { return }
+            DispatchQueue.main.async {
+                self.scrollOffset = scrollView.contentView.bounds.origin
+            }
+        }
+    }
+}
+
 struct TimelinePanelNew: View {
     @ObservedObject var viewModel: TimelineViewModel
     @ObservedObject var commandManager: CommandManager
@@ -215,76 +318,85 @@ struct TimelinePanelNew: View {
                             .font(.system(size: 9, design: .monospaced))
                             .foregroundColor(Constants.Theme.textSecondary)
                             .frame(width: cellSize, height: headerHeight)
-                            .background(frame.index == viewModel.currentFrameIndex ?
-                                      Constants.Theme.accentBlue.opacity(0.2) :
-                                      Constants.Theme.sectionBackground)
+                            .background(Constants.Theme.sectionBackground)
                             .contentShape(Rectangle())
                             .onTapGesture {
                                 viewModel.selectFrame(at: frame.index)
                             }
                     }
                 }
-                .offset(x: horizontalScrollOffset)
+                .offset(x: -horizontalScrollOffset)
                 .background(Constants.Theme.sectionBackground)
             }
             .frame(height: headerHeight)
+            .clipped()
 
             // 프레임 셀 그리드 + Playhead
             ZStack(alignment: .topLeading) {
                 // 프레임 셀 그리드
                 GeometryReader { geometry in
-                    ScrollViewReader { scrollProxy in
-                        ScrollView([.horizontal, .vertical], showsIndicators: true) {
-                            LazyVStack(alignment: .leading, spacing: 0, pinnedViews: []) {
-                                ForEach(viewModel.layerViewModel.layers.indices.reversed(), id: \.self) { layerIndex in
-                                    frameRowForLayer(layerIndex: layerIndex)
-                                }
+                    PreciseScrollView(
+                        scrollOffset: Binding(
+                            get: { CGPoint(x: horizontalScrollOffset, y: verticalScrollOffset) },
+                            set: { point in
+                                horizontalScrollOffset = point.x
+                                verticalScrollOffset = point.y
                             }
-                            .frame(minWidth: geometry.size.width, minHeight: geometry.size.height, alignment: .topLeading)
-                            .background(
-                                GeometryReader { contentGeometry in
-                                    Color.clear.preference(
-                                        key: ScrollOffsetPreferenceKey.self,
-                                        value: contentGeometry.frame(in: .named("frameScrollView")).origin
-                                    )
-                                }
-                            )
-                        }
-                        .coordinateSpace(name: "frameScrollView")
-                        .onPreferenceChange(ScrollOffsetPreferenceKey.self) { value in
-                            horizontalScrollOffset = value.x
-                            verticalScrollOffset = value.y
-                        }
-                        .onChange(of: viewModel.currentFrameIndex) { oldIndex, newIndex in
-                            // 재생 중이거나 프레임 변경 시 자동 스크롤
-                            withAnimation(.easeInOut(duration: 0.2)) {
-                                scrollProxy.scrollTo("frame_\(newIndex)", anchor: .center)
+                        ),
+                        targetFrameIndex: viewModel.currentFrameIndex,
+                        cellSize: cellSize,
+                        viewportWidth: geometry.size.width,
+                        isPlaying: viewModel.isPlaying
+                    ) {
+                        LazyVStack(alignment: .leading, spacing: 0, pinnedViews: []) {
+                            ForEach(viewModel.layerViewModel.layers.indices.reversed(), id: \.self) { layerIndex in
+                                frameRowForLayer(layerIndex: layerIndex)
                             }
                         }
+                        .frame(minWidth: geometry.size.width, minHeight: geometry.size.height, alignment: .topLeading)
                     }
                 }
 
-                // Playhead 붉은 선 (프레임 왼쪽)
-                Rectangle()
-                    .fill(Constants.Theme.playheadRed)
-                    .frame(width: 2)
-                    .offset(
-                        x: CGFloat(viewModel.currentFrameIndex) * cellSize + horizontalScrollOffset,
-                        y: 0
-                    )
-                    .allowsHitTesting(false)
+                // Playhead 붉은 선
+                playheadView
             }
         }
     }
 
+    @ViewBuilder
+    private var playheadView: some View {
+        GeometryReader { geo in
+            let contentWidth = CGFloat(viewModel.frames.count) * cellSize
+            let viewportWidth = geo.size.width
+            let maxScrollX = max(0, contentWidth - viewportWidth)
+            let idealCenterScroll = CGFloat(viewModel.currentFrameIndex) * cellSize - (viewportWidth / 2) + (cellSize / 2)
+            let clampedScroll = max(0, min(idealCenterScroll, maxScrollX))
+            let isAtStart = clampedScroll <= 0
+            let isAtEnd = clampedScroll >= maxScrollX
+
+            Rectangle()
+                .fill(Constants.Theme.playheadRed)
+                .frame(width: 2)
+                .offset(x: {
+                    if isAtStart || isAtEnd {
+                        // 양 끝: 프레임 위치 따라감
+                        return CGFloat(viewModel.currentFrameIndex) * cellSize - horizontalScrollOffset
+                    } else {
+                        // 중간: 화면 중앙 고정
+                        return viewportWidth / 2
+                    }
+                }(), y: 0)
+                .allowsHitTesting(false)
+        }
+        .allowsHitTesting(false)
+    }
+
     private func frameRowForLayer(layerIndex: Int) -> some View {
         let layer = viewModel.layerViewModel.layers[layerIndex]
-        let isFirstLayer = layerIndex == viewModel.layerViewModel.layers.indices.first
 
         return HStack(spacing: 0) {
             ForEach(viewModel.frames) { frame in
                 frameCellView(layer: layer, layerIndex: layerIndex, frameIndex: frame.index)
-                    .id(isFirstLayer ? "frame_\(frame.index)" : nil)
             }
         }
         .frame(height: cellSize)

@@ -105,13 +105,7 @@ class PasteCommand: LayerPixelApplicable {
         canvasViewModel?.clearSelection()
 
         // 3. 붙여넣기를 floating selection으로 설정 (바로 커밋하지 않음)
-        // Debug: 픽셀 데이터 확인
-        guard !pastedSelectionPixels.isEmpty else {
-            print("⚠️ PasteCommand: pastedSelectionPixels is empty!")
-            return
-        }
-
-        print("✅ PasteCommand: pasting \(pastedSelectionPixels.count)x\(pastedSelectionPixels[0].count) pixels at \(pastedSelectionRect)")
+        guard !pastedSelectionPixels.isEmpty else { return }
 
         // 붙여넣기는 모든 픽셀이 선택된 상태의 마스크 생성 (전부 true)
         let mask = Array(repeating: Array(repeating: true, count: pastedSelectionPixels[0].count), count: pastedSelectionPixels.count)
