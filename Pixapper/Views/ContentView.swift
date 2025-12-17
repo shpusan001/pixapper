@@ -28,6 +28,7 @@ struct ContentView: View {
     @State private var showingExportSheet = false
     @State private var showingCanvasSizeSheet = false
     @State private var showingNewProjectAlert = false
+    @State private var showingShortcutsSheet = false
 
     // Convenience accessors
     private var layerViewModel: LayerViewModel { appViewModel.layerViewModel }
@@ -226,6 +227,9 @@ struct ContentView: View {
         .sheet(isPresented: $showingCanvasSizeSheet) {
             CanvasSizeSheet(viewModel: canvasViewModel, commandManager: commandManager)
         }
+        .sheet(isPresented: $showingShortcutsSheet) {
+            ShortcutsView()
+        }
         .focusable()
         .focused($isFocused)
         .onAppear {
@@ -250,119 +254,25 @@ struct ContentView: View {
             Text(appViewModel.errorMessage ?? "An unknown error occurred")
         }
         .onKeyPress { keyPress in
-            // New Project (Cmd+N)
-            if keyPress.characters == "n" && keyPress.modifiers.contains(.command) {
-                if appViewModel.isDirty {
-                    showingNewProjectAlert = true
-                } else {
-                    appViewModel.newProject()
-                }
-                return .handled
-            }
-            // Open (Cmd+O)
-            else if keyPress.characters == "o" && keyPress.modifiers.contains(.command) {
-                appViewModel.loadProject()
-                return .handled
-            }
-            // Save (Cmd+S)
-            else if keyPress.characters == "s" && keyPress.modifiers.contains(.command) {
-                appViewModel.saveProject()
-                return .handled
-            }
-            // Resize Canvas (Cmd+R)
-            else if keyPress.characters == "r" && keyPress.modifiers.contains(.command) {
-                showingCanvasSizeSheet = true
-                return .handled
-            }
-            // Toggle Background (Cmd+B)
-            else if keyPress.characters == "b" && keyPress.modifiers.contains(.command) {
-                canvasViewModel.toggleBackground()
-                return .handled
-            }
-            // Toggle Grid (Cmd+G)
-            else if keyPress.characters == "g" && keyPress.modifiers.contains(.command) {
-                canvasViewModel.toggleGrid()
-                return .handled
-            }
-            // Undo (Cmd+Z)
-            else if keyPress.characters == "z" && keyPress.modifiers.contains(.command) && !keyPress.modifiers.contains(.shift) {
-                if commandManager.canUndo {
-                    commandManager.undo()
-                }
-                return .handled
-            }
-            // Redo (Cmd+Shift+Z)
-            else if keyPress.characters == "Z" && keyPress.modifiers.contains(.command) {
-                if commandManager.canRedo {
-                    commandManager.redo()
-                }
-                return .handled
-            }
-            // Commit selection (Enter/Return)
-            else if keyPress.key == .return {
-                if canvasViewModel.isFloatingSelection {
-                    canvasViewModel.commitSelection()
-                }
-                return .handled
-            }
-            // Cancel selection (Escape)
-            else if keyPress.key == .escape {
-                if canvasViewModel.selectionRect != nil {
-                    canvasViewModel.clearSelection()
-                }
-                return .handled
-            }
-            // Color shortcuts
-            else if keyPress.characters == "x" || keyPress.characters == "X" {
-                appViewModel.colorManager.swapColors()
-                return .handled
-            } else if keyPress.characters == "d" || keyPress.characters == "D" {
-                appViewModel.colorManager.resetToDefaults()
-                return .handled
-            }
-            // Timeline controls
-            else if keyPress.characters == " " {
-                timelineViewModel.togglePlayback()
-                return .handled
-            } else if keyPress.characters == "," {
-                timelineViewModel.previousFrame()
-                return .handled
-            } else if keyPress.characters == "." {
-                timelineViewModel.nextFrame()
-                return .handled
-            } else if keyPress.characters == "o" || keyPress.characters == "O" {
-                timelineViewModel.toggleOnionSkin()
-                return .handled
-            }
-            // Frame Copy/Paste/Cut (when frames are selected)
-            else if keyPress.characters == "c" && keyPress.modifiers.contains(.command) && !timelineViewModel.selectedFrameIndices.isEmpty {
-                let layerId = timelineViewModel.layerViewModel.layers[timelineViewModel.layerViewModel.selectedLayerIndex].id
-                timelineViewModel.copyFrames(frameIndices: timelineViewModel.selectedFrameIndices, layerId: layerId)
-                return .handled
-            }
-            else if keyPress.characters == "v" && keyPress.modifiers.contains(.command) && !timelineViewModel.frameClipboard.isEmpty {
-                let layerId = timelineViewModel.layerViewModel.layers[timelineViewModel.layerViewModel.selectedLayerIndex].id
-                let command = PasteFramesCommand(
-                    timelineViewModel: timelineViewModel,
-                    startIndex: timelineViewModel.currentFrameIndex,
-                    layerId: layerId
-                )
-                commandManager.performCommand(command)
-                return .handled
-            }
-            else if keyPress.characters == "x" && keyPress.modifiers.contains(.command) && !timelineViewModel.selectedFrameIndices.isEmpty {
-                let layerId = timelineViewModel.layerViewModel.layers[timelineViewModel.layerViewModel.selectedLayerIndex].id
-                let command = CutFramesCommand(
-                    timelineViewModel: timelineViewModel,
-                    frameIndices: timelineViewModel.selectedFrameIndices,
-                    layerId: layerId
-                )
-                commandManager.performCommand(command)
-                return .handled
-            }
-            return .ignored
+            // 모든 단축키를 ShortcutManager에서 통합 처리
+            let handled = ShortcutManager.handle(
+                keyPress,
+                appViewModel: appViewModel,
+                canvasViewModel: canvasViewModel,
+                timelineViewModel: timelineViewModel,
+                colorManager: appViewModel.colorManager,
+                commandManager: commandManager
+            )
+            return handled ? .handled : .ignored
         }
+        .focusedValue(\.appViewModel, appViewModel)
         .focusedValue(\.canvasViewModel, canvasViewModel)
+        .focusedValue(\.timelineViewModel, timelineViewModel)
+        .focusedValue(\.colorManager, appViewModel.colorManager)
+        .focusedValue(\.commandManager, commandManager)
+        .focusedValue(\.showShortcuts) {
+            showingShortcutsSheet = true
+        }
     }
 }
 
