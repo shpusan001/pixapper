@@ -44,6 +44,10 @@ enum Shortcut: String, CaseIterable, Identifiable {
     case pasteFrames
     case cutFrames
     case deleteFrames
+    case extendFrame
+    case convertToKeyframe
+    case addBlankKeyframe
+    case addKeyframeWithDrawing
 
     // MARK: - Color
     case swapColors
@@ -65,7 +69,8 @@ enum Shortcut: String, CaseIterable, Identifiable {
         case .toggleGrid, .toggleBackground, .resizeCanvas, .zoomIn, .zoomOut, .zoomReset:
             return .view
         case .playPause, .nextFrame, .previousFrame, .toggleOnionSkin,
-             .copyFrames, .pasteFrames, .cutFrames, .deleteFrames:
+             .copyFrames, .pasteFrames, .cutFrames, .deleteFrames,
+             .extendFrame, .convertToKeyframe, .addBlankKeyframe, .addKeyframeWithDrawing:
             return .timeline
         case .swapColors, .resetColors:
             return .color
@@ -105,6 +110,10 @@ enum Shortcut: String, CaseIterable, Identifiable {
         case .pasteFrames: return "Paste Frames"
         case .cutFrames: return "Cut Frames"
         case .deleteFrames: return "Delete Frames"
+        case .extendFrame: return "Extend Frame"
+        case .convertToKeyframe: return "Convert to Keyframe"
+        case .addBlankKeyframe: return "Add Blank Keyframe"
+        case .addKeyframeWithDrawing: return "Add Keyframe with Current Drawing"
 
         case .swapColors: return "Swap Foreground/Background"
         case .resetColors: return "Reset to Default Colors"
@@ -174,6 +183,14 @@ enum Shortcut: String, CaseIterable, Identifiable {
             return nil  // Context-dependent, uses .cut
         case .deleteFrames:
             return nil  // Context-dependent, uses .delete
+        case .extendFrame:
+            return KeyboardShortcut("e")
+        case .convertToKeyframe:
+            return KeyboardShortcut("k")
+        case .addBlankKeyframe:
+            return KeyboardShortcut("b")
+        case .addKeyframeWithDrawing:
+            return KeyboardShortcut("i")
 
         // Color
         case .swapColors:
@@ -225,6 +242,10 @@ enum Shortcut: String, CaseIterable, Identifiable {
         case .pasteFrames: return "⌘V"
         case .cutFrames: return "⌘X"
         case .deleteFrames: return "⌫"
+        case .extendFrame: return "E"
+        case .convertToKeyframe: return "K"
+        case .addBlankKeyframe: return "B"
+        case .addKeyframeWithDrawing: return "I"
 
         // Color
         case .swapColors: return "X"
@@ -267,6 +288,10 @@ enum Shortcut: String, CaseIterable, Identifiable {
         case .pasteFrames: return "Paste copied frames"
         case .cutFrames: return "Cut selected frames"
         case .deleteFrames: return "Delete selected frames"
+        case .extendFrame: return "Extend current frame"
+        case .convertToKeyframe: return "Convert frame to keyframe"
+        case .addBlankKeyframe: return "Add blank keyframe at current position"
+        case .addKeyframeWithDrawing: return "Add keyframe with current drawing content"
 
         case .swapColors: return "Swap primary and secondary colors"
         case .resetColors: return "Reset colors to black and white"

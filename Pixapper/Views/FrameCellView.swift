@@ -45,25 +45,17 @@ struct FrameCellView: View {
         }
         .overlay(
             RoundedRectangle(cornerRadius: 1)
-                .strokeBorder(borderColor, lineWidth: isSelected ? 2 : (isMultiSelected ? 1 : 0))
+                .strokeBorder(borderColor, lineWidth: (isSelected || isMultiSelected) ? 2 : 0)
         )
     }
 
     // MARK: - UI Components
 
     private var backgroundColor: Color {
-        let isCurrentLayer = layerIndex == viewModel.layerViewModel.selectedLayerIndex
-
         switch spanPosition {
         case .keyframeStart:
-            if isCurrentFrame && isCurrentLayer {
-                return Constants.Theme.accentBlue.opacity(0.3)
-            }
             return Constants.Theme.sectionBackground
         case .extended, .end:
-            if isCurrentFrame && isCurrentLayer {
-                return Constants.Theme.accentBlue.opacity(0.15)
-            }
             return Constants.Theme.sectionBackground.opacity(0.5)
         case .empty:
             return Constants.Theme.backgroundDark
@@ -71,10 +63,8 @@ struct FrameCellView: View {
     }
 
     private var borderColor: Color {
-        if isSelected {
+        if isSelected || isMultiSelected {
             return Constants.Theme.accentBlue
-        } else if isMultiSelected {
-            return Constants.Theme.accentBlue.opacity(0.5)
         } else {
             return Color.clear
         }
@@ -226,8 +216,35 @@ class ClickHandlerNSView: NSView {
         Task { @MainActor in
             guard let vm = viewModel else { return }
 
-            // 일반 클릭: 단일 선택
-            vm.selectFrame(at: frameIndex)
+            let modifiers = event.modifierFlags
+
+            if modifiers.contains(.command) {
+                // Cmd+클릭: 토글 선택
+                if vm.selectedFrameIndices.contains(frameIndex) {
+                    vm.selectedFrameIndices.remove(frameIndex)
+                    if vm.selectedFrameIndices.isEmpty {
+                        vm.selectionAnchor = nil
+                    }
+                } else {
+                    vm.selectedFrameIndices.insert(frameIndex)
+                    vm.selectionAnchor = frameIndex
+                    vm.currentFrameIndex = frameIndex
+                    vm.loadFrame(at: frameIndex)
+                }
+            } else if modifiers.contains(.shift) {
+                // Shift+클릭: 범위 선택
+                let anchor = vm.selectionAnchor ?? vm.currentFrameIndex
+                let range = min(anchor, frameIndex)...max(anchor, frameIndex)
+                vm.selectedFrameIndices = Set(range.filter { $0 < vm.totalFrames })
+                vm.currentFrameIndex = frameIndex
+                vm.loadFrame(at: frameIndex)
+            } else {
+                // 일반 클릭: 단일 선택
+                vm.selectedFrameIndices = [frameIndex]
+                vm.selectionAnchor = frameIndex
+                vm.selectFrame(at: frameIndex)
+            }
+
             vm.layerViewModel.selectedLayerIndex = layerIndex
         }
     }

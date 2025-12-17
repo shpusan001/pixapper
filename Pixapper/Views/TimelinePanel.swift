@@ -303,28 +303,31 @@ struct TimelinePanel: View {
         Button("Copy") {
             viewModel.copyFrames(frameIndices: viewModel.selectedFrameIndices, layerId: layer.id)
         }
+        .keyboardShortcut("c", modifiers: .command)
         .disabled(viewModel.selectedFrameIndices.isEmpty)
 
         Button("Cut") {
             viewModel.cutFrames(frameIndices: viewModel.selectedFrameIndices, layerId: layer.id)
         }
+        .keyboardShortcut("x", modifiers: .command)
         .disabled(viewModel.selectedFrameIndices.isEmpty)
 
         Button("Paste") {
             viewModel.pasteFrames(at: frameIndex, layerId: layer.id)
         }
+        .keyboardShortcut("v", modifiers: .command)
         .disabled(!viewModel.hasFrameClipboard || isMultipleSelection)
 
         Divider()
 
-        // Convert to Keyframe (F6) - 단일 선택만 허용
-        Button("Convert to Keyframe") {
+        // Convert to Keyframe (K) - 단일 선택만 허용
+        Button("Convert to Keyframe (K)") {
             viewModel.toggleKeyframe(frameIndex: frameIndex, layerId: layer.id)
         }
         .disabled(isMultipleSelection)
 
-        // Add Keyframe with Current Drawing - 단일 선택만 허용
-        Button("Add Keyframe with Current Drawing") {
+        // Add Keyframe with Current Drawing (I) - 단일 선택만 허용
+        Button("Add Keyframe with Current Drawing (I)") {
             let command = AddKeyframeWithContentCommand(
                 timelineViewModel: viewModel,
                 layerId: layer.id
@@ -333,8 +336,8 @@ struct TimelinePanel: View {
         }
         .disabled(isMultipleSelection)
 
-        // Add Blank Keyframe (F7) - 단일 선택만 허용
-        Button("Add Blank Keyframe") {
+        // Add Blank Keyframe (B) - 단일 선택만 허용
+        Button("Add Blank Keyframe (B)") {
             let command = AddBlankKeyframeCommand(
                 timelineViewModel: viewModel,
                 layerId: layer.id,
@@ -347,8 +350,8 @@ struct TimelinePanel: View {
 
         Divider()
 
-        // Add Frame (Extend) (F5) - 단일 선택만 허용
-        Button("Extend Frame") {
+        // Add Frame (Extend) (E) - 단일 선택만 허용
+        Button("Extend Frame (E)") {
             let command = ExtendFrameCommand(
                 timelineViewModel: viewModel,
                 frameIndex: frameIndex,

@@ -24,6 +24,14 @@ struct TimelineMenuCommands: Commands {
 
             Divider()
 
+            // Keyframe operations
+            shortcutButton(.extendFrame)
+            shortcutButton(.convertToKeyframe)
+            shortcutButton(.addBlankKeyframe)
+            shortcutButton(.addKeyframeWithDrawing)
+
+            Divider()
+
             // Note: Play/Pause, Next/Previous Frame, Onion Skin은
             // 단일 키 단축키라서 메뉴에 넣지 않음
             // ContentView에서 직접 처리됨

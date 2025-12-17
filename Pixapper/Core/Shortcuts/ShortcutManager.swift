@@ -65,6 +65,7 @@ struct ShortcutManager {
             return .playPause
         }
 
+
         // Command + key
         if hasCommand && !hasShift {
             switch char {
@@ -102,6 +103,10 @@ struct ShortcutManager {
             case "o": return .toggleOnionSkin
             case "x": return .swapColors
             case "d": return .resetColors
+            case "e": return .extendFrame
+            case "k": return .convertToKeyframe
+            case "b": return .addBlankKeyframe
+            case "i": return .addKeyframeWithDrawing
             default: return nil
             }
         }
@@ -241,6 +246,26 @@ struct ShortcutManager {
                 executeDeleteFrames(timelineViewModel: timeline, commandManager: commandManager)
             }
 
+        case .extendFrame:
+            if let timeline = timelineViewModel {
+                executeExtendFrame(timelineViewModel: timeline, commandManager: commandManager)
+            }
+
+        case .convertToKeyframe:
+            if let timeline = timelineViewModel {
+                executeConvertToKeyframe(timelineViewModel: timeline)
+            }
+
+        case .addBlankKeyframe:
+            if let timeline = timelineViewModel {
+                executeAddBlankKeyframe(timelineViewModel: timeline, commandManager: commandManager)
+            }
+
+        case .addKeyframeWithDrawing:
+            if let timeline = timelineViewModel {
+                executeAddKeyframeWithDrawing(timelineViewModel: timeline, commandManager: commandManager)
+            }
+
         // MARK: - Color
         case .swapColors:
             colorManager?.swapColors()
@@ -333,6 +358,9 @@ struct ShortcutManager {
             // 항상 활성화 (클립보드 비어있으면 그냥 무시)
             return true
 
+        case .extendFrame, .convertToKeyframe, .addBlankKeyframe, .addKeyframeWithDrawing:
+            return timelineViewModel != nil
+
         // Color
         case .swapColors, .resetColors:
             return colorManager != nil
@@ -380,6 +408,41 @@ struct ShortcutManager {
         let command = DeleteFramesCommand(
             timelineViewModel: timelineViewModel,
             frameIndices: timelineViewModel.selectedFrameIndices,
+            layerId: layerId
+        )
+        commandManager?.performCommand(command)
+    }
+
+    private static func executeExtendFrame(timelineViewModel: TimelineViewModel, commandManager: CommandManager?) {
+        guard let layerId = timelineViewModel.layerViewModel.layers[safe: timelineViewModel.layerViewModel.selectedLayerIndex]?.id else { return }
+        let command = ExtendFrameCommand(
+            timelineViewModel: timelineViewModel,
+            frameIndex: timelineViewModel.currentFrameIndex,
+            layerId: layerId
+        )
+        commandManager?.performCommand(command)
+    }
+
+    private static func executeConvertToKeyframe(timelineViewModel: TimelineViewModel) {
+        guard let layerId = timelineViewModel.layerViewModel.layers[safe: timelineViewModel.layerViewModel.selectedLayerIndex]?.id else { return }
+        timelineViewModel.toggleKeyframe(frameIndex: timelineViewModel.currentFrameIndex, layerId: layerId)
+    }
+
+    private static func executeAddBlankKeyframe(timelineViewModel: TimelineViewModel, commandManager: CommandManager?) {
+        guard let layerId = timelineViewModel.layerViewModel.layers[safe: timelineViewModel.layerViewModel.selectedLayerIndex]?.id else { return }
+        let command = AddBlankKeyframeCommand(
+            timelineViewModel: timelineViewModel,
+            layerId: layerId,
+            canvasWidth: timelineViewModel.canvasWidth,
+            canvasHeight: timelineViewModel.canvasHeight
+        )
+        commandManager?.performCommand(command)
+    }
+
+    private static func executeAddKeyframeWithDrawing(timelineViewModel: TimelineViewModel, commandManager: CommandManager?) {
+        guard let layerId = timelineViewModel.layerViewModel.layers[safe: timelineViewModel.layerViewModel.selectedLayerIndex]?.id else { return }
+        let command = AddKeyframeWithContentCommand(
+            timelineViewModel: timelineViewModel,
             layerId: layerId
         )
         commandManager?.performCommand(command)

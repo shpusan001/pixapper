@@ -230,22 +230,21 @@ struct TimelinePanelNew: View {
         GeometryReader { geometry in
             HStack(spacing: 0) {
                 // 왼쪽: 레이어 컬럼
-                layerColumn
+                layerColumnContent(availableHeight: geometry.size.height)
                     .frame(width: layerColumnWidth)
 
                 // 중간: 드래그 분할선
                 splitterDivider
 
                 // 오른쪽: 프레임 그리드
-                frameGrid
-                    .frame(width: geometry.size.width - layerColumnWidth - splitterWidth)
+                frameGridContent(availableHeight: geometry.size.height, availableWidth: geometry.size.width - layerColumnWidth - splitterWidth)
             }
         }
     }
 
     // MARK: - Layer Column
 
-    private var layerColumn: some View {
+    private func layerColumnContent(availableHeight: CGFloat) -> some View {
         VStack(spacing: 0) {
             // 헤더
             Text("LAYERS")
@@ -256,15 +255,18 @@ struct TimelinePanelNew: View {
                 .background(Constants.Theme.sectionBackground)
 
             // 레이어 리스트 (스크롤 오프셋으로 동기화)
-            GeometryReader { geometry in
+            ZStack(alignment: .topLeading) {
                 VStack(spacing: 0) {
                     ForEach(viewModel.layerViewModel.layers.indices.reversed(), id: \.self) { index in
                         layerInfoRow(index: index)
                     }
                 }
-                .offset(y: verticalScrollOffset)
+                .offset(y: -verticalScrollOffset)
             }
+            .frame(height: availableHeight - headerHeight)
+            .clipped()
         }
+        .frame(height: availableHeight)
         .background(Constants.Theme.panelBackground)
     }
 
@@ -308,10 +310,10 @@ struct TimelinePanelNew: View {
 
     // MARK: - Frame Grid
 
-    private var frameGrid: some View {
+    private func frameGridContent(availableHeight: CGFloat, availableWidth: CGFloat) -> some View {
         VStack(spacing: 0) {
             // 프레임 번호 헤더 (스크롤 오프셋으로 동기화)
-            GeometryReader { headerGeometry in
+            ZStack(alignment: .topLeading) {
                 HStack(spacing: 0) {
                     ForEach(viewModel.frames) { frame in
                         Text("\(frame.index + 1)")
@@ -334,33 +336,34 @@ struct TimelinePanelNew: View {
             // 프레임 셀 그리드 + Playhead
             ZStack(alignment: .topLeading) {
                 // 프레임 셀 그리드
-                GeometryReader { geometry in
-                    PreciseScrollView(
-                        scrollOffset: Binding(
-                            get: { CGPoint(x: horizontalScrollOffset, y: verticalScrollOffset) },
-                            set: { point in
-                                horizontalScrollOffset = point.x
-                                verticalScrollOffset = point.y
-                            }
-                        ),
-                        targetFrameIndex: viewModel.currentFrameIndex,
-                        cellSize: cellSize,
-                        viewportWidth: geometry.size.width,
-                        isPlaying: viewModel.isPlaying
-                    ) {
-                        LazyVStack(alignment: .leading, spacing: 0, pinnedViews: []) {
-                            ForEach(viewModel.layerViewModel.layers.indices.reversed(), id: \.self) { layerIndex in
-                                frameRowForLayer(layerIndex: layerIndex)
-                            }
+                PreciseScrollView(
+                    scrollOffset: Binding(
+                        get: { CGPoint(x: horizontalScrollOffset, y: verticalScrollOffset) },
+                        set: { point in
+                            horizontalScrollOffset = point.x
+                            verticalScrollOffset = point.y
                         }
-                        .frame(minWidth: geometry.size.width, minHeight: geometry.size.height, alignment: .topLeading)
+                    ),
+                    targetFrameIndex: viewModel.currentFrameIndex,
+                    cellSize: cellSize,
+                    viewportWidth: availableWidth,
+                    isPlaying: viewModel.isPlaying
+                ) {
+                    LazyVStack(alignment: .leading, spacing: 0, pinnedViews: []) {
+                        ForEach(viewModel.layerViewModel.layers.indices.reversed(), id: \.self) { layerIndex in
+                            frameRowForLayer(layerIndex: layerIndex)
+                        }
                     }
+                    .frame(minWidth: availableWidth, minHeight: availableHeight - headerHeight, alignment: .topLeading)
                 }
 
                 // Playhead 붉은 선
                 playheadView
             }
+            .frame(height: availableHeight - headerHeight)
+            .clipped()
         }
+        .frame(width: availableWidth, height: availableHeight)
     }
 
     @ViewBuilder
