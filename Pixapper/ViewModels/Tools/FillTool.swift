@@ -43,7 +43,7 @@ class FillTool: BaseTool, CanvasTool {
         let targetColor = pixels[y][x]
 
         // Don't fill if target and fill colors are the same (with tolerance)
-        if colorsEqualWithTolerance(targetColor, fillColor, tolerance: tolerance) {
+        if Color.areEqual(targetColor, fillColor, tolerance: tolerance) {
             return
         }
 
@@ -68,7 +68,7 @@ class FillTool: BaseTool, CanvasTool {
             }
             let currentColor = currentPixels[py][px]
 
-            if !colorsEqualWithTolerance(currentColor, targetColor, tolerance: tolerance) {
+            if !Color.areEqual(currentColor, targetColor, tolerance: tolerance) {
                 continue
             }
 
@@ -99,16 +99,5 @@ class FillTool: BaseTool, CanvasTool {
             // Fill 완료 시 timeline에 즉시 동기화
             timelineViewModel?.pixelStateManager?.syncToTimeline()
         }
-    }
-
-    /// 두 색상을 허용 오차(tolerance)와 함께 비교
-    private func colorsEqualWithTolerance(_ c1: Color?, _ c2: Color?, tolerance: Double) -> Bool {
-        if c1 == nil && c2 == nil {
-            return true
-        }
-        guard let c1 = c1, let c2 = c2 else {
-            return false
-        }
-        return c1.isEqual(to: c2, tolerance: tolerance)
     }
 }

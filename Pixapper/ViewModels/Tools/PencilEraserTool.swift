@@ -12,15 +12,10 @@ import SwiftUI
 class PencilEraserTool: BaseTool, CanvasTool {
     // Drawing state
     private var lastDrawPoint: (x: Int, y: Int)?
-    private var currentStrokePixels: [PixelChange] = []
-    private var oldStrokePixels: [PixelChange] = []
-    private var drawnPixelsInStroke: Set<String> = []  // "x,y" 형식으로 저장
 
     func handleDown(x: Int, y: Int, altPressed: Bool) {
         lastDrawPoint = (x, y)
-        currentStrokePixels = []
-        oldStrokePixels = []
-        drawnPixelsInStroke = []
+        beginStroke()
         drawPixel(x: x, y: y)
     }
 
@@ -38,23 +33,8 @@ class PencilEraserTool: BaseTool, CanvasTool {
     }
 
     func handleUp(x: Int, y: Int) {
-        // 스트로크 완료 - Command 생성
-        if !currentStrokePixels.isEmpty {
-            let command = DrawCommand(
-                timelineViewModel: timelineViewModel,
-                layerId: layerViewModel.layers[currentLayerIndex].id,
-                oldPixels: oldStrokePixels,
-                newPixels: currentStrokePixels
-            )
-            commandManager.addExecutedCommand(command)
-        }
-        currentStrokePixels = []
-        oldStrokePixels = []
-        drawnPixelsInStroke = []
+        finishStroke()
         lastDrawPoint = nil
-
-        // 스트로크 완료 시 timeline에 즉시 동기화
-        timelineViewModel?.pixelStateManager?.syncToTimeline()
     }
 
     func updateHover(x: Int, y: Int) {
@@ -108,14 +88,11 @@ class PencilEraserTool: BaseTool, CanvasTool {
                 guard shouldDraw else { continue }
 
                 // 이미 그린 픽셀인지 체크 (보간 중 중복 방지)
-                // - Note: Set을 사용하여 O(1) 중복 체크
-                //   같은 스트로크에서 같은 픽셀을 여러 번 그리는 것을 방지하여
-                //   oldStrokePixels의 정확성을 보장하고 Undo/Redo 버그 방지
-                let pixelKey = "\(px),\(py)"
-                if drawnPixelsInStroke.contains(pixelKey) {
+                let pixelPoint = PixelPoint(px, py)
+                if drawingState.drawnPixelsInStroke.contains(pixelPoint) {
                     continue
                 }
-                drawnPixelsInStroke.insert(pixelKey)
+                drawingState.drawnPixelsInStroke.insert(pixelPoint)
 
                 // Single Source of Truth: TimelineViewModel 사용
                 let layerId = layerViewModel.layers[currentLayerIndex].id
@@ -126,10 +103,10 @@ class PencilEraserTool: BaseTool, CanvasTool {
                    py >= 0, py < pixels.count, px >= 0, px < pixels[py].count {
                     oldColor = pixels[py][px]
                 }
-                oldStrokePixels.append(PixelChange(x: px, y: py, color: oldColor))
+                drawingState.oldStrokePixels.append(PixelChange(x: px, y: py, color: oldColor))
 
                 // 새로운 값 저장
-                currentStrokePixels.append(PixelChange(x: px, y: py, color: color))
+                drawingState.currentStrokePixels.append(PixelChange(x: px, y: py, color: color))
 
                 // 픽셀 변경 - TimelineViewModel을 통해 즉시 timeline 반영
                 timelineViewModel?.setPixel(layerId: layerId, x: px, y: py, color: color)

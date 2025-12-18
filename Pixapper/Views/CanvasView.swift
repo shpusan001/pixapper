@@ -328,39 +328,79 @@ struct CanvasView: View {
         let settings = viewModel.toolSettingsManager.textSettings
         let font = NSFont.systemFont(ofSize: settings.fontSize)
 
-        // 커서 위치까지의 텍스트
+        // 커서 위치
         let cursorIndex = min(textState.cursorPosition, textState.text.count)
 
-        // 줄별로 분할하여 커서가 어느 줄에 있는지 찾기
-        let lines = textState.text.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
-        var currentIndex = 0
-        var cursorLine = 0
-        var cursorColumn = 0
-
-        for (lineIndex, line) in lines.enumerated() {
-            let lineEndIndex = currentIndex + line.count
-            if cursorIndex <= lineEndIndex {
-                cursorLine = lineIndex
-                cursorColumn = cursorIndex - currentIndex
-                break
-            }
-            currentIndex = lineEndIndex + 1  // +1 for newline
+        // 빈 텍스트면 기본 위치
+        if textState.text.isEmpty || cursorIndex == 0 {
+            let lineHeight = "A".size(withAttributes: [.font: font]).height
+            return (Int(textState.rect.minX), Int(textState.rect.minY), Int(lineHeight))
         }
 
-        // 현재 줄의 커서 앞 텍스트
-        let currentLineText = cursorLine < lines.count ? lines[cursorLine] : ""
-        let textBeforeCursorInLine = String(currentLineText.prefix(cursorColumn))
+        // NSLayoutManager를 사용하여 실제 커서 위치 계산
+        let textStorage = NSTextStorage(string: textState.text)
+        let layoutManager = NSLayoutManager()
+        let textContainer = NSTextContainer(size: NSSize(width: textState.rect.width, height: CGFloat.greatestFiniteMagnitude))
 
-        // 커서 X 위치 (텍스트 너비)
-        let textWidth = textBeforeCursorInLine.size(withAttributes: [.font: font]).width
-        let cursorX = Int(textState.rect.minX) + Int(textWidth)
+        textContainer.lineFragmentPadding = 0  // 여백 제거
+        layoutManager.addTextContainer(textContainer)
+        textStorage.addLayoutManager(layoutManager)
+        textStorage.addAttributes([.font: font], range: NSRange(location: 0, length: textStorage.length))
 
-        // 커서 Y 위치 (줄 높이 누적)
-        let lineHeight = "A".size(withAttributes: [.font: font]).height
-        let cursorY = Int(textState.rect.minY) + cursorLine * Int(lineHeight)
+        // 레이아웃 강제 계산
+        layoutManager.glyphRange(for: textContainer)
 
-        // 커서 높이
-        let cursorHeight = Int(lineHeight)
+        // 커서 위치의 glyph 인덱스
+        let characterIndex = min(cursorIndex, textStorage.length)
+        var glyphIndex: Int
+
+        if characterIndex >= textStorage.length {
+            // 텍스트 끝이면 마지막 glyph 다음 위치
+            glyphIndex = layoutManager.numberOfGlyphs
+        } else {
+            glyphIndex = layoutManager.glyphIndexForCharacter(at: characterIndex)
+        }
+
+        // 커서가 속한 line fragment 찾기
+        var lineFragmentRect = CGRect.zero
+        var lineFragmentUsedRect = CGRect.zero
+        var effectiveGlyphIndex = glyphIndex
+
+        if glyphIndex >= layoutManager.numberOfGlyphs && layoutManager.numberOfGlyphs > 0 {
+            // 텍스트 끝이면 마지막 glyph의 line fragment 사용
+            effectiveGlyphIndex = layoutManager.numberOfGlyphs - 1
+        }
+
+        lineFragmentRect = layoutManager.lineFragmentRect(
+            forGlyphAt: effectiveGlyphIndex,
+            effectiveRange: nil,
+            withoutAdditionalLayout: true
+        )
+        lineFragmentUsedRect = layoutManager.lineFragmentUsedRect(
+            forGlyphAt: effectiveGlyphIndex,
+            effectiveRange: nil,
+            withoutAdditionalLayout: true
+        )
+
+        // 커서의 X 위치 계산
+        var cursorXInFragment: CGFloat = 0
+        if glyphIndex < layoutManager.numberOfGlyphs {
+            let location = layoutManager.location(forGlyphAt: glyphIndex)
+            cursorXInFragment = location.x
+        } else if layoutManager.numberOfGlyphs > 0 {
+            // 텍스트 끝이면 마지막 glyph 다음
+            let location = layoutManager.location(forGlyphAt: layoutManager.numberOfGlyphs - 1)
+            let lastGlyphRect = layoutManager.boundingRect(
+                forGlyphRange: NSRange(location: layoutManager.numberOfGlyphs - 1, length: 1),
+                in: textContainer
+            )
+            cursorXInFragment = location.x + lastGlyphRect.width
+        }
+
+        // 커서 위치 계산 (픽셀 좌표)
+        let cursorX = Int(textState.rect.minX) + Int(cursorXInFragment)
+        let cursorY = Int(textState.rect.minY) + Int(lineFragmentRect.minY)
+        let cursorHeight = Int(lineFragmentUsedRect.height > 0 ? lineFragmentUsedRect.height : "A".size(withAttributes: [.font: font]).height)
 
         return (cursorX, cursorY, cursorHeight)
     }

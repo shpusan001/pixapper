@@ -12,15 +12,10 @@ import SwiftUI
 class MirrorTool: BaseTool, CanvasTool {
     // Drawing state
     private var lastDrawPoint: (x: Int, y: Int)?
-    private var currentStrokePixels: [PixelChange] = []
-    private var oldStrokePixels: [PixelChange] = []
-    private var drawnPixelsInStroke: Set<String> = []
 
     func handleDown(x: Int, y: Int, altPressed: Bool) {
         lastDrawPoint = (x, y)
-        currentStrokePixels = []
-        oldStrokePixels = []
-        drawnPixelsInStroke = []
+        beginStroke()
         drawWithMirror(x: x, y: y)
     }
 
@@ -37,20 +32,8 @@ class MirrorTool: BaseTool, CanvasTool {
     }
 
     func handleUp(x: Int, y: Int) {
-        if !currentStrokePixels.isEmpty, let layerId = currentLayerId {
-            let command = DrawCommand(
-                timelineViewModel: timelineViewModel,
-                layerId: layerId,
-                oldPixels: oldStrokePixels,
-                newPixels: currentStrokePixels
-            )
-            commandManager.addExecutedCommand(command)
-        }
-        currentStrokePixels = []
-        oldStrokePixels = []
-        drawnPixelsInStroke = []
+        finishStroke()
         lastDrawPoint = nil
-        timelineViewModel?.pixelStateManager?.syncToTimeline()
     }
 
     func updateHover(x: Int, y: Int) {
@@ -159,19 +142,19 @@ class MirrorTool: BaseTool, CanvasTool {
                 }
                 guard shouldDraw else { continue }
 
-                let pixelKey = "\(px),\(py)"
-                if drawnPixelsInStroke.contains(pixelKey) {
+                let pixelPoint = PixelPoint(px, py)
+                if drawingState.drawnPixelsInStroke.contains(pixelPoint) {
                     continue
                 }
-                drawnPixelsInStroke.insert(pixelKey)
+                drawingState.drawnPixelsInStroke.insert(pixelPoint)
 
                 var oldColor: Color? = nil
                 if let pixels = timelineViewModel?.getCurrentFramePixels(layerId: layerId),
                    py >= 0, py < pixels.count, px >= 0, px < pixels[py].count {
                     oldColor = pixels[py][px]
                 }
-                oldStrokePixels.append(PixelChange(x: px, y: py, color: oldColor))
-                currentStrokePixels.append(PixelChange(x: px, y: py, color: color))
+                drawingState.oldStrokePixels.append(PixelChange(x: px, y: py, color: oldColor))
+                drawingState.currentStrokePixels.append(PixelChange(x: px, y: py, color: color))
                 timelineViewModel?.setPixel(layerId: layerId, x: px, y: py, color: color)
             }
         }

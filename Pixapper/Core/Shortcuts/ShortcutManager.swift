@@ -149,14 +149,8 @@ struct ShortcutManager {
         switch shortcut {
         // MARK: - File
         case .newProject:
-            if let app = appViewModel {
-                if app.isDirty {
-                    // TODO: Show alert
-                    app.newProject()
-                } else {
-                    app.newProject()
-                }
-            }
+            // Note: Alert handling is done in ContentView
+            appViewModel?.newProject()
 
         case .openProject:
             appViewModel?.loadProject()
@@ -204,7 +198,7 @@ struct ShortcutManager {
             }
 
         case .selectAll:
-            // TODO: Implement selectAll
+            // Note: Select All requires SelectionTool integration - not implemented yet
             break
 
         case .deselect:
@@ -218,7 +212,7 @@ struct ShortcutManager {
             canvasViewModel?.toggleBackground()
 
         case .resizeCanvas:
-            // TODO: Show sheet (handled in ContentView)
+            // Note: Sheet is shown in ContentView via shortcut key binding
             break
 
         case .zoomIn:

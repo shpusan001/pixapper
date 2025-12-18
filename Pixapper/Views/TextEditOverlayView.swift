@@ -60,6 +60,12 @@ struct TextEditOverlayView: View {
                     textBoxHeight: rectHeight,  // 화면 포인트 크기로 변경!
                     onTextChange: {
                         viewModel.updateTextPreview()
+                    },
+                    onCancel: {
+                        viewModel.cancelText()
+                    },
+                    onCommit: {
+                        viewModel.commitText()
                     }
                 )
                 .frame(width: rectWidth, height: rectHeight)

@@ -41,4 +41,20 @@ extension Color {
                abs(rgb1.b - rgb2.b) < tolerance &&
                abs(rgb1.a - rgb2.a) < tolerance
     }
+
+    /// 두 Color 옵셔널의 비교 (nil 처리 포함)
+    /// - Parameters:
+    ///   - c1: 첫 번째 색상 (optional)
+    ///   - c2: 두 번째 색상 (optional)
+    ///   - tolerance: 허용 오차 (기본값 Constants.Color.defaultTolerance)
+    /// - Returns: 두 색상이 같으면 true (둘 다 nil이면 true)
+    static func areEqual(_ c1: Color?, _ c2: Color?, tolerance: Double = Constants.Color.defaultTolerance) -> Bool {
+        if c1 == nil && c2 == nil {
+            return true
+        }
+        guard let c1 = c1, let c2 = c2 else {
+            return false
+        }
+        return c1.isEqual(to: c2, tolerance: tolerance)
+    }
 }

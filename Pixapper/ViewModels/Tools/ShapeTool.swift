@@ -26,9 +26,6 @@ class ShapeTool: BaseTool, CanvasTool {
         commitShape()
         shapeStartPoint = nil
         canvasViewModel?.shapePreview = []
-
-        // Shape 완료 시 timeline에 즉시 동기화
-        timelineViewModel?.pixelStateManager?.syncToTimeline()
     }
 
     // MARK: - Private Methods
@@ -107,6 +104,9 @@ class ShapeTool: BaseTool, CanvasTool {
             )
             commandManager.addExecutedCommand(command)
         }
+
+        // Timeline에 즉시 동기화
+        timelineViewModel?.pixelStateManager?.syncToTimeline()
     }
 
     // MARK: - Shape Drawing Algorithms

@@ -67,36 +67,17 @@ class AppViewModel: ObservableObject {
 
     // MARK: - 변경 추적
     private func setupDirtyTracking() {
-        // 레이어 변경 추적
-        layerViewModel.$layers
-            .dropFirst()
-            .sink { [weak self] _ in
-                self?.markDirty()
-            }
-            .store(in: &cancellables)
-
-        // 타임라인 변경 추적
-        timelineViewModel.$totalFrames
-            .dropFirst()
-            .sink { [weak self] _ in
-                self?.markDirty()
-            }
-            .store(in: &cancellables)
-
-        timelineViewModel.$currentFrameIndex
-            .dropFirst()
-            .sink { [weak self] _ in
-                self?.markDirty()
-            }
-            .store(in: &cancellables)
-
-        // 커맨드 실행 시 dirty 표시
-        commandManager.$undoStack
-            .dropFirst()
-            .sink { [weak self] _ in
-                self?.markDirty()
-            }
-            .store(in: &cancellables)
+        // 모든 변경사항을 하나의 Publisher로 통합
+        Publishers.Merge4(
+            layerViewModel.$layers.dropFirst().map { _ in () }.eraseToAnyPublisher(),
+            timelineViewModel.$totalFrames.dropFirst().map { _ in () }.eraseToAnyPublisher(),
+            timelineViewModel.$currentFrameIndex.dropFirst().map { _ in () }.eraseToAnyPublisher(),
+            commandManager.$undoStack.dropFirst().map { _ in () }.eraseToAnyPublisher()
+        )
+        .sink { [weak self] _ in
+            self?.markDirty()
+        }
+        .store(in: &cancellables)
     }
 
     private func markDirty() {

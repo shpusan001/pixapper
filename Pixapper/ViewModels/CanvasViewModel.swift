@@ -121,6 +121,17 @@ class CanvasViewModel: ObservableObject {
 
         // Recreate tools with timeline reference
         setupTools(timelineViewModel: timeline)
+
+        // 프레임 변경 시 텍스트 자동 커밋 (표준 UX)
+        timeline.$currentFrameIndex
+            .dropFirst()
+            .sink { [weak self] _ in
+                guard let self = self else { return }
+                if self.textEditState != nil {
+                    self.commitText()
+                }
+            }
+            .store(in: &cancellables)
     }
 
     /// 도구들을 생성하거나 재생성합니다
@@ -196,12 +207,28 @@ class CanvasViewModel: ObservableObject {
             .sink { [weak self] newTool in
                 guard let self = self else { return }
 
+                // 텍스트 입력 중이면 자동 커밋 (표준 UX)
+                if newTool != .text && self.textEditState != nil {
+                    self.commitText()
+                }
+
                 if newTool != .selection {
                     if self.isFloatingSelection {
                         self.commitSelection()
                     } else if self.selectionRect != nil {
                         self.clearSelection()
                     }
+                }
+            }
+            .store(in: &cancellables)
+
+        // 레이어 변경 시 텍스트 자동 커밋 (표준 UX)
+        layerViewModel.$selectedLayerIndex
+            .dropFirst()
+            .sink { [weak self] _ in
+                guard let self = self else { return }
+                if self.textEditState != nil {
+                    self.commitText()
                 }
             }
             .store(in: &cancellables)
@@ -454,13 +481,7 @@ class CanvasViewModel: ObservableObject {
 
     /// 두 색상의 RGB 정밀 비교
     func colorsEqual(_ c1: Color?, _ c2: Color?) -> Bool {
-        if c1 == nil && c2 == nil {
-            return true
-        }
-        guard let c1 = c1, let c2 = c2 else {
-            return false
-        }
-        return c1.isEqual(to: c2, tolerance: Constants.Color.defaultTolerance)
+        return Color.areEqual(c1, c2)
     }
 
     /// PixelChange 계산 헬퍼 (Commands에서 사용)

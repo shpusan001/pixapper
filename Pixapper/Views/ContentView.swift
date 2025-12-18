@@ -203,11 +203,11 @@ struct ContentView: View {
 
                     // Color panel - 독립 열 (좁게)
                     ColorPanel(colorManager: toolSettingsManager.colorManager)
-                        .frame(minWidth: 140, idealWidth: 160, maxWidth: 200)
+                        .frame(minWidth: 140, idealWidth: 140, maxWidth: 280)
 
                     // Properties panel - 독립 열
                     PropertiesPanel(toolSettingsManager: toolSettingsManager, viewModel: canvasViewModel)
-                        .frame(minWidth: 180, idealWidth: 220, maxWidth: 280)
+                        .frame(minWidth: 140, idealWidth: 140, maxWidth: 280)
                 }
 
                 // Timeline panel at the bottom

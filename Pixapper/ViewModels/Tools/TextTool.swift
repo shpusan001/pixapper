@@ -28,11 +28,21 @@ enum TextBoxMode {
 /// 텍스트 도구 - TextField 기반 IME 지원
 @MainActor
 class TextTool: BaseTool, CanvasTool {
+    // MARK: - Constants
+    private static let minBoxWidth = 3
+    private static let minBoxHeight = 2
+
+    // MARK: - Properties
     private var startPoint: (x: Int, y: Int)?
     private var mode: TextBoxMode = .idle
     private var hoveredHandle: TextBoxHandle?
-    private var settingsCancellable: AnyCancellable?
-    private var cursorTimer: Timer?
+    nonisolated(unsafe) private var settingsCancellable: AnyCancellable?
+    nonisolated(unsafe) private var cursorTimer: Timer?
+
+    nonisolated deinit {
+        stopCursorTimer()
+        stopSettingsObserver()
+    }
 
     func handleDown(x: Int, y: Int, altPressed: Bool) {
         let point = CGPoint(x: CGFloat(x), y: CGFloat(y))
@@ -111,7 +121,7 @@ class TextTool: BaseTool, CanvasTool {
             )
 
             // 최소 크기 체크
-            if newRect.width >= 3 && newRect.height >= 2 {
+            if newRect.width >= CGFloat(Self.minBoxWidth) && newRect.height >= CGFloat(Self.minBoxHeight) {
                 if var state = canvasViewModel?.textEditState {
                     state.rect = newRect
                     canvasViewModel?.textEditState = state
@@ -137,7 +147,7 @@ class TextTool: BaseTool, CanvasTool {
             let width = maxX - minX + 1
             let height = maxY - minY + 1
 
-            if width >= 3 && height >= 2 {
+            if width >= Self.minBoxWidth && height >= Self.minBoxHeight {
                 // 텍스트 박스 생성 완료
                 canvasViewModel?.textEditState = TextEditState(
                     rect: CGRect(x: minX, y: minY, width: width, height: height),
@@ -242,7 +252,7 @@ class TextTool: BaseTool, CanvasTool {
         }
     }
 
-    private func stopCursorTimer() {
+    nonisolated private func stopCursorTimer() {
         cursorTimer?.invalidate()
         cursorTimer = nil
     }
@@ -259,7 +269,7 @@ class TextTool: BaseTool, CanvasTool {
             }
     }
 
-    private func stopSettingsObserver() {
+    nonisolated private func stopSettingsObserver() {
         settingsCancellable?.cancel()
         settingsCancellable = nil
     }
@@ -281,32 +291,46 @@ class TextTool: BaseTool, CanvasTool {
             return
         }
 
-        // 줄 단위로 분할
-        let lines = state.text.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
-        var currentY: CGFloat = 0
+        // NSLayoutManager를 사용하여 실제 줄바꿈을 계산
+        let textStorage = NSTextStorage(string: state.text)
+        let layoutManager = NSLayoutManager()
+        let textContainer = NSTextContainer(size: NSSize(width: state.rect.width, height: CGFloat.greatestFiniteMagnitude))
 
-        for line in lines {
-            if line.isEmpty {
-                // 빈 줄 - 줄 높이만큼 건너뛰기
-                let lineHeight = "A".size(withAttributes: [.font: font]).height
-                currentY += lineHeight
-                continue
+        textContainer.lineFragmentPadding = 0  // 여백 제거 (TransparentTextEditor와 동일)
+        layoutManager.addTextContainer(textContainer)
+        textStorage.addLayoutManager(layoutManager)
+
+        // 폰트 속성 적용
+        textStorage.addAttributes([.font: font], range: NSRange(location: 0, length: textStorage.length))
+
+        // 레이아웃 강제 계산
+        layoutManager.glyphRange(for: textContainer)
+
+        // 각 줄 조각(line fragment)을 순회하여 렌더링
+        layoutManager.enumerateLineFragments(forGlyphRange: NSRange(location: 0, length: layoutManager.numberOfGlyphs)) { (rect, usedRect, textContainer, glyphRange, stop) in
+            // 현재 줄의 텍스트 추출
+            let characterRange = layoutManager.characterRange(forGlyphRange: glyphRange, actualGlyphRange: nil)
+            let lineText = (textStorage.string as NSString).substring(with: characterRange)
+
+            // 빈 줄은 건너뛰기 (높이는 자동으로 계산됨)
+            if lineText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                return
             }
 
-            if let pixels = renderTextLine(line, font: font, color: color) {
+            // 줄 렌더링
+            if let pixels = self.renderTextLine(lineText, font: font, color: color) {
+                let offsetY = Int(usedRect.minY)
+
                 for (dy, row) in pixels.enumerated() {
                     for (dx, shouldDraw) in row.enumerated() {
                         if shouldDraw {
                             let px = Int(state.rect.minX) + dx
-                            let py = Int(state.rect.minY) + Int(currentY) + dy
+                            let py = Int(state.rect.minY) + offsetY + dy
                             previewPixels.append((x: px, y: py, color: color))
                         }
                     }
                 }
             }
-
-            let lineHeight = line.size(withAttributes: [.font: font]).height
-            currentY += lineHeight
         }
 
         canvasViewModel?.textEditState?.previewPixels = previewPixels

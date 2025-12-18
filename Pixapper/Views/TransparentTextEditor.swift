@@ -16,12 +16,16 @@ struct TransparentTextEditor: NSViewRepresentable {
     var textBoxWidth: CGFloat  // 텍스트 박스 너비 (픽셀 단위)
     var textBoxHeight: CGFloat  // 텍스트 박스 높이 (픽셀 단위)
     var onTextChange: () -> Void
+    var onCancel: (() -> Void)?  // Escape 키 처리
+    var onCommit: (() -> Void)?  // Cmd+Enter 또는 외부 클릭
 
     func makeNSView(context: Context) -> CustomTextView {
         // Frame 설정 - height는 충분히 크게 (자동 줄바꿈으로 늘어남)
         let textView = CustomTextView(frame: NSRect(x: 0, y: 0, width: textBoxWidth, height: CGFloat.greatestFiniteMagnitude))
 
         textView.delegate = context.coordinator
+        textView.onCancel = context.coordinator.handleCancel
+        textView.onCommit = context.coordinator.handleCommit
 
         // 기본 설정
         textView.isEditable = true
@@ -129,11 +133,22 @@ struct TransparentTextEditor: NSViewRepresentable {
             // 커서 위치 업데이트
             parent.cursorPosition = textView.selectedRange().location
         }
+
+        func handleCancel() {
+            parent.onCancel?()
+        }
+
+        func handleCommit() {
+            parent.onCommit?()
+        }
     }
 }
 
 /// 커스텀 NSTextView - 엔터/백스페이스 완전 지원
 class CustomTextView: NSTextView {
+    var onCancel: (() -> Void)?
+    var onCommit: (() -> Void)?
+
     override var acceptsFirstResponder: Bool {
         return true
     }
@@ -143,6 +158,18 @@ class CustomTextView: NSTextView {
     }
 
     override func performKeyEquivalent(with event: NSEvent) -> Bool {
+        // Escape - 취소
+        if event.keyCode == 53 { // Escape
+            onCancel?()
+            return true
+        }
+
+        // Cmd+Enter - 커밋
+        if event.keyCode == 36 && event.modifierFlags.contains(.command) { // Cmd+Return
+            onCommit?()
+            return true
+        }
+
         // 엔터키 - 직접 처리 (단축키보다 우선)
         if event.keyCode == 36 { // Return
             if !event.modifierFlags.contains(.command) {
