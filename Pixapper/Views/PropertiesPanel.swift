@@ -81,6 +81,8 @@ struct PropertiesPanel: View {
                 settings: $toolSettingsManager.ditheringSettings,
                 colorManager: toolSettingsManager.colorManager
             )
+        case .text:
+            TextPropertiesView(settings: $toolSettingsManager.textSettings)
         }
     }
 }
@@ -586,5 +588,67 @@ struct CompactColorPicker: View {
         ColorPicker("", selection: selection)
             .labelsHidden()
             .frame(height: 24)
+    }
+}
+
+// MARK: - Text Properties
+struct TextPropertiesView: View {
+    @Binding var settings: TextToolSettings
+
+    // 시스템 폰트 목록
+    private let availableFonts: [String] = {
+        let fontFamilies = NSFontManager.shared.availableFontFamilies.sorted()
+        // 자주 사용하는 폰트를 상단에 배치
+        let commonFonts = ["Courier", "Helvetica", "Arial", "Monaco", "Menlo", "SF Mono"]
+        let otherFonts = fontFamilies.filter { !commonFonts.contains($0) }
+        return commonFonts + otherFonts
+    }()
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            PropertySectionHeader(title: "Text")
+
+            VStack(alignment: .leading, spacing: 6) {
+                // Font
+                PropertyRow(label: "Font") {
+                    Picker("", selection: $settings.fontName) {
+                        ForEach(availableFonts, id: \.self) { fontName in
+                            Text(fontName)
+                                .font(.custom(fontName, size: 12))
+                                .tag(fontName)
+                        }
+                    }
+                    .labelsHidden()
+                    .frame(maxWidth: .infinity)
+                }
+
+                // Size
+                PropertyRow(label: "Size") {
+                    LabeledSlider(
+                        value: Binding(
+                            get: { Int(settings.fontSize) },
+                            set: { settings.fontSize = CGFloat($0) }
+                        ),
+                        range: 6...24,
+                        step: 2
+                    )
+                }
+
+                // Style toggles
+                PropertyRow(label: "Style") {
+                    HStack(spacing: 8) {
+                        Toggle("Bold", isOn: $settings.isBold)
+                            .toggleStyle(.button)
+                            .controlSize(.small)
+
+                        Toggle("Italic", isOn: $settings.isItalic)
+                            .toggleStyle(.button)
+                            .controlSize(.small)
+                    }
+                }
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 8)
+        }
     }
 }

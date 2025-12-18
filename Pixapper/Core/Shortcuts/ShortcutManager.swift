@@ -15,6 +15,8 @@ struct ShortcutManager {
     // MARK: - Key Press Handling
 
     /// 키 입력을 받아서 적절한 단축키로 처리
+    /// - Parameters:
+    ///   - isTextEditing: 텍스트 편집 중인지 여부
     /// - Returns: 처리되었으면 true, 무시하면 false
     static func handle(
         _ keyPress: KeyPress,
@@ -22,8 +24,27 @@ struct ShortcutManager {
         canvasViewModel: CanvasViewModel?,
         timelineViewModel: TimelineViewModel?,
         colorManager: ColorManager?,
-        commandManager: CommandManager?
+        commandManager: CommandManager?,
+        isTextEditing: Bool = false
     ) -> Bool {
+        // 텍스트 편집 중이면 대부분의 단축키 무시
+        if isTextEditing {
+            // Escape만 허용 (텍스트 편집 취소)
+            if keyPress.key == .escape {
+                canvasViewModel?.cancelText()
+                return true
+            }
+
+            // Cmd+Enter 허용 (텍스트 커밋)
+            if keyPress.key == .return && keyPress.modifiers.contains(.command) {
+                canvasViewModel?.commitText()
+                return true
+            }
+
+            // 나머지는 모두 NSTextView로 전달
+            return false
+        }
+
         // KeyPress를 Shortcut으로 매핑
         guard let shortcut = mapKeyPressToShortcut(keyPress) else {
             return false

@@ -254,6 +254,9 @@ struct ContentView: View {
             Text(appViewModel.errorMessage ?? "An unknown error occurred")
         }
         .onKeyPress { keyPress in
+            // 텍스트 편집 중인지 체크
+            let isTextEditing = canvasViewModel.textEditState?.isEditing ?? false
+
             // 모든 단축키를 ShortcutManager에서 통합 처리
             let handled = ShortcutManager.handle(
                 keyPress,
@@ -261,7 +264,8 @@ struct ContentView: View {
                 canvasViewModel: canvasViewModel,
                 timelineViewModel: timelineViewModel,
                 colorManager: appViewModel.colorManager,
-                commandManager: commandManager
+                commandManager: commandManager,
+                isTextEditing: isTextEditing
             )
             return handled ? .handled : .ignored
         }

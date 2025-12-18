@@ -52,6 +52,13 @@ struct ToolPanel: View {
                             isSelected: toolSettingsManager.selectedTool == .dithering,
                             action: { toolSettingsManager.selectTool(.dithering) }
                         )
+
+                        AdobeToolButton(
+                            icon: "textformat",
+                            tooltip: "Text (T)",
+                            isSelected: toolSettingsManager.selectedTool == .text,
+                            action: { toolSettingsManager.selectTool(.text) }
+                        )
                     }
 
                     Rectangle()

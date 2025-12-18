@@ -14,6 +14,20 @@ enum CanvasBackgroundMode: String, CaseIterable {
     case white = "White"
 }
 
+/// 텍스트 편집 상태
+struct TextEditState {
+    var rect: CGRect  // 텍스트 박스 영역 (픽셀 좌표)
+    var isEditing: Bool = false
+    var text: String = ""  // 텍스트 내용
+
+    // 렌더링된 픽셀
+    var previewPixels: [(x: Int, y: Int, color: Color)] = []
+
+    // 커서 상태
+    var cursorPosition: Int = 0  // 텍스트 내 커서 위치
+    var cursorVisible: Bool = true  // 깜박임 상태
+}
+
 @MainActor
 class CanvasViewModel: ObservableObject {
     // MARK: - Canvas State
@@ -29,6 +43,8 @@ class CanvasViewModel: ObservableObject {
             _selectionTool?.setShiftPressed(shiftPressed)
         }
     }
+    @Published var textEditState: TextEditState? = nil  // 텍스트 편집 상태
+    @Published var textBoxHoveredHandle: TextBoxHandle? = nil  // 텍스트 박스 호버 핸들
 
     // MARK: - View Toggle Methods
 
@@ -54,6 +70,7 @@ class CanvasViewModel: ObservableObject {
     private var _selectionTool: SelectionTool!
     private var mirrorTool: MirrorTool!
     private var ditheringTool: DitheringTool!
+    private var textTool: TextTool!
 
     // MARK: - Internal State
     private var cancellables = Set<AnyCancellable>()
@@ -155,6 +172,14 @@ class CanvasViewModel: ObservableObject {
             toolSettingsManager: toolSettingsManager,
             timelineViewModel: timelineViewModel
         )
+
+        self.textTool = TextTool(
+            canvasViewModel: self,
+            layerViewModel: layerViewModel,
+            commandManager: commandManager,
+            toolSettingsManager: toolSettingsManager,
+            timelineViewModel: timelineViewModel
+        )
     }
 
     private func setupBindings() {
@@ -241,7 +266,23 @@ class CanvasViewModel: ObservableObject {
             return mirrorTool
         case .dithering:
             return ditheringTool
+        case .text:
+            return textTool
         }
+    }
+
+    // MARK: - Text Operations (delegated to TextTool)
+
+    func updateTextPreview() {
+        textTool.updateTextPreview()
+    }
+
+    func commitText() {
+        textTool.commitText()
+    }
+
+    func cancelText() {
+        textTool.cancelText()
     }
 
     // MARK: - Selection Operations (delegated to SelectionTool)

@@ -89,11 +89,17 @@ struct CanvasView: View {
                         // 도형 프리뷰 (전체 영역)
                         renderShapePreview(marginX: marginX, marginY: marginY)
 
+                        // 텍스트 프리뷰 (실시간)
+                        renderTextPreview(marginX: marginX, marginY: marginY)
+
                         // 브러시 미리보기 (연필/지우개)
                         renderBrushPreview(marginX: marginX, marginY: marginY)
 
                         // 선택 영역 (전체 영역)
                         renderSelection(marginX: marginX, marginY: marginY)
+
+                        // 텍스트 입력 오버레이
+                        renderTextEditOverlay(marginX: marginX, marginY: marginY)
                     }
                     .frame(width: totalWidth, height: totalHeight)
                     .background(
@@ -280,6 +286,101 @@ struct CanvasView: View {
         }
     }
 
+    @ViewBuilder
+    private func renderTextPreview(marginX: CGFloat, marginY: CGFloat) -> some View {
+        if let textState = viewModel.textEditState {
+            // 텍스트 픽셀 렌더링
+            ForEach(Array(textState.previewPixels.enumerated()), id: \.offset) { _, pixel in
+                Rectangle()
+                    .fill(pixel.color)
+                    .frame(width: pixelSize, height: pixelSize)
+                    .position(
+                        x: marginX + CGFloat(pixel.x) * pixelSize + pixelSize / 2,
+                        y: marginY + CGFloat(pixel.y) * pixelSize + pixelSize / 2
+                    )
+            }
+
+            // 커서 렌더링 (픽셀 단위, 깜박임)
+            if textState.cursorVisible {
+                renderTextCursor(textState: textState, marginX: marginX, marginY: marginY)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func renderTextCursor(textState: TextEditState, marginX: CGFloat, marginY: CGFloat) -> some View {
+        let cursorInfo = calculateCursorPosition(textState: textState)
+        let cursorColor = viewModel.toolSettingsManager.colorManager.primaryColor
+
+        // 커서 렌더링 (1픽셀 너비, primary color)
+        ForEach(0..<cursorInfo.height, id: \.self) { offset in
+            Rectangle()
+                .fill(cursorColor)
+                .frame(width: pixelSize, height: pixelSize)
+                .position(
+                    x: marginX + CGFloat(cursorInfo.x) * pixelSize + pixelSize / 2,
+                    y: marginY + CGFloat(cursorInfo.y + offset) * pixelSize + pixelSize / 2
+                )
+        }
+    }
+
+    private func calculateCursorPosition(textState: TextEditState) -> (x: Int, y: Int, height: Int) {
+        let settings = viewModel.toolSettingsManager.textSettings
+        let font = NSFont.systemFont(ofSize: settings.fontSize)
+
+        // 커서 위치까지의 텍스트
+        let cursorIndex = min(textState.cursorPosition, textState.text.count)
+
+        // 줄별로 분할하여 커서가 어느 줄에 있는지 찾기
+        let lines = textState.text.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
+        var currentIndex = 0
+        var cursorLine = 0
+        var cursorColumn = 0
+
+        for (lineIndex, line) in lines.enumerated() {
+            let lineEndIndex = currentIndex + line.count
+            if cursorIndex <= lineEndIndex {
+                cursorLine = lineIndex
+                cursorColumn = cursorIndex - currentIndex
+                break
+            }
+            currentIndex = lineEndIndex + 1  // +1 for newline
+        }
+
+        // 현재 줄의 커서 앞 텍스트
+        let currentLineText = cursorLine < lines.count ? lines[cursorLine] : ""
+        let textBeforeCursorInLine = String(currentLineText.prefix(cursorColumn))
+
+        // 커서 X 위치 (텍스트 너비)
+        let textWidth = textBeforeCursorInLine.size(withAttributes: [.font: font]).width
+        let cursorX = Int(textState.rect.minX) + Int(textWidth)
+
+        // 커서 Y 위치 (줄 높이 누적)
+        let lineHeight = "A".size(withAttributes: [.font: font]).height
+        let cursorY = Int(textState.rect.minY) + cursorLine * Int(lineHeight)
+
+        // 커서 높이
+        let cursorHeight = Int(lineHeight)
+
+        return (cursorX, cursorY, cursorHeight)
+    }
+
+    @ViewBuilder
+    private func renderTextEditOverlay(marginX: CGFloat, marginY: CGFloat) -> some View {
+        if let _ = viewModel.textEditState {
+            TextEditOverlayView(
+                textState: Binding(
+                    get: { viewModel.textEditState ?? TextEditState(rect: .zero, isEditing: false) },
+                    set: { viewModel.textEditState = $0 }
+                ),
+                viewModel: viewModel,
+                pixelSize: pixelSize,
+                offsetX: marginX,
+                offsetY: marginY
+            )
+        }
+    }
+
     // MARK: - Gestures
 
     private func dragGesture(marginX: CGFloat, marginY: CGFloat) -> some Gesture {
@@ -409,6 +510,8 @@ struct CanvasView: View {
 
                 if viewModel.toolSettingsManager.selectedTool == .selection {
                     updateCursor(for: clampedCoord)
+                } else if viewModel.toolSettingsManager.selectedTool == .text {
+                    updateTextCursor(for: clampedCoord)
                 } else {
                     NSCursor.crosshair.set()
                 }
@@ -447,6 +550,29 @@ struct CanvasView: View {
             }
         default:
             NSCursor.crosshair.set()
+        }
+    }
+
+    private func updateTextCursor(for coord: (x: Int, y: Int)) {
+        if let handle = viewModel.textBoxHoveredHandle {
+            setTextCursor(for: handle)
+        } else {
+            NSCursor.iBeam.set()
+        }
+    }
+
+    private func setTextCursor(for handle: TextBoxHandle) {
+        switch handle {
+        case .topLeft, .bottomRight:
+            NSCursor.crosshair.set()  // 대각선 리사이즈
+        case .topRight, .bottomLeft:
+            NSCursor.crosshair.set()  // 대각선 리사이즈
+        case .top, .bottom:
+            NSCursor.resizeUpDown.set()
+        case .left, .right:
+            NSCursor.resizeLeftRight.set()
+        case .inside:
+            NSCursor.openHand.set()  // 이동용 손 모양
         }
     }
 

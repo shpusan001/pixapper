@@ -43,6 +43,9 @@ class ToolSettingsManager: ObservableObject {
     /// 디더링 설정
     @Published var ditheringSettings = DitheringSettings()
 
+    /// 텍스트 설정
+    @Published var textSettings = TextToolSettings()
+
     init(colorManager: ColorManager = ColorManager()) {
         self.colorManager = colorManager
     }
@@ -140,6 +143,8 @@ class ToolSettingsManager: ObservableObject {
             return mirrorSettings
         case .dithering:
             return ditheringSettings
+        case .text:
+            return textSettings
         }
     }
 
@@ -154,5 +159,6 @@ class ToolSettingsManager: ObservableObject {
         selectionSettings = SelectionSettings()
         mirrorSettings = MirrorSettings()
         ditheringSettings = DitheringSettings()
+        textSettings = TextToolSettings()
     }
 }

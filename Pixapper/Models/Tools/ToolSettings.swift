@@ -27,6 +27,7 @@ enum DrawingTool: String, CaseIterable, Identifiable {
     case selection
     case mirror          // 대칭 그리기
     case dithering       // 디더링 브러시
+    case text            // 텍스트 도구
 
     var id: String { rawValue }
 
@@ -42,6 +43,33 @@ enum DrawingTool: String, CaseIterable, Identifiable {
         case .selection: return "Selection"
         case .mirror: return "Mirror"
         case .dithering: return "Dithering"
+        case .text: return "Text"
         }
+    }
+}
+
+/// 텍스트 도구 설정
+struct TextToolSettings: ToolSettings {
+    var toolType: DrawingTool { .text }
+
+    /// 폰트 이름
+    var fontName: String = "Courier"
+
+    /// 폰트 크기 (픽셀)
+    var fontSize: CGFloat = 8
+
+    /// 볼드 여부
+    var isBold: Bool = false
+
+    /// 이탤릭 여부
+    var isItalic: Bool = false
+
+    func copy() -> TextToolSettings {
+        return TextToolSettings(
+            fontName: fontName,
+            fontSize: fontSize,
+            isBold: isBold,
+            isItalic: isItalic
+        )
     }
 }
