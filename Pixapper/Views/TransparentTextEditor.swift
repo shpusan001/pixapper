@@ -18,7 +18,8 @@ struct TransparentTextEditor: NSViewRepresentable {
     var onTextChange: () -> Void
 
     func makeNSView(context: Context) -> CustomTextView {
-        let textView = CustomTextView()
+        // Frame 설정 - height는 충분히 크게 (자동 줄바꿈으로 늘어남)
+        let textView = CustomTextView(frame: NSRect(x: 0, y: 0, width: textBoxWidth, height: CGFloat.greatestFiniteMagnitude))
 
         textView.delegate = context.coordinator
 
@@ -45,16 +46,24 @@ struct TransparentTextEditor: NSViewRepresentable {
         textView.isGrammarCheckingEnabled = false
 
         // 자동 줄바꿈 설정 (텍스트 박스 크기 제한)
-        textView.maxSize = NSSize(width: textBoxWidth, height: textBoxHeight)
-        textView.minSize = NSSize(width: textBoxWidth, height: textBoxHeight)
         textView.isHorizontallyResizable = false
-        textView.isVerticallyResizable = false
+        textView.isVerticallyResizable = true
+        textView.maxSize = NSSize(width: textBoxWidth, height: CGFloat.greatestFiniteMagnitude)
+        textView.minSize = NSSize(width: textBoxWidth, height: 0)
 
         if let container = textView.textContainer {
-            container.containerSize = NSSize(width: textBoxWidth, height: textBoxHeight)
+            // 여백 제거 (중요!)
+            container.lineFragmentPadding = 0
+
+            // 컨테이너 크기 설정 (가로 고정, 세로 무제한)
+            container.containerSize = NSSize(width: textBoxWidth, height: CGFloat.greatestFiniteMagnitude)
             container.widthTracksTextView = false
             container.heightTracksTextView = false
-            container.lineBreakMode = .byCharWrapping  // 문자 단위로 줄바꿈
+        }
+
+        // 텍스트 레이아웃 관리자 설정
+        if let layoutManager = textView.layoutManager {
+            layoutManager.allowsNonContiguousLayout = false
         }
 
         return textView
@@ -73,6 +82,15 @@ struct TransparentTextEditor: NSViewRepresentable {
 
         // 폰트 크기 업데이트
         textView.font = NSFont.systemFont(ofSize: fontSize)
+
+        // 텍스트 박스 크기 업데이트 (리사이즈 시)
+        textView.frame = NSRect(x: 0, y: 0, width: textBoxWidth, height: CGFloat.greatestFiniteMagnitude)
+        textView.maxSize = NSSize(width: textBoxWidth, height: CGFloat.greatestFiniteMagnitude)
+        textView.minSize = NSSize(width: textBoxWidth, height: 0)
+
+        if let container = textView.textContainer {
+            container.containerSize = NSSize(width: textBoxWidth, height: CGFloat.greatestFiniteMagnitude)
+        }
 
         // First responder 유지
         if textView.window?.firstResponder != textView {

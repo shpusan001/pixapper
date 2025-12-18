@@ -49,15 +49,15 @@ struct TextEditOverlayView: View {
             if textState.isEditing {
                 let rectX = offsetX + textState.rect.minX * pixelSize
                 let rectY = offsetY + textState.rect.minY * pixelSize
-                let rectWidth = textState.rect.width * pixelSize
-                let rectHeight = textState.rect.height * pixelSize
+                let rectWidth = textState.rect.width * pixelSize  // 화면 포인트 크기
+                let rectHeight = textState.rect.height * pixelSize  // 화면 포인트 크기
 
                 TransparentTextEditor(
                     text: $textState.text,
                     cursorPosition: $textState.cursorPosition,
                     fontSize: CGFloat(viewModel.toolSettingsManager.textSettings.fontSize),
-                    textBoxWidth: textState.rect.width,  // 픽셀 단위
-                    textBoxHeight: textState.rect.height,  // 픽셀 단위
+                    textBoxWidth: rectWidth,  // 화면 포인트 크기로 변경!
+                    textBoxHeight: rectHeight,  // 화면 포인트 크기로 변경!
                     onTextChange: {
                         viewModel.updateTextPreview()
                     }
