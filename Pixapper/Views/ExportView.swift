@@ -9,217 +9,219 @@ import SwiftUI
 
 struct ExportView: View {
     @Environment(\.dismiss) var dismiss
-    @ObservedObject var timelineViewModel: TimelineViewModel
-    let canvasWidth: Int
-    let canvasHeight: Int
+    @StateObject private var viewModel: ExportViewModel
 
-    @State private var exportType: ExportType = .singleImage
-    @State private var spriteSheetLayout: SpriteSheetLayout = .horizontal
-    @State private var spriteSheetPadding: Int = 0
-    @State private var sequenceBaseName: String = "frame"
-    @State private var showingErrorAlert = false
-    @State private var errorMessage: String = ""
-
-    enum ExportType: String, CaseIterable, Identifiable {
-        case singleImage = "Single Image"
-        case spriteSheet = "Sprite Sheet"
-        case pngSequence = "PNG Sequence"
-
-        var id: String { rawValue }
+    init(timelineViewModel: TimelineViewModel, canvasWidth: Int, canvasHeight: Int) {
+        _viewModel = StateObject(wrappedValue: ExportViewModel(
+            timelineViewModel: timelineViewModel,
+            canvasWidth: canvasWidth,
+            canvasHeight: canvasHeight
+        ))
     }
 
     var body: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 0) {
+            // Header
+            headerView
+
+            Divider()
+                .background(Constants.Theme.divider)
+
+            // Main content: Settings + Preview
+            HStack(spacing: 0) {
+                // Left: Settings Panel
+                settingsPanel
+                    .frame(width: 320)
+
+                Divider()
+                    .background(Constants.Theme.divider)
+
+                // Right: Preview Panel
+                previewPanel
+                    .frame(width: 360)
+            }
+            .frame(height: 500)
+
+            Divider()
+                .background(Constants.Theme.divider)
+
+            // Footer: Export Button
+            footerView
+        }
+        .background(Constants.Theme.panelBackground)
+        .onAppear {
+            viewModel.generatePreview()
+        }
+        .onDisappear {
+            viewModel.cancelExport()
+        }
+        .alert("Export Failed", isPresented: $viewModel.showingErrorAlert) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(viewModel.errorMessage)
+        }
+    }
+
+    // MARK: - Header
+
+    private var headerView: some View {
+        VStack(spacing: 12) {
             Text("Export")
-                .font(.title)
+                .font(.title2)
+                .fontWeight(.semibold)
+                .foregroundColor(Constants.Theme.textPrimary)
+                .frame(maxWidth: .infinity, alignment: .leading)
 
-            Divider()
-
-            // Export type selector
-            Picker("Export Type", selection: $exportType) {
-                ForEach(ExportType.allCases) { type in
-                    Text(type.rawValue).tag(type)
+            // Format tabs
+            HStack(spacing: 0) {
+                ForEach(ExportFormat.allCases) { format in
+                    FormatTabButton(
+                        format: format,
+                        isSelected: viewModel.selectedFormat == format
+                    ) {
+                        viewModel.selectedFormat = format
+                    }
                 }
             }
-            .pickerStyle(.segmented)
+            .background(Constants.Theme.sectionBackground)
+            .cornerRadius(8)
+        }
+        .padding(20)
+    }
 
-            // Export options based on type
-            Group {
-                switch exportType {
-                case .singleImage:
-                    singleImageOptions
-                case .spriteSheet:
-                    spriteSheetOptions
-                case .pngSequence:
-                    pngSequenceOptions
+    // MARK: - Settings Panel
+
+    private var settingsPanel: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 0) {
+                Group {
+                    switch viewModel.selectedFormat {
+                    case .singleImage:
+                        SingleImageSettings(viewModel: viewModel)
+                    case .spriteSheet:
+                        SpriteSheetSettings(viewModel: viewModel)
+                    case .pngSequence:
+                        PNGSequenceSettings(viewModel: viewModel)
+                    case .gif:
+                        GIFSettings(viewModel: viewModel)
+                    case .mp4:
+                        MP4Settings(viewModel: viewModel)
+                    }
                 }
+                .padding(20)
             }
-            .padding(.vertical, 8)
+        }
+        .background(Constants.Theme.panelBackground)
+    }
 
-            Divider()
+    // MARK: - Preview Panel
 
-            // Export button
-            HStack {
+    private var previewPanel: some View {
+        ExportPreviewView(viewModel: viewModel)
+            .padding(20)
+            .background(Constants.Theme.backgroundDark)
+    }
+
+    // MARK: - Footer
+
+    private var footerView: some View {
+        VStack(spacing: 12) {
+            // Progress indicator
+            if viewModel.isExporting {
+                VStack(spacing: 8) {
+                    ProgressView(value: viewModel.exportProgress, total: 1.0)
+                        .progressViewStyle(LinearProgressViewStyle(tint: Constants.Theme.accentBlue))
+
+                    Text("Exporting... \(Int(viewModel.exportProgress * 100))%")
+                        .font(.caption)
+                        .foregroundColor(Constants.Theme.textSecondary)
+                }
+                .padding(.horizontal, 20)
+                .padding(.top, 12)
+            }
+
+            // Buttons
+            HStack(spacing: 12) {
                 Button("Cancel") {
+                    viewModel.cancelExport()
                     dismiss()
                 }
-                .buttonStyle(.bordered)
+                .buttonStyle(SecondaryButtonStyle())
 
                 Spacer()
 
                 Button("Export") {
-                    performExport()
-                }
-                .buttonStyle(.borderedProminent)
-            }
-        }
-        .padding(24)
-        .frame(width: Constants.Layout.Panel.exportViewWidth)
-        .alert("Export 실패", isPresented: $showingErrorAlert) {
-            Button("확인", role: .cancel) {}
-        } message: {
-            Text(errorMessage)
-        }
-    }
-
-    private var singleImageOptions: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Export current frame as PNG")
-                .font(.callout)
-                .foregroundColor(.secondary)
-
-            Text("Frame: \(timelineViewModel.currentFrameIndex + 1)/\(timelineViewModel.totalFrames)")
-                .font(.callout)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-    private var spriteSheetOptions: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Combine all frames into a single sprite sheet")
-                .font(.callout)
-                .foregroundColor(.secondary)
-
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Layout")
-                    .font(.callout)
-                Picker("Layout", selection: $spriteSheetLayout) {
-                    ForEach(SpriteSheetLayout.allCases) { layout in
-                        Text(layout.rawValue).tag(layout)
+                    viewModel.performExport {
+                        dismiss()
                     }
                 }
-                .labelsHidden()
+                .buttonStyle(PrimaryButtonStyle())
+                .disabled(viewModel.isExporting)
             }
-
-            VStack(alignment: .leading, spacing: 8) {
-                HStack {
-                    Text("Padding")
-                        .font(.callout)
-                    Spacer()
-                    Text("\(spriteSheetPadding)px")
-                        .font(.callout)
-                        .foregroundColor(.secondary)
-                }
-                Slider(value: Binding(
-                    get: { Double(spriteSheetPadding) },
-                    set: { spriteSheetPadding = Int($0) }
-                ), in: 0...16, step: 1)
-            }
-
-            Text("\(timelineViewModel.totalFrames) frames")
-                .font(.callout)
-                .foregroundColor(.secondary)
+            .padding(.horizontal, 20)
+            .padding(.bottom, 20)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
     }
+}
 
-    private var pngSequenceOptions: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Export each frame as a separate PNG file")
-                .font(.callout)
-                .foregroundColor(.secondary)
+// MARK: - Format Tab Button
 
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Base Name")
-                    .font(.callout)
-                TextField("Base name", text: $sequenceBaseName)
-                    .textFieldStyle(.roundedBorder)
+struct FormatTabButton: View {
+    let format: ExportFormat
+    let isSelected: Bool
+    let action: () -> Void
 
-                Text("Files will be named: \(sequenceBaseName)_001.png, \(sequenceBaseName)_002.png, ...")
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: 4) {
+                Image(systemName: format.icon)
+                    .font(.system(size: 20))
+                Text(format.rawValue)
                     .font(.caption)
-                    .foregroundColor(.secondary)
             }
-
-            Text("\(timelineViewModel.totalFrames) frames will be exported")
-                .font(.callout)
-                .foregroundColor(.secondary)
+            .foregroundColor(isSelected ? .white : Constants.Theme.textPrimary)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 12)
+            .background(isSelected ? Constants.Theme.accentBlue : Constants.Theme.sectionBackground.opacity(0.01))
+            .cornerRadius(6)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .buttonStyle(.plain)
+        .contentShape(Rectangle())
     }
+}
 
-    private func performExport() {
-        switch exportType {
-        case .singleImage:
-            exportSingleImage(width: canvasWidth, height: canvasHeight)
-        case .spriteSheet:
-            exportSpriteSheet(width: canvasWidth, height: canvasHeight)
-        case .pngSequence:
-            exportPNGSequence(width: canvasWidth, height: canvasHeight)
-        }
+// MARK: - Custom Button Styles
 
-        dismiss()
-    }
-
-    private func exportSingleImage(width: Int, height: Int) {
-        let resolvedFrames = timelineViewModel.getResolvedFrames()
-        let currentFrame = resolvedFrames[timelineViewModel.currentFrameIndex]
-        let layers = timelineViewModel.layerViewModel.layers
-
-        if let image = ExportManager.exportSingleImage(frame: currentFrame, layers: layers, width: width, height: height) {
-            ExportManager.savePNG(image: image)
-        }
-    }
-
-    private func exportSpriteSheet(width: Int, height: Int) {
-        let resolvedFrames = timelineViewModel.getResolvedFrames()
-        let layers = timelineViewModel.layerViewModel.layers
-
-        if let image = ExportManager.exportSpriteSheet(
-            frames: resolvedFrames,
-            layers: layers,
-            width: width,
-            height: height,
-            layout: spriteSheetLayout,
-            padding: spriteSheetPadding
-        ) {
-            ExportManager.savePNG(image: image)
-        }
-    }
-
-    private func exportPNGSequence(width: Int, height: Int) {
-        let resolvedFrames = timelineViewModel.getResolvedFrames()
-        let layers = timelineViewModel.layerViewModel.layers
-
-        ExportManager.chooseDirectory { url in
-            guard let directoryURL = url else { return }
-
-            let result = ExportManager.exportPNGSequence(
-                frames: resolvedFrames,
-                layers: layers,
-                width: width,
-                height: height,
-                directoryURL: directoryURL,
-                baseName: sequenceBaseName
+struct PrimaryButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.headline)
+            .foregroundColor(.white)
+            .padding(.horizontal, 32)
+            .padding(.vertical, 10)
+            .background(
+                configuration.isPressed ?
+                    Constants.Theme.accentBlueHover :
+                    Constants.Theme.accentBlue
             )
+            .cornerRadius(8)
+            .scaleEffect(configuration.isPressed ? 0.98 : 1.0)
+    }
+}
 
-            switch result {
-            case .success:
-                // 성공 - 아무것도 하지 않음 (필요시 성공 알림 추가 가능)
-                break
-            case .failure(let error):
-                errorMessage = error.localizedDescription
-                showingErrorAlert = true
-            }
-        }
+struct SecondaryButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.headline)
+            .foregroundColor(Constants.Theme.textPrimary)
+            .padding(.horizontal, 24)
+            .padding(.vertical, 10)
+            .background(Constants.Theme.sectionBackground)
+            .cornerRadius(8)
+            .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(Constants.Theme.divider, lineWidth: 1)
+            )
+            .scaleEffect(configuration.isPressed ? 0.98 : 1.0)
     }
 }

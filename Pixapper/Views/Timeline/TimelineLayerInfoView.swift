@@ -27,11 +27,25 @@ struct TimelineLayerInfoView: View {
     @Binding var draggingLayerIndex: Int?
 
     // 레이어를 computed property로 변경하여 항상 최신 상태 반영
-    private var layer: Layer {
-        layerViewModel.layers[layerIndex]
+    private var layer: Layer? {
+        guard layerIndex >= 0 && layerIndex < layerViewModel.layers.count else {
+            return nil
+        }
+        return layerViewModel.layers[layerIndex]
     }
 
     var body: some View {
+        Group {
+            if let layer = layer {
+                layerContent(layer: layer)
+            } else {
+                EmptyView()
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func layerContent(layer: Layer) -> some View {
         HStack(alignment: .center, spacing: 4) {
             // Drag handle
             Image(systemName: "line.3.horizontal")
@@ -45,6 +59,11 @@ struct TimelineLayerInfoView: View {
                 layerViewModel.toggleVisibility(at: layerIndex)
             }) {
                 ZStack {
+                    // Invisible background for larger click area
+                    RoundedRectangle(cornerRadius: 3)
+                        .fill(Color.white.opacity(0.001))
+                        .frame(width: 28, height: 28)
+
                     RoundedRectangle(cornerRadius: 3)
                         .fill(layer.isVisible ? Color.clear : Constants.Theme.textDisabled.opacity(0.2))
                         .frame(width: 22, height: 22)
@@ -55,7 +74,8 @@ struct TimelineLayerInfoView: View {
                 }
             }
             .buttonStyle(.plain)
-            .frame(width: 22, height: 22)
+            .frame(width: 28, height: 28)
+            .contentShape(Rectangle())
             .fixedSize()
             .help(layer.isVisible ? "Hide layer" : "Show layer")
 
@@ -80,6 +100,10 @@ struct TimelineLayerInfoView: View {
                         .foregroundColor(Constants.Theme.textPrimary)
                         .lineLimit(1)
                         .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.vertical, 4)
+                        .padding(.horizontal, 2)
+                        .background(Color.white.opacity(0.001))
+                        .contentShape(Rectangle())
                         .onTapGesture(count: 2) {
                             editingLayerIndex = layerIndex
                             editingLayerName = layer.name
@@ -190,3 +214,4 @@ struct TimelineLayerInfoView: View {
         }
     }
 }
+

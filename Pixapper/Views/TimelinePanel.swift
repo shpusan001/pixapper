@@ -147,9 +147,14 @@ struct TimelinePanel: View {
     // MARK: - Layer Row
 
     private func layerRow(layerIndex: Int) -> some View {
+        // Bounds checking to prevent index out of range crash
+        guard layerIndex >= 0 && layerIndex < viewModel.layerViewModel.layers.count else {
+            return AnyView(EmptyView())
+        }
+
         let layer = viewModel.layerViewModel.layers[layerIndex]
 
-        return HStack(spacing: 0) {
+        return AnyView(HStack(spacing: 0) {
             // Layer info column
             TimelineLayerInfoView(
                 layerIndex: layerIndex,
@@ -179,7 +184,7 @@ struct TimelinePanel: View {
                 )
             }
         }
-        .frame(height: cellSize)
+        .frame(height: cellSize))
     }
 
     // MARK: - Cell View

@@ -144,7 +144,7 @@ struct CanvasView: View {
     private func renderOnionSkinLayers(marginX: CGFloat, marginY: CGFloat) -> some View {
         if let timeline = timelineViewModel {
             ForEach(timeline.getOnionSkinFrames(), id: \.frameIndex) { onionFrame in
-                ForEach(timeline.layerViewModel.layers.indices.reversed(), id: \.self) { layerIndex in
+                ForEach(timeline.layerViewModel.layers.indices, id: \.self) { layerIndex in
                     let layer = timeline.layerViewModel.layers[layerIndex]
                     if layer.isVisible,
                        let pixels = timeline.getEffectivePixels(frameIndex: onionFrame.frameIndex, layerId: layer.id) {
@@ -164,7 +164,7 @@ struct CanvasView: View {
 
     @ViewBuilder
     private func renderCurrentLayers(marginX: CGFloat, marginY: CGFloat) -> some View {
-        ForEach(viewModel.canvas.layers.indices.reversed(), id: \.self) { index in
+        ForEach(viewModel.canvas.layers.indices, id: \.self) { index in
             let layer = viewModel.canvas.layers[index]
             if layer.isVisible, let timeline = timelineViewModel {
                 PixelGridView(
