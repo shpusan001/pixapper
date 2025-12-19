@@ -123,7 +123,6 @@ struct ShortcutManager {
             case ".": return .nextFrame
             case "o": return .toggleOnionSkin
             case "x": return .swapColors
-            case "d": return .resetColors
             case "e": return .extendFrame
             case "k": return .convertToKeyframe
             case "b": return .addBlankKeyframe

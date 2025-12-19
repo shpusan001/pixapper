@@ -47,42 +47,6 @@ struct ColorPanel: View {
                         .fill(Constants.Theme.divider)
                         .frame(height: 1)
 
-                    // Recent Colors - 반응형 그리드
-                    let recentColors = Array(colorManager.recentColors.prefix(20))
-                    if !recentColors.isEmpty {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("RECENT")
-                                .font(.system(size: 9, weight: .semibold))
-                                .foregroundColor(Constants.Theme.textSecondary)
-                                .tracking(0.3)
-                                .padding(.horizontal, 6)
-                                .padding(.top, 6)
-
-                            LazyVGrid(columns: [
-                                GridItem(.adaptive(minimum: 24, maximum: 30), spacing: 3)
-                            ], spacing: 3) {
-                                ForEach(Array(recentColors.enumerated()), id: \.offset) { index, color in
-                                    AdobeColorCell(
-                                        color: color,
-                                        onTap: { colorManager.setPrimaryColor(color) },
-                                        onRightClick: { colorManager.setSecondaryColor(color) }
-                                    )
-                                }
-                            }
-                            .padding(.horizontal, 6)
-                            .padding(.bottom, 6)
-                        }
-
-                        Rectangle()
-                            .fill(Constants.Theme.divider)
-                            .frame(height: 1)
-                    }
-
-                    // Palette System
-                    Rectangle()
-                        .fill(Constants.Theme.divider)
-                        .frame(height: 1)
-
                     PaletteView(
                         paletteManager: paletteManager,
                         colorManager: colorManager,
@@ -128,85 +92,49 @@ struct ColorPanel: View {
 
 // MARK: - Adobe Style Components
 
-/// Adobe 스타일 Primary/Secondary 색상 스와치
+/// 컴팩트 Primary/Secondary 색상 스와치
 private struct AdobeColorSwatchView: View {
     @ObservedObject var colorManager: ColorManager
-    @State private var showingPrimaryPicker = false
-    @State private var showingSecondaryPicker = false
 
     var body: some View {
-        HStack(spacing: 8) {
-            // Primary Color (큰 사각형)
-            Button(action: { showingPrimaryPicker = true }) {
-                ZStack {
-                    CheckerboardBackground()
-                    Rectangle()
-                        .fill(colorManager.primaryColor)
-                }
-                .frame(width: 48, height: 48)
-                .overlay(
-                    Rectangle()
-                        .strokeBorder(Constants.Theme.textPrimary, lineWidth: 1)
-                )
+        HStack(spacing: 6) {
+            // Primary Color (32x32)
+            ZStack {
+                CheckerboardBackground()
+                Rectangle()
+                    .fill(colorManager.primaryColor)
+            }
+            .frame(width: 32, height: 32)
+            .overlay(
+                Rectangle()
+                    .strokeBorder(Constants.Theme.textPrimary, lineWidth: 1)
+            )
+            .help("Primary Color")
+
+            // Secondary Color (20x20)
+            ZStack {
+                CheckerboardBackground()
+                Rectangle()
+                    .fill(colorManager.secondaryColor)
+            }
+            .frame(width: 20, height: 20)
+            .overlay(
+                Rectangle()
+                    .strokeBorder(Constants.Theme.divider, lineWidth: 1)
+            )
+            .help("Secondary Color")
+
+            // Swap button
+            Button(action: { colorManager.swapColors() }) {
+                Image(systemName: "arrow.left.arrow.right")
+                    .font(.system(size: 9))
+                    .foregroundColor(Constants.Theme.textSecondary)
+                    .frame(width: 16, height: 16)
             }
             .buttonStyle(.plain)
-            .popover(isPresented: $showingPrimaryPicker) {
-                ColorPicker("", selection: Binding(
-                    get: { colorManager.primaryColor },
-                    set: { colorManager.setPrimaryColor($0) }
-                ), supportsOpacity: true)
-                    .labelsHidden()
-                    .padding()
-            }
-
-            VStack(spacing: 4) {
-                // Secondary Color (작은 사각형)
-                Button(action: { showingSecondaryPicker = true }) {
-                    ZStack {
-                        CheckerboardBackground()
-                        Rectangle()
-                            .fill(colorManager.secondaryColor)
-                    }
-                    .frame(width: 32, height: 22)
-                    .overlay(
-                        Rectangle()
-                            .strokeBorder(Constants.Theme.divider, lineWidth: 1)
-                    )
-                }
-                .buttonStyle(.plain)
-                .popover(isPresented: $showingSecondaryPicker) {
-                    ColorPicker("", selection: $colorManager.secondaryColor, supportsOpacity: true)
-                        .labelsHidden()
-                        .padding()
-                }
-
-                // Swap & Reset buttons
-                HStack(spacing: 4) {
-                    // Swap button
-                    Button(action: { colorManager.swapColors() }) {
-                        Image(systemName: "arrow.left.arrow.right")
-                            .font(.system(size: 8))
-                            .foregroundColor(Constants.Theme.textSecondary)
-                            .frame(width: 14, height: 14)
-                    }
-                    .buttonStyle(.plain)
-                    .background(Constants.Theme.sectionBackground)
-                    .cornerRadius(1)
-                    .help("Swap Colors (X)")
-
-                    // Reset button
-                    Button(action: { colorManager.resetToDefaults() }) {
-                        Image(systemName: "arrow.counterclockwise")
-                            .font(.system(size: 8))
-                            .foregroundColor(Constants.Theme.textSecondary)
-                            .frame(width: 14, height: 14)
-                    }
-                    .buttonStyle(.plain)
-                    .background(Constants.Theme.sectionBackground)
-                    .cornerRadius(1)
-                    .help("Reset to Defaults (D)")
-                }
-            }
+            .background(Constants.Theme.sectionBackground)
+            .cornerRadius(2)
+            .help("Swap Colors (X)")
 
             Spacer()
         }
