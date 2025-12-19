@@ -98,8 +98,8 @@ struct ToolPanel: View {
                     // Selection tool
                     VStack(spacing: 2) {
                         AdobeToolButton(
-                            icon: "selection.pin.in.out",
-                            tooltip: "Selection (V)",
+                            icon: toolSettingsManager.selectionSettings.selectionType.icon,
+                            tooltip: "Selection (V) - \(toolSettingsManager.selectionSettings.selectionType.displayName)",
                             isSelected: toolSettingsManager.selectedTool == .selection,
                             action: { toolSettingsManager.selectTool(.selection) }
                         )

@@ -136,7 +136,7 @@ struct TimelineToolbarView: View {
                 .foregroundColor(Constants.Theme.textSecondary)
                 .frame(width: 55, alignment: .leading)
 
-            HStack(spacing: 2) {
+            HStack(spacing: 4) {
                 content()
             }
         }

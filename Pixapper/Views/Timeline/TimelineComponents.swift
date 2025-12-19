@@ -56,8 +56,10 @@ struct TimelineToggleButton: View {
                     .font(.system(size: 9, weight: .medium))
             }
             .padding(.horizontal, 8)
-            .padding(.vertical, 4)
+            .padding(.vertical, 6)
+            .frame(minWidth: 44, minHeight: 28)
             .foregroundColor(isOn ? Constants.Theme.accentBlue : Constants.Theme.textSecondary)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .background(
@@ -277,9 +279,11 @@ struct TimelineToolbarButton: View {
                 Text(text)
                     .font(.system(size: 9, weight: .medium))
             }
-            .padding(.horizontal, 6)
-            .padding(.vertical, 4)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 6)
+            .frame(minWidth: 44, minHeight: 28)
             .foregroundColor(disabled ? Constants.Theme.textDisabled : Constants.Theme.textPrimary)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .background(
