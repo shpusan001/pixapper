@@ -224,6 +224,7 @@ private struct PaletteColorEditor: View {
     @State private var hue: Double = 0
     @State private var saturation: Double = 1
     @State private var brightness: Double = 1
+    @State private var alpha: Double = 1
     @State private var hexString: String = ""
     @State private var editingColor: Color  // 임시 편집 색상 (팔레트 업데이트 안함)
     private let originalColor: Color  // 편집 시작 시 색상
@@ -236,13 +237,14 @@ private struct PaletteColorEditor: View {
         self.onClose = onClose
         self.originalColor = originalColor
 
-        // 초기 색상 설정 (HSV)
+        // 초기 색상 설정 (HSV + Alpha)
         let hsv = originalColor.hsvComponents() ?? (h: 0, s: 1, v: 1)
         _hue = State(initialValue: hsv.h)
         _saturation = State(initialValue: hsv.s)
         _brightness = State(initialValue: hsv.v)
 
         let rgb = originalColor.rgbComponents() ?? (r: 0, g: 0, b: 0, a: 1)
+        _alpha = State(initialValue: rgb.a)
         _hexString = State(initialValue: String(format: "%02X%02X%02X", Int(rgb.r * 255), Int(rgb.g * 255), Int(rgb.b * 255)))
 
         _editingColor = State(initialValue: originalColor)
@@ -323,6 +325,28 @@ private struct PaletteColorEditor: View {
                 )
                 .frame(height: 20)
 
+                // Alpha Slider
+                VStack(spacing: 4) {
+                    HStack(spacing: 4) {
+                        Text("Alpha")
+                            .font(.system(size: 9, weight: .medium))
+                            .foregroundColor(Constants.Theme.textSecondary)
+                            .frame(width: 35, alignment: .leading)
+
+                        Slider(value: $alpha, in: 0...1)
+                            .tint(Constants.Theme.accentBlue)
+                            .onChange(of: alpha) { _, _ in
+                                updateColorFromHSV()
+                            }
+
+                        Text("\(Int(alpha * 100))%")
+                            .font(.system(size: 9, design: .monospaced))
+                            .foregroundColor(Constants.Theme.textPrimary)
+                            .frame(width: 35, alignment: .trailing)
+                    }
+                    .frame(height: 20)
+                }
+
                 // Hex Input
                 HStack(spacing: 4) {
                     Text("#")
@@ -378,13 +402,14 @@ private struct PaletteColorEditor: View {
     }
 
     private func updateColorFromHSV() {
-        // 편집 색상 업데이트
-        editingColor = Color.fromHSV(h: hue, s: saturation, v: brightness)
+        // 편집 색상 업데이트 (HSV + Alpha)
+        let baseColor = Color.fromHSV(h: hue, s: saturation, v: brightness)
+        editingColor = baseColor.opacity(alpha)
 
         // 실시간 캔버스 반영: 팔레트 즉시 업데이트 (Command 없이)
         paletteManager.updateColor(at: colorIndex, to: editingColor)
 
-        // Hex 필드 동기화
+        // Hex 필드 동기화 (RGB만, 알파는 슬라이더로 별도 관리)
         if let rgb = editingColor.rgbComponents() {
             hexString = String(format: "%02X%02X%02X", Int(rgb.r * 255), Int(rgb.g * 255), Int(rgb.b * 255))
         }
@@ -402,14 +427,15 @@ private struct PaletteColorEditor: View {
         let g = Double((hexValue >> 8) & 0xFF) / 255.0
         let b = Double(hexValue & 0xFF) / 255.0
 
-        // 편집 색상 업데이트
-        editingColor = Color(red: r, green: g, blue: b)
+        // 편집 색상 업데이트 (현재 알파값 유지)
+        editingColor = Color(red: r, green: g, blue: b).opacity(alpha)
 
         // 실시간 캔버스 반영: 팔레트 즉시 업데이트 (Command 없이)
         paletteManager.updateColor(at: colorIndex, to: editingColor)
 
         // HSV 동기화
-        if let hsv = editingColor.hsvComponents() {
+        let baseColor = Color(red: r, green: g, blue: b)
+        if let hsv = baseColor.hsvComponents() {
             hue = hsv.h
             saturation = hsv.s
             brightness = hsv.v

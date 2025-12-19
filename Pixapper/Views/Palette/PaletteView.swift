@@ -114,14 +114,17 @@ struct PaletteGridCell: View {
     @State private var isHovered = false
 
     var body: some View {
-        Rectangle()
-            .fill(color)
-            .aspectRatio(1, contentMode: .fit)
-            .overlay(
-                Rectangle()
-                    .strokeBorder(borderColor, lineWidth: borderWidth)
-            )
-            .overlay(
+        ZStack {
+            CheckerboardBackground()
+            Rectangle()
+                .fill(color)
+        }
+        .aspectRatio(1, contentMode: .fit)
+        .overlay(
+            Rectangle()
+                .strokeBorder(borderColor, lineWidth: borderWidth)
+        )
+        .overlay(
                 // Primary/Secondary indicators
                 VStack {
                     HStack {
