@@ -14,6 +14,7 @@ struct PaletteView: View {
     @ObservedObject var pixelStateManager: PixelStateManager
     let commandManager: CommandManager
     @Binding var selectedColorIndex: UInt8?
+    @Binding var originalSelectedColor: Color?
 
     @State private var showingAddColorPicker = false
     @State private var newColor: Color = .white
@@ -73,6 +74,7 @@ struct PaletteView: View {
                                 onTap: {
                                     // 색상 선택 (편집기 표시)
                                     selectedColorIndex = UInt8(index)
+                                    originalSelectedColor = color  // 원본 색상 캡처
                                     colorManager.primaryColor = color
                                 },
                                 onRemove: {

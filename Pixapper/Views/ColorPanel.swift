@@ -15,6 +15,7 @@ struct ColorPanel: View {
     let commandManager: CommandManager
 
     @State private var selectedPaletteColorIndex: UInt8? = nil
+    @State private var originalSelectedColor: Color? = nil  // 편집 시작 시 색상 캡처
 
     var body: some View {
         VStack(spacing: 0) {
@@ -87,7 +88,8 @@ struct ColorPanel: View {
                         colorManager: colorManager,
                         pixelStateManager: pixelStateManager,
                         commandManager: commandManager,
-                        selectedColorIndex: $selectedPaletteColorIndex
+                        selectedColorIndex: $selectedPaletteColorIndex,
+                        originalSelectedColor: $originalSelectedColor
                     )
 
                     Rectangle()
@@ -96,14 +98,17 @@ struct ColorPanel: View {
 
                     // Palette Color Editor (선택된 색상이 있을 때만 표시)
                     if let selectedIndex = selectedPaletteColorIndex,
-                       let selectedColor = paletteManager.currentPalette[selectedIndex] {
+                       let originalColor = originalSelectedColor {
                         PaletteColorEditor(
                             colorIndex: selectedIndex,
-                            color: selectedColor,
+                            originalColor: originalColor,
                             paletteManager: paletteManager,
                             colorManager: colorManager,
                             commandManager: commandManager,
-                            onClose: { selectedPaletteColorIndex = nil }
+                            onClose: {
+                                selectedPaletteColorIndex = nil
+                                originalSelectedColor = nil
+                            }
                         )
 
                         Rectangle()
@@ -208,39 +213,39 @@ private struct AdobeColorSwatchView: View {
     }
 }
 
-/// 팔레트 색상 인라인 편집기 (HSV 색상 피커)
+/// 팔레트 색상 인라인 편집기 (HSV 색상 피커) - Apply/Cancel 방식
 private struct PaletteColorEditor: View {
     let colorIndex: UInt8
-    let originalColor: Color  // 원래 색상 (Cancel 시 복원용)
     @ObservedObject var paletteManager: PaletteManager
     @ObservedObject var colorManager: ColorManager
     let commandManager: CommandManager
     let onClose: () -> Void
 
-    @State private var editingColor: Color
     @State private var hue: Double = 0
     @State private var saturation: Double = 1
     @State private var brightness: Double = 1
     @State private var hexString: String = ""
-    @State private var hasChanges: Bool = false
+    @State private var editingColor: Color  // 임시 편집 색상 (팔레트 업데이트 안함)
+    private let originalColor: Color  // 편집 시작 시 색상
 
-    init(colorIndex: UInt8, color: Color, paletteManager: PaletteManager, colorManager: ColorManager, commandManager: CommandManager, onClose: @escaping () -> Void) {
+    init(colorIndex: UInt8, originalColor: Color, paletteManager: PaletteManager, colorManager: ColorManager, commandManager: CommandManager, onClose: @escaping () -> Void) {
         self.colorIndex = colorIndex
-        self.originalColor = color  // 원본 저장
         self.paletteManager = paletteManager
         self.colorManager = colorManager
         self.commandManager = commandManager
         self.onClose = onClose
+        self.originalColor = originalColor
 
         // 초기 색상 설정 (HSV)
-        let hsv = color.hsvComponents() ?? (h: 0, s: 1, v: 1)
-        _editingColor = State(initialValue: color)
+        let hsv = originalColor.hsvComponents() ?? (h: 0, s: 1, v: 1)
         _hue = State(initialValue: hsv.h)
         _saturation = State(initialValue: hsv.s)
         _brightness = State(initialValue: hsv.v)
 
-        let rgb = color.rgbComponents() ?? (r: 0, g: 0, b: 0, a: 1)
+        let rgb = originalColor.rgbComponents() ?? (r: 0, g: 0, b: 0, a: 1)
         _hexString = State(initialValue: String(format: "%02X%02X%02X", Int(rgb.r * 255), Int(rgb.g * 255), Int(rgb.b * 255)))
+
+        _editingColor = State(initialValue: originalColor)
     }
 
     var body: some View {
@@ -254,7 +259,7 @@ private struct PaletteColorEditor: View {
 
                 Spacer()
 
-                Button(action: cancelEdit) {
+                Button(action: { cancelEdit() }) {
                     Image(systemName: "xmark")
                         .font(.system(size: 8))
                         .foregroundColor(Constants.Theme.textSecondary)
@@ -267,9 +272,8 @@ private struct PaletteColorEditor: View {
             .background(Constants.Theme.sectionBackground)
 
             VStack(spacing: 8) {
-                // Preview
+                // Preview - 이중 프리뷰 (Original vs Live)
                 HStack(spacing: 8) {
-                    // Original color
                     VStack(spacing: 2) {
                         ZStack {
                             CheckerboardBackground()
@@ -286,7 +290,6 @@ private struct PaletteColorEditor: View {
                             .foregroundColor(Constants.Theme.textSecondary)
                     }
 
-                    // Current (Live) color
                     VStack(spacing: 2) {
                         ZStack {
                             CheckerboardBackground()
@@ -314,8 +317,11 @@ private struct PaletteColorEditor: View {
                 .frame(height: 120)
 
                 // Hue Bar
-                HueBar(hue: $hue, onChange: { updateColorFromHSV() })
-                    .frame(height: 20)
+                HueBar(
+                    hue: $hue,
+                    onChange: { updateColorFromHSV() }
+                )
+                .frame(height: 20)
 
                 // Hex Input
                 HStack(spacing: 4) {
@@ -335,7 +341,7 @@ private struct PaletteColorEditor: View {
                         }
                 }
 
-                // Buttons
+                // Apply/Cancel Buttons
                 HStack(spacing: 4) {
                     Button("Cancel") {
                         cancelEdit()
@@ -365,20 +371,6 @@ private struct PaletteColorEditor: View {
             .padding(8)
         }
         .background(Constants.Theme.panelBackground)
-        .onDisappear {
-            // 편집기가 닫힐 때: 변경사항이 있으면 자동 Apply (다른 색상 클릭 시)
-            // Cancel 버튼이나 ESC는 hasChanges를 false로 설정하므로 여기서 복원 안 됨
-            if hasChanges {
-                // 자동 Apply: Command 생성하여 Undo/Redo 스택에 추가
-                let command = ChangePaletteColorCommand(
-                    paletteManager: paletteManager,
-                    index: colorIndex,
-                    oldColor: originalColor,
-                    newColor: editingColor
-                )
-                commandManager.performCommand(command)
-            }
-        }
         .onKeyPress(.escape) {
             cancelEdit()
             return .handled
@@ -386,16 +378,18 @@ private struct PaletteColorEditor: View {
     }
 
     private func updateColorFromHSV() {
+        // 편집 색상 업데이트
         editingColor = Color.fromHSV(h: hue, s: saturation, v: brightness)
+
+        // 실시간 캔버스 반영: 팔레트 즉시 업데이트 (Command 없이)
+        paletteManager.updateColor(at: colorIndex, to: editingColor)
+
+        // Hex 필드 동기화
         if let rgb = editingColor.rgbComponents() {
             hexString = String(format: "%02X%02X%02X", Int(rgb.r * 255), Int(rgb.g * 255), Int(rgb.b * 255))
         }
 
-        // 실시간 미리보기: 즉시 팔레트 업데이트 (Command 없이)
-        paletteManager.updateColor(at: colorIndex, to: editingColor)
-        hasChanges = true
-
-        // Primary/Secondary 동기화
+        // Primary/Secondary 동기화 (실시간)
         updatePrimarySecondary()
     }
 
@@ -407,24 +401,26 @@ private struct PaletteColorEditor: View {
         let r = Double((hexValue >> 16) & 0xFF) / 255.0
         let g = Double((hexValue >> 8) & 0xFF) / 255.0
         let b = Double(hexValue & 0xFF) / 255.0
+
+        // 편집 색상 업데이트
         editingColor = Color(red: r, green: g, blue: b)
 
+        // 실시간 캔버스 반영: 팔레트 즉시 업데이트 (Command 없이)
+        paletteManager.updateColor(at: colorIndex, to: editingColor)
+
+        // HSV 동기화
         if let hsv = editingColor.hsvComponents() {
             hue = hsv.h
             saturation = hsv.s
             brightness = hsv.v
         }
 
-        // 실시간 미리보기: 즉시 팔레트 업데이트 (Command 없이)
-        paletteManager.updateColor(at: colorIndex, to: editingColor)
-        hasChanges = true
-
-        // Primary/Secondary 동기화
+        // Primary/Secondary 동기화 (실시간)
         updatePrimarySecondary()
     }
 
     private func updatePrimarySecondary() {
-        // 원본 색상이 Primary/Secondary였다면 새 색상으로 업데이트
+        // 원본 색상이 Primary/Secondary였다면 실시간 업데이트
         if originalColor.isEqual(to: colorManager.primaryColor) {
             colorManager.primaryColor = editingColor
         }
@@ -434,38 +430,33 @@ private struct PaletteColorEditor: View {
     }
 
     private func applyColor() {
-        // Command 생성 및 실행 (Undo/Redo 스택에 추가)
-        let command = ChangePaletteColorCommand(
-            paletteManager: paletteManager,
-            index: colorIndex,
-            oldColor: originalColor,  // 원본 색상 사용
-            newColor: editingColor
-        )
-        commandManager.performCommand(command)
+        // 변경사항이 있을 때만 Command 생성
+        if !originalColor.isEqual(to: editingColor) {
+            let command = ChangePaletteColorCommand(
+                paletteManager: paletteManager,
+                index: colorIndex,
+                oldColor: originalColor,
+                newColor: editingColor
+            )
+            commandManager.performCommand(command)
+        }
 
-        // 변경사항 확정됨
-        hasChanges = false
         onClose()
     }
 
     private func cancelEdit() {
-        // 원본 색상으로 복원
-        restoreOriginalColor()
-        hasChanges = false
-        onClose()
-    }
-
-    private func restoreOriginalColor() {
-        // 팔레트를 원본 색상으로 복원 (Command 없이)
+        // 원본 색상으로 복원 (Command 없이)
         paletteManager.updateColor(at: colorIndex, to: originalColor)
 
-        // Primary/Secondary도 복원
+        // Primary/Secondary 복원
         if editingColor.isEqual(to: colorManager.primaryColor) {
             colorManager.primaryColor = originalColor
         }
         if editingColor.isEqual(to: colorManager.secondaryColor) {
             colorManager.secondaryColor = originalColor
         }
+
+        onClose()
     }
 }
 
