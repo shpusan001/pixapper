@@ -57,4 +57,72 @@ extension Color {
         }
         return c1.isEqual(to: c2, tolerance: tolerance)
     }
+
+    /// HSV 컴포넌트 추출
+    /// - Returns: (h: 0-1, s: 0-1, v: 0-1) 또는 nil
+    func hsvComponents() -> (h: Double, s: Double, v: Double)? {
+        guard let rgb = rgbComponents() else { return nil }
+
+        let r = rgb.r
+        let g = rgb.g
+        let b = rgb.b
+
+        let maxC = max(r, g, b)
+        let minC = min(r, g, b)
+        let delta = maxC - minC
+
+        var h: Double = 0
+        let s: Double = maxC == 0 ? 0 : delta / maxC
+        let v: Double = maxC
+
+        if delta != 0 {
+            if maxC == r {
+                h = (g - b) / delta + (g < b ? 6 : 0)
+            } else if maxC == g {
+                h = (b - r) / delta + 2
+            } else {
+                h = (r - g) / delta + 4
+            }
+            h /= 6
+        }
+
+        return (h: h, s: s, v: v)
+    }
+
+    /// HSV 값으로 Color 생성
+    /// - Parameters:
+    ///   - h: Hue (0-1)
+    ///   - s: Saturation (0-1)
+    ///   - v: Value/Brightness (0-1)
+    /// - Returns: Color
+    static func fromHSV(h: Double, s: Double, v: Double) -> Color {
+        let h = h.clamped(to: 0...1)
+        let s = s.clamped(to: 0...1)
+        let v = v.clamped(to: 0...1)
+
+        let i = Int(h * 6)
+        let f = h * 6 - Double(i)
+        let p = v * (1 - s)
+        let q = v * (1 - f * s)
+        let t = v * (1 - (1 - f) * s)
+
+        let r: Double, g: Double, b: Double
+
+        switch i % 6 {
+        case 0: (r, g, b) = (v, t, p)
+        case 1: (r, g, b) = (q, v, p)
+        case 2: (r, g, b) = (p, v, t)
+        case 3: (r, g, b) = (p, q, v)
+        case 4: (r, g, b) = (t, p, v)
+        default: (r, g, b) = (v, p, q)
+        }
+
+        return Color(red: r, green: g, blue: b)
+    }
+}
+
+extension Double {
+    func clamped(to range: ClosedRange<Double>) -> Double {
+        return Swift.min(Swift.max(self, range.lowerBound), range.upperBound)
+    }
 }

@@ -13,10 +13,8 @@ struct PaletteView: View {
     @ObservedObject var colorManager: ColorManager
     @ObservedObject var pixelStateManager: PixelStateManager
     let commandManager: CommandManager
+    @Binding var selectedColorIndex: UInt8?
 
-    @State private var selectedColorIndex: UInt8? = nil
-    @State private var showingColorPicker = false
-    @State private var editingColor: Color = .black
     @State private var showingAddColorPicker = false
     @State private var newColor: Color = .white
 
@@ -73,10 +71,9 @@ struct PaletteView: View {
                                 isSecondary: color.isEqual(to: colorManager.secondaryColor),
                                 usageCount: colorUsage[UInt8(index)] ?? 0,
                                 onTap: {
-                                    handleColorTap(index: UInt8(index), color: color)
-                                },
-                                onDoubleTap: {
-                                    handleColorDoubleTap(index: UInt8(index), color: color)
+                                    // 색상 선택 (편집기 표시)
+                                    selectedColorIndex = UInt8(index)
+                                    colorManager.primaryColor = color
                                 },
                                 onRemove: {
                                     paletteManager.removeColor(at: UInt8(index))
@@ -90,32 +87,6 @@ struct PaletteView: View {
             .frame(maxHeight: 300)
         }
         .background(Constants.Theme.panelBackground)
-        .sheet(isPresented: $showingColorPicker) {
-            ColorPickerSheet(
-                color: $editingColor,
-                onSave: { newColor in
-                    if let index = selectedColorIndex,
-                       let oldColor = paletteManager.currentPalette[index] {
-                        // Command 생성 및 실행 (Undo/Redo 지원)
-                        let command = ChangePaletteColorCommand(
-                            paletteManager: paletteManager,
-                            index: index,
-                            oldColor: oldColor,
-                            newColor: newColor
-                        )
-                        commandManager.performCommand(command)
-
-                        // Primary/Secondary 색상도 업데이트
-                        if oldColor.isEqual(to: colorManager.primaryColor) {
-                            colorManager.primaryColor = newColor
-                        }
-                        if oldColor.isEqual(to: colorManager.secondaryColor) {
-                            colorManager.secondaryColor = newColor
-                        }
-                    }
-                }
-            )
-        }
         .sheet(isPresented: $showingAddColorPicker) {
             ColorPickerSheet(
                 color: $newColor,
@@ -124,17 +95,6 @@ struct PaletteView: View {
                 }
             )
         }
-    }
-
-    private func handleColorTap(index: UInt8, color: Color) {
-        selectedColorIndex = index
-        colorManager.primaryColor = color
-    }
-
-    private func handleColorDoubleTap(index: UInt8, color: Color) {
-        selectedColorIndex = index
-        editingColor = color
-        showingColorPicker = true
     }
 }
 
@@ -147,7 +107,6 @@ struct PaletteGridCell: View {
     let isSecondary: Bool
     let usageCount: Int
     let onTap: () -> Void
-    let onDoubleTap: () -> Void
     let onRemove: () -> Void
 
     @State private var isHovered = false
@@ -191,14 +150,7 @@ struct PaletteGridCell: View {
             .onTapGesture {
                 onTap()
             }
-            .onTapGesture(count: 2) {
-                onDoubleTap()
-            }
             .contextMenu {
-                Button("Edit Color...") {
-                    onDoubleTap()
-                }
-                Divider()
                 Button("Remove from Palette", role: .destructive) {
                     onRemove()
                 }
