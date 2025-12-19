@@ -10,6 +10,9 @@ import SwiftUI
 /// Adobe 스타일 컬러 패널 - 프로페셔널하고 조밀한 레이아웃
 struct ColorPanel: View {
     @ObservedObject var colorManager: ColorManager
+    @ObservedObject var paletteManager: PaletteManager
+    @ObservedObject var pixelStateManager: PixelStateManager
+    let commandManager: CommandManager
 
     var body: some View {
         VStack(spacing: 0) {
@@ -72,69 +75,24 @@ struct ColorPanel: View {
                             .frame(height: 1)
                     }
 
-                    // Palette - 반응형 그리드
-                    VStack(alignment: .leading, spacing: 4) {
-                        HStack {
-                            Text("PALETTE")
-                                .font(.system(size: 9, weight: .semibold))
-                                .foregroundColor(Constants.Theme.textSecondary)
-                                .tracking(0.3)
+                    // Palette System
+                    Rectangle()
+                        .fill(Constants.Theme.divider)
+                        .frame(height: 1)
 
-                            Spacer()
+                    PaletteView(
+                        paletteManager: paletteManager,
+                        colorManager: colorManager,
+                        pixelStateManager: pixelStateManager,
+                        commandManager: commandManager
+                    )
 
-                            // Count indicator
-                            Text("\(colorManager.palette.count)/\(colorManager.maxPaletteColors)")
-                                .font(.system(size: 8, design: .monospaced))
-                                .foregroundColor(Constants.Theme.textDisabled)
+                    Rectangle()
+                        .fill(Constants.Theme.divider)
+                        .frame(height: 1)
 
-                            // Add button
-                            Button(action: {
-                                colorManager.addToPalette(colorManager.primaryColor)
-                            }) {
-                                Image(systemName: "plus")
-                                    .font(.system(size: 9, weight: .semibold))
-                                    .foregroundColor(
-                                        colorManager.palette.count >= colorManager.maxPaletteColors
-                                        ? Constants.Theme.textDisabled
-                                        : Constants.Theme.textSecondary
-                                    )
-                                    .frame(width: 18, height: 18)
-                            }
-                            .buttonStyle(.plain)
-                            .background(Constants.Theme.sectionBackground)
-                            .cornerRadius(2)
-                            .disabled(colorManager.palette.count >= colorManager.maxPaletteColors)
-                            .help(
-                                colorManager.palette.count >= colorManager.maxPaletteColors
-                                ? "Palette full (max \(colorManager.maxPaletteColors))"
-                                : "Add current color to palette"
-                            )
-                        }
-                        .padding(.horizontal, 6)
-                        .padding(.top, 6)
-
-                        if !colorManager.palette.isEmpty {
-                            LazyVGrid(columns: [
-                                GridItem(.adaptive(minimum: 24, maximum: 30), spacing: 3)
-                            ], spacing: 3) {
-                                ForEach(Array(colorManager.palette.enumerated()), id: \.offset) { index, color in
-                                    AdobePaletteCell(
-                                        color: color,
-                                        index: index,
-                                        colorManager: colorManager
-                                    )
-                                }
-                            }
-                            .padding(.horizontal, 6)
-                            .padding(.bottom, 6)
-                        } else {
-                            Text("No colors in palette")
-                                .font(.system(size: 9))
-                                .foregroundColor(Constants.Theme.textDisabled)
-                                .frame(maxWidth: .infinity, alignment: .center)
-                                .padding(.vertical, 12)
-                        }
-                    }
+                    PaletteSelectorView(paletteManager: paletteManager)
+                        .frame(maxHeight: 200)
                 }
             }
         }

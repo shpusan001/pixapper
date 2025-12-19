@@ -11,7 +11,7 @@ import SwiftUI
 struct PixelChange {
     let x: Int
     let y: Int
-    let color: Color?
+    let value: PixelValue
 }
 
 /// 그리기 작업(연필, 지우개, 도형 등)을 캡슐화하는 Command

@@ -90,14 +90,23 @@ class DitheringTool: BaseTool, CanvasTool {
 
                 let color = getPatternColor(x: px, y: py, pattern: pattern, color1: color1, color2: color2)
 
-                var oldColor: Color? = nil
+                var oldValue: PixelValue = .transparent
                 if let pixels = timelineViewModel?.getCurrentFramePixels(layerId: layerId),
                    py >= 0, py < pixels.count, px >= 0, px < pixels[py].count {
-                    oldColor = pixels[py][px]
+                    oldValue = pixels[py][px]
                 }
-                drawingState.oldStrokePixels.append(PixelChange(x: px, y: py, color: oldColor))
-                drawingState.currentStrokePixels.append(PixelChange(x: px, y: py, color: color))
-                timelineViewModel?.setPixel(layerId: layerId, x: px, y: py, color: color)
+
+                // Color → PixelValue 변환
+                let newValue: PixelValue
+                if let colorIndex = timelineViewModel?.pixelStateManager.currentPalette.findClosest(color) {
+                    newValue = .indexed(colorIndex)
+                } else {
+                    newValue = .transparent
+                }
+
+                drawingState.oldStrokePixels.append(PixelChange(x: px, y: py, value: oldValue))
+                drawingState.currentStrokePixels.append(PixelChange(x: px, y: py, value: newValue))
+                timelineViewModel?.setPixel(layerId: layerId, x: px, y: py, value: newValue)
             }
         }
     }

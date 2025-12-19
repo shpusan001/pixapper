@@ -15,7 +15,7 @@ class ExtendFrameCommand: Command {
     private let frameIndex: Int
     private let layerId: UUID
     private var spanEnd: Int?
-    private var shiftedKeyframes: [Int: [[Color?]]] = [:]  // 이동된 키프레임 백업
+    private var shiftedKeyframes: [Int: PixelGrid] = [:]  // 이동된 키프레임 백업
     private var previousTotalFrames: Int = 0
     private var previousCurrentFrameIndex: Int = 0
 

@@ -13,7 +13,7 @@ class InsertBlankKeyframeCommand: Command {
     private weak var timelineViewModel: TimelineViewModel?
     private let frameIndex: Int
     private let layerId: UUID
-    private var oldPixels: [[Color?]]?
+    private var oldPixels: PixelGrid?
     private var wasKeyframe: Bool = false
 
     var description: String {

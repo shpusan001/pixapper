@@ -15,7 +15,7 @@ class DeleteFramesCommand: Command {
     private let frameIndices: Set<Int>
     private var previousTotalFrames: Int = 0
     private var previousCurrentFrameIndex: Int = 0
-    private var deletedKeyframes: [Int: [[Color?]]] = [:]
+    private var deletedKeyframes: [Int: PixelGrid] = [:]
 
     var description: String {
         "Delete frames"

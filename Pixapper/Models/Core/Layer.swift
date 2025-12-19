@@ -16,7 +16,7 @@ struct Layer: Identifiable {
     ///   - 읽기: `timelineViewModel.pixelStateManager.getPixels(layerId:)`
     ///   - 쓰기: `timelineViewModel.pixelStateManager.setPixel()` 또는 `applyPixelChanges()`
     /// - Important: 직접 수정 시 PixelStateManager와 동기화되지 않을 수 있습니다.
-    var pixels: [[Color?]]
+    var pixels: PixelGrid  // [[Color?]] → PixelGrid ([[PixelValue]])
 
     var isVisible: Bool = true
     var opacity: Double = 1.0
@@ -27,8 +27,8 @@ struct Layer: Identifiable {
     var timeline: LayerTimeline
 
     /// 빈 픽셀 배열 생성 헬퍼 메서드
-    static func createEmptyPixels(width: Int, height: Int) -> [[Color?]] {
-        return Array(repeating: Array(repeating: nil as Color?, count: width), count: height)
+    static func createEmptyPixels(width: Int, height: Int) -> PixelGrid {
+        return PixelGrid.createEmpty(width: width, height: height)
     }
 
     init(id: UUID = UUID(), name: String, width: Int, height: Int) {
@@ -41,7 +41,7 @@ struct Layer: Identifiable {
         self.timeline.setKeyframe(at: 0, pixels: self.pixels)
     }
 
-    init(id: UUID = UUID(), name: String, pixels: [[Color?]]) {
+    init(id: UUID = UUID(), name: String, pixels: PixelGrid) {
         self.id = id
         self.name = name
         self.pixels = pixels
@@ -52,30 +52,30 @@ struct Layer: Identifiable {
     }
 
     // Timeline을 포함한 완전 초기화
-    init(id: UUID = UUID(), name: String, pixels: [[Color?]], timeline: LayerTimeline) {
+    init(id: UUID = UUID(), name: String, pixels: PixelGrid, timeline: LayerTimeline) {
         self.id = id
         self.name = name
         self.pixels = pixels
         self.timeline = timeline
     }
 
-    func getPixel(x: Int, y: Int) -> Color? {
+    func getPixel(x: Int, y: Int) -> PixelValue? {
         guard y >= 0 && y < pixels.count && x >= 0 && x < pixels[0].count else {
             return nil
         }
         return pixels[y][x]
     }
 
-    mutating func setPixel(x: Int, y: Int, color: Color?) {
+    mutating func setPixel(x: Int, y: Int, value: PixelValue) {
         guard y >= 0 && y < pixels.count && x >= 0 && x < pixels[0].count else {
             return
         }
-        pixels[y][x] = color
+        pixels[y][x] = value
     }
 
     /// 새로운 UUID로 레이어 복제
     /// - Note: Layer는 struct이므로 pixels와 timeline이 자동으로 deep copy됨
-    ///   - pixels: [[Color?]] (Array와 Color는 모두 value type)
+    ///   - pixels: PixelGrid (Array와 PixelValue는 모두 value type)
     ///   - timeline: LayerTimeline (struct, keyframes Dictionary도 복사됨)
     /// - Parameter newName: 복제된 레이어의 이름
     /// - Returns: 새로운 UUID와 복사된 데이터를 가진 Layer

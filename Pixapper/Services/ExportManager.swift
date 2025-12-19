@@ -48,13 +48,13 @@ class ExportManager {
 
     // MARK: - Single Image Export
 
-    static func exportSingleImage(frame: Frame, layers: [Layer], width: Int, height: Int) -> NSImage? {
-        return renderFrameToImage(frame: frame, layers: layers, width: width, height: height)
+    static func exportSingleImage(frame: Frame, layers: [Layer], width: Int, height: Int, palette: ColorPalette = .default) -> NSImage? {
+        return renderFrameToImage(frame: frame, layers: layers, width: width, height: height, palette: palette)
     }
 
     // MARK: - Sprite Sheet Export
 
-    static func exportSpriteSheet(frames: [Frame], layers: [Layer], width: Int, height: Int, layout: SpriteSheetLayout, padding: Int, gridColumns: Int, gridRows: Int) -> NSImage? {
+    static func exportSpriteSheet(frames: [Frame], layers: [Layer], width: Int, height: Int, layout: SpriteSheetLayout, padding: Int, gridColumns: Int, gridRows: Int, palette: ColorPalette = .default) -> NSImage? {
         guard !frames.isEmpty else { return nil }
 
         let frameCount = frames.count
@@ -72,7 +72,7 @@ class ExportManager {
             let x = col * (width + padding)
             let y = row * (height + padding)
 
-            if let frameImage = renderFrameToImage(frame: frame, layers: layers, width: width, height: height) {
+            if let frameImage = renderFrameToImage(frame: frame, layers: layers, width: width, height: height, palette: palette) {
                 frameImage.draw(at: NSPoint(x: x, y: totalHeight - y - height), from: .zero, operation: .sourceOver, fraction: 1.0)
             }
         }
@@ -106,13 +106,13 @@ class ExportManager {
 
     // MARK: - PNG Sequence Export
 
-    static func exportPNGSequence(frames: [Frame], layers: [Layer], width: Int, height: Int, directoryURL: URL, baseName: String) -> Result<Void, ExportError> {
+    static func exportPNGSequence(frames: [Frame], layers: [Layer], width: Int, height: Int, directoryURL: URL, baseName: String, palette: ColorPalette = .default) -> Result<Void, ExportError> {
         guard !frames.isEmpty else {
             return .failure(.noFramesToExport)
         }
 
         for (index, frame) in frames.enumerated() {
-            guard let image = renderFrameToImage(frame: frame, layers: layers, width: width, height: height) else {
+            guard let image = renderFrameToImage(frame: frame, layers: layers, width: width, height: height, palette: palette) else {
                 return .failure(.invalidImageData)
             }
 
@@ -131,7 +131,7 @@ class ExportManager {
     // MARK: - Helper Methods
 
     /// Render frame to CGImage with pixel-perfect quality
-    private static func renderFrameToCGImage(frame: Frame, layers: [Layer], width: Int, height: Int, pixelPerfect: Bool = true) -> CGImage? {
+    private static func renderFrameToCGImage(frame: Frame, layers: [Layer], width: Int, height: Int, palette: ColorPalette = .default, pixelPerfect: Bool = true) -> CGImage? {
         let colorSpace = CGColorSpaceCreateDeviceRGB()
         let bitmapInfo = CGImageAlphaInfo.premultipliedLast.rawValue
 
@@ -159,7 +159,20 @@ class ExportManager {
 
             for y in 0..<cell.pixels.count {
                 for x in 0..<cell.pixels[y].count {
-                    if let color = cell.pixels[y][x] {
+                    let pixelValue = cell.pixels[y][x]
+                    if pixelValue != .transparent {
+                        // Convert PixelValue to Color using default palette
+                        let color: Color
+                        switch pixelValue {
+                        case .transparent:
+                            continue
+                        case .indexed(let colorIndex):
+                            color = palette.getColor(at: colorIndex) ?? .clear
+                        case .gradient:
+                            // Gradient not implemented yet, use clear
+                            color = .clear
+                        }
+
                         // Apply layer opacity
                         let finalColor = color.opacity(layer.opacity)
 
@@ -179,8 +192,8 @@ class ExportManager {
     }
 
     /// Render frame to NSImage (wrapper for compatibility)
-    private static func renderFrameToImage(frame: Frame, layers: [Layer], width: Int, height: Int) -> NSImage? {
-        guard let cgImage = renderFrameToCGImage(frame: frame, layers: layers, width: width, height: height, pixelPerfect: true) else {
+    private static func renderFrameToImage(frame: Frame, layers: [Layer], width: Int, height: Int, palette: ColorPalette = .default) -> NSImage? {
+        guard let cgImage = renderFrameToCGImage(frame: frame, layers: layers, width: width, height: height, palette: palette, pixelPerfect: true) else {
             return nil
         }
 
@@ -247,7 +260,7 @@ class ExportManager {
 
     // MARK: - GIF Export
 
-    static func exportGIF(frames: [Frame], layers: [Layer], width: Int, height: Int, fps: Int, loopCount: Int, renderMode: GIFRenderMode, to url: URL) -> Result<Void, ExportError> {
+    static func exportGIF(frames: [Frame], layers: [Layer], width: Int, height: Int, fps: Int, loopCount: Int, renderMode: GIFRenderMode, to url: URL, palette: ColorPalette = .default) -> Result<Void, ExportError> {
         guard !frames.isEmpty else {
             return .failure(.noFramesToExport)
         }
@@ -281,7 +294,7 @@ class ExportManager {
 
         // Add each frame to the GIF
         for frame in frames {
-            guard let cgImage = renderFrameToCGImage(frame: frame, layers: layers, width: width, height: height, pixelPerfect: pixelPerfect) else {
+            guard let cgImage = renderFrameToCGImage(frame: frame, layers: layers, width: width, height: height, palette: palette, pixelPerfect: pixelPerfect) else {
                 return .failure(.invalidImageData)
             }
 
@@ -298,7 +311,7 @@ class ExportManager {
 
     // MARK: - MP4 Export
 
-    static func exportMP4(frames: [Frame], layers: [Layer], width: Int, height: Int, fps: Int, quality: MP4Quality, renderMode: MP4RenderMode, to url: URL) -> Result<Void, ExportError> {
+    static func exportMP4(frames: [Frame], layers: [Layer], width: Int, height: Int, fps: Int, quality: MP4Quality, renderMode: MP4RenderMode, to url: URL, palette: ColorPalette = .default) -> Result<Void, ExportError> {
         guard !frames.isEmpty else {
             return .failure(.noFramesToExport)
         }
@@ -372,7 +385,7 @@ class ExportManager {
 
                 // Render frame to CGImage directly for pixel-perfect quality
                 let pixelPerfect = (renderMode == .pixelPerfect)
-                guard let cgImage = renderFrameToCGImage(frame: frame, layers: layers, width: width, height: height, pixelPerfect: pixelPerfect),
+                guard let cgImage = renderFrameToCGImage(frame: frame, layers: layers, width: width, height: height, palette: palette, pixelPerfect: pixelPerfect),
                       let pixelBuffer = createPixelBuffer(from: cgImage, width: width, height: height, pixelPerfect: pixelPerfect) else {
                     exportError = .invalidImageData
                     semaphore.signal()

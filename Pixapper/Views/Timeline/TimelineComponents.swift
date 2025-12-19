@@ -80,8 +80,9 @@ struct TimelineToggleButton: View {
 // MARK: - Cell Thumbnail View
 
 struct CellThumbnailView: View {
-    let pixels: [[Color?]]
+    let pixels: PixelGrid
     let size: CGFloat
+    let palette: ColorPalette
 
     var body: some View {
         if let image = renderThumbnail() {
@@ -103,7 +104,19 @@ struct CellThumbnailView: View {
 
         for y in 0..<height {
             for x in 0..<width {
-                if let color = pixels[y][x] {
+                let pixelValue = pixels[y][x]
+                if pixelValue != .transparent {
+                    // Convert PixelValue to Color
+                    let color: Color
+                    switch pixelValue {
+                    case .transparent:
+                        continue
+                    case .indexed(let colorIndex):
+                        color = palette.getColor(at: colorIndex) ?? .clear
+                    case .gradient:
+                        color = .clear
+                    }
+
                     NSColor(color).setFill()
                     let rect = NSRect(x: x, y: height - y - 1, width: 1, height: 1)
                     NSBezierPath(rect: rect).fill()

@@ -75,4 +75,45 @@ extension Array where Element == [SerializableColor?] {
             }
         }
     }
+
+    /// [[SerializableColor?]] → PixelGrid (마이그레이션용)
+    /// - Parameter palette: 색상을 인덱스로 변환할 팔레트 (기본값: 기본 팔레트)
+    func toPixelGrid(palette: ColorPalette = ColorPalette.default) -> PixelGrid {
+        self.map { row in
+            row.map { serializableColor in
+                if let color = serializableColor?.toColor() {
+                    // 팔레트에서 가장 가까운 색상 찾기
+                    if let index = palette.findClosest(color) {
+                        return .indexed(index)
+                    }
+                }
+                return .transparent
+            }
+        }
+    }
+}
+
+/// PixelGrid를 직렬화하기 위한 헬퍼 extension
+extension Array where Element == [PixelValue] {
+    /// PixelGrid → [[SerializableColor?]] (저장용)
+    /// - Parameter palette: 인덱스를 색상으로 변환할 팔레트 (기본값: 기본 팔레트)
+    func toSerializable(palette: ColorPalette = ColorPalette.default) -> [[SerializableColor?]] {
+        self.map { row in
+            row.map { pixelValue -> SerializableColor? in
+                switch pixelValue {
+                case .transparent:
+                    return nil
+                case .indexed(let colorIndex):
+                    // 팔레트에서 색상 가져오기
+                    if let color = palette.getColor(at: colorIndex) {
+                        return SerializableColor(from: color)
+                    }
+                    return nil
+                case .gradient:
+                    // 그라디언트는 아직 미구현, 투명으로 처리
+                    return nil
+                }
+            }
+        }
+    }
 }

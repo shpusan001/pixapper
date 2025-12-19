@@ -17,15 +17,15 @@ class PasteCommand: LayerPixelApplicable {
 
     // 이전 선택 상태 (undo 시 복원)
     private let previousSelectionRect: CGRect?
-    private let previousSelectionPixels: [[Color?]]?
-    private let previousOriginalPixels: [[Color?]]?
+    private let previousSelectionPixels: PixelGrid?
+    private let previousOriginalPixels: PixelGrid?
     private let previousOriginalRect: CGRect?
     private let previousIsFloating: Bool
     private let previousFreeformMask: [[Bool]]?
 
     // 붙여넣은 선택 상태
     private let pastedSelectionRect: CGRect
-    private let pastedSelectionPixels: [[Color?]]
+    private let pastedSelectionPixels: PixelGrid
 
     // 이전 선택을 커밋할 때의 픽셀 변경 정보
     private var oldCommitPixels: [PixelChange] = []
@@ -45,13 +45,13 @@ class PasteCommand: LayerPixelApplicable {
         timelineViewModel: TimelineViewModel?,
         layerIndex: Int,
         previousSelectionRect: CGRect?,
-        previousSelectionPixels: [[Color?]]?,
-        previousOriginalPixels: [[Color?]]?,
+        previousSelectionPixels: PixelGrid?,
+        previousOriginalPixels: PixelGrid?,
         previousOriginalRect: CGRect?,
         previousIsFloating: Bool,
         previousFreeformMask: [[Bool]]?,
         pastedSelectionRect: CGRect,
-        pastedSelectionPixels: [[Color?]]
+        pastedSelectionPixels: PixelGrid
     ) {
         self.canvasViewModel = canvasViewModel
         self.layerViewModel = layerViewModel

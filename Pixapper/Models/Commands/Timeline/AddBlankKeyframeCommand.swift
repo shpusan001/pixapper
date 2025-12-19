@@ -15,7 +15,7 @@ class AddBlankKeyframeCommand: Command {
     private var insertedIndex: Int?
     private var previousTotalFrames: Int = 0
     private var previousCurrentFrameIndex: Int = 0
-    private var shiftedKeyframes: [Int: [[Color?]]] = [:]
+    private var shiftedKeyframes: [Int: PixelGrid] = [:]
     private let canvasWidth: Int
     private let canvasHeight: Int
 

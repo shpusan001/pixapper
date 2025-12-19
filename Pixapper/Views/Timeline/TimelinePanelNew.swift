@@ -423,7 +423,7 @@ struct TimelinePanelNew: View {
 
             // Thumbnail for keyframes with content
             if spanPosition == .keyframeStart && hasContent, let pixels = effectivePixels {
-                CellThumbnailView(pixels: pixels, size: cellSize - 8)
+                CellThumbnailView(pixels: pixels, size: cellSize - 8, palette: viewModel.pixelStateManager.currentPalette)
                     .padding(4)
             }
 

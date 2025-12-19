@@ -10,6 +10,7 @@ import SwiftUI
 struct CanvasView: View {
     @ObservedObject var viewModel: CanvasViewModel
     var timelineViewModel: TimelineViewModel?
+    @ObservedObject var pixelStateManager: PixelStateManager
     @State private var isDragging = false
     @State private var eventMonitor: Any?
     @State private var dragMonitor: Any?
@@ -154,7 +155,8 @@ struct CanvasView: View {
                             tint: onionFrame.tint,
                             opacity: onionFrame.opacity,
                             marginX: marginX,
-                            marginY: marginY
+                            marginY: marginY,
+                            palette: timeline.pixelStateManager.currentPalette
                         )
                     }
                 }
@@ -281,7 +283,8 @@ struct CanvasView: View {
                 hoveredHandle: viewModel.hoveredHandle,
                 marginX: marginX,
                 marginY: marginY,
-                freeformMask: viewModel.freeformMask
+                freeformMask: viewModel.freeformMask,
+                palette: timelineViewModel?.pixelStateManager.currentPalette ?? .default
             )
         }
     }
@@ -711,7 +714,19 @@ struct PixelGridView: View {
 
             for y in 0..<pixels.count {
                 for x in 0..<pixels[y].count {
-                    if let color = pixels[y][x] {
+                    let pixelValue = pixels[y][x]
+                    if pixelValue != .transparent {
+                        // Convert PixelValue to Color
+                        let color: Color
+                        switch pixelValue {
+                        case .transparent:
+                            continue
+                        case .indexed(let colorIndex):
+                            color = pixelStateManager.currentPalette.getColor(at: colorIndex) ?? .clear
+                        case .gradient:
+                            color = .clear
+                        }
+
                         let rect = CGRect(
                             x: marginX + CGFloat(x) * pixelSize,
                             y: marginY + CGFloat(y) * pixelSize,
@@ -869,12 +884,25 @@ struct OnionSkinLayerView: View {
     let opacity: Double
     let marginX: CGFloat
     let marginY: CGFloat
+    let palette: ColorPalette
 
     var body: some View {
         Canvas { context, size in
             for y in 0..<layer.pixels.count {
                 for x in 0..<layer.pixels[y].count {
-                    if let color = layer.pixels[y][x] {
+                    let pixelValue = layer.pixels[y][x]
+                    if pixelValue != .transparent {
+                        // Convert PixelValue to Color
+                        let color: Color
+                        switch pixelValue {
+                        case .transparent:
+                            continue
+                        case .indexed(let colorIndex):
+                            color = palette.getColor(at: colorIndex) ?? .clear
+                        case .gradient:
+                            color = .clear
+                        }
+
                         let rect = CGRect(
                             x: marginX + CGFloat(x) * pixelSize,
                             y: marginY + CGFloat(y) * pixelSize,
@@ -953,15 +981,16 @@ struct SelectionRectView: View {
     let rect: CGRect
     let offset: CGPoint
     let pixelSize: CGFloat
-    let selectionPixels: [[Color?]]?
+    let selectionPixels: PixelGrid?
     let isMoving: Bool
-    let originalPixels: [[Color?]]?
+    let originalPixels: PixelGrid?
     let originalRect: CGRect?
     let selectionMode: SelectionTool.SelectionMode
     let hoveredHandle: SelectionTool.ResizeHandle?
     let marginX: CGFloat
     let marginY: CGFloat
     let freeformMask: [[Bool]]?
+    let palette: ColorPalette
 
     var body: some View {
         Canvas { context, size in
@@ -991,7 +1020,7 @@ struct SelectionRectView: View {
         return false
     }
 
-    private func drawPixels(context: GraphicsContext, pixels: [[Color?]], rect: CGRect, opacity: Double) {
+    private func drawPixels(context: GraphicsContext, pixels: PixelGrid, rect: CGRect, opacity: Double) {
         // 항상 마스크 기반으로 렌더링 (Rectangle도 마스크 사용)
         guard let mask = freeformMask else { return }
 
@@ -999,7 +1028,19 @@ struct SelectionRectView: View {
             for x in 0..<pixels[y].count {
                 guard y < mask.count && x < mask[y].count && mask[y][x] else { continue }
 
-                if let color = pixels[y][x] {
+                let pixelValue = pixels[y][x]
+                if pixelValue != .transparent {
+                    // Convert PixelValue to Color
+                    let color: Color
+                    switch pixelValue {
+                    case .transparent:
+                        continue
+                    case .indexed(let colorIndex):
+                        color = palette.getColor(at: colorIndex) ?? .clear
+                    case .gradient:
+                        color = .clear
+                    }
+
                     let pixelRect = CGRect(
                         x: marginX + (rect.minX + CGFloat(x)) * pixelSize,
                         y: marginY + (rect.minY + CGFloat(y)) * pixelSize,

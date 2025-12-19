@@ -38,13 +38,32 @@ class FillTool: BaseTool, CanvasTool {
         let layerId = layerViewModel.layers[currentLayerIndex].id
         guard let pixels = timelineVM.getCurrentFramePixels(layerId: layerId) else { return }
 
-        // 시작점의 색상 가져오기
+        // 시작점의 픽셀 값 가져오기
         guard y >= 0, y < pixels.count, x >= 0, x < pixels[y].count else { return }
-        let targetColor = pixels[y][x]
+        let targetValue = pixels[y][x]
+
+        // Convert to Color for comparison
+        let targetColor: Color
+        switch targetValue {
+        case .transparent:
+            targetColor = .clear
+        case .indexed(let colorIndex):
+            targetColor = timelineViewModel?.pixelStateManager.currentPalette.getColor(at: colorIndex) ?? .clear
+        case .gradient:
+            targetColor = .clear
+        }
 
         // Don't fill if target and fill colors are the same (with tolerance)
         if Color.areEqual(targetColor, fillColor, tolerance: tolerance) {
             return
+        }
+
+        // Convert fillColor to PixelValue
+        let fillValue: PixelValue
+        if let colorIndex = timelineViewModel?.pixelStateManager.currentPalette.findClosest(fillColor) {
+            fillValue = .indexed(colorIndex)
+        } else {
+            fillValue = .transparent
         }
 
         var changedPixels: [PixelChange] = []
@@ -61,23 +80,34 @@ class FillTool: BaseTool, CanvasTool {
                 continue
             }
 
-            // 현재 픽셀 색상 가져오기 (TimelineViewModel 사용)
+            // 현재 픽셀 값 가져오기 (TimelineViewModel 사용)
             guard let currentPixels = timelineVM.getCurrentFramePixels(layerId: layerId),
                   py < currentPixels.count, px < currentPixels[py].count else {
                 continue
             }
-            let currentColor = currentPixels[py][px]
+            let currentValue = currentPixels[py][px]
+
+            // Convert current PixelValue to Color for comparison
+            let currentColor: Color
+            switch currentValue {
+            case .transparent:
+                currentColor = .clear
+            case .indexed(let colorIndex):
+                currentColor = timelineViewModel?.pixelStateManager.currentPalette.getColor(at: colorIndex) ?? .clear
+            case .gradient:
+                currentColor = .clear
+            }
 
             if !Color.areEqual(currentColor, targetColor, tolerance: tolerance) {
                 continue
             }
 
             // 이전 상태 저장
-            oldPixels.append(PixelChange(x: px, y: py, color: currentColor))
-            changedPixels.append(PixelChange(x: px, y: py, color: fillColor))
+            oldPixels.append(PixelChange(x: px, y: py, value: currentValue))
+            changedPixels.append(PixelChange(x: px, y: py, value: fillValue))
 
             // Timeline에 즉시 반영
-            timelineVM.setPixel(layerId: layerId, x: px, y: py, color: fillColor)
+            timelineVM.setPixel(layerId: layerId, x: px, y: py, value: fillValue)
 
             stack.append((px + 1, py))
             stack.append((px - 1, py))

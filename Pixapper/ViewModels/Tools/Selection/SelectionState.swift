@@ -14,7 +14,7 @@ struct SelectionState {
 
     // MARK: - Resize State
     var resizeStartRect: CGRect?
-    var resizeStartPixels: [[Color?]]?
+    var resizeStartPixels: PixelGrid?
     var resizeStartMask: [[Bool]]?
 
     // MARK: - Move State
@@ -22,7 +22,7 @@ struct SelectionState {
 
     // MARK: - Rotate State
     var rotateStartAngle: Double = 0
-    var rotateStartPixels: [[Color?]]?
+    var rotateStartPixels: PixelGrid?
     var rotateStartMask: [[Bool]]?
     var currentRotationAngle: Double = 0
 
@@ -89,7 +89,7 @@ struct SelectionState {
 // MARK: - Selection Clipboard
 
 struct SelectionClipboard {
-    let pixels: [[Color?]]
+    let pixels: PixelGrid
     let width: Int
     let height: Int
 }

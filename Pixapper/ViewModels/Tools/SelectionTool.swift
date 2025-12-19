@@ -44,7 +44,7 @@ class SelectionTool: BaseTool, CanvasTool {
         get { canvasViewModel?.selectionRect }
         set { canvasViewModel?.selectionRect = newValue }
     }
-    private var selectionPixels: [[Color?]]? {
+    private var selectionPixels: PixelGrid? {
         get { canvasViewModel?.selectionPixels }
         set { canvasViewModel?.selectionPixels = newValue }
     }
@@ -56,7 +56,7 @@ class SelectionTool: BaseTool, CanvasTool {
         get { canvasViewModel?.isFloatingSelection ?? false }
         set { canvasViewModel?.isFloatingSelection = newValue }
     }
-    private var originalPixels: [[Color?]]? {
+    private var originalPixels: PixelGrid? {
         get { canvasViewModel?.originalPixels }
         set { canvasViewModel?.originalPixels = newValue }
     }
@@ -258,7 +258,7 @@ class SelectionTool: BaseTool, CanvasTool {
             mask = Array(repeating: Array(repeating: true, count: width), count: height)
         }
 
-        var pixels: [[Color?]] = Array(repeating: Array(repeating: nil, count: width), count: height)
+        var pixels: PixelGrid = Array(repeating: Array(repeating: .transparent, count: width), count: height)
         var layerOldPixels: [PixelChange] = []
         var layerNewPixels: [PixelChange] = []
 
@@ -272,12 +272,12 @@ class SelectionTool: BaseTool, CanvasTool {
                     if let canvas = canvasViewModel,
                        pixelX >= 0 && pixelX < canvas.canvas.width &&
                        pixelY >= 0 && pixelY < canvas.canvas.height {
-                        let color = timelineViewModel?.getCurrentFramePixels(layerId: layerId)?[pixelY][pixelX]
-                        pixels[y][x] = color
+                        let pixelValue = timelineViewModel?.getCurrentFramePixels(layerId: layerId)?[pixelY][pixelX] ?? .transparent
+                        pixels[y][x] = pixelValue
 
-                        if color != nil {
-                            layerOldPixels.append(PixelChange(x: pixelX, y: pixelY, color: color))
-                            layerNewPixels.append(PixelChange(x: pixelX, y: pixelY, color: nil))
+                        if pixelValue != .transparent {
+                            layerOldPixels.append(PixelChange(x: pixelX, y: pixelY, value: pixelValue))
+                            layerNewPixels.append(PixelChange(x: pixelX, y: pixelY, value: .transparent))
                         }
                     }
                 }
@@ -285,7 +285,7 @@ class SelectionTool: BaseTool, CanvasTool {
         }
 
         for change in layerNewPixels {
-            timelineViewModel?.setPixel(layerId: layerId, x: change.x, y: change.y, color: change.color)
+            timelineViewModel?.setPixel(layerId: layerId, x: change.x, y: change.y, value: change.value)
         }
 
         selectionPixels = pixels
@@ -336,7 +336,7 @@ class SelectionTool: BaseTool, CanvasTool {
                     let pixelY = startY + y
 
                     if pixelX >= 0 && pixelX < canvas.canvas.width && pixelY >= 0 && pixelY < canvas.canvas.height {
-                        timelineViewModel?.setPixel(layerId: layerId, x: pixelX, y: pixelY, color: origPixels[y][x])
+                        timelineViewModel?.setPixel(layerId: layerId, x: pixelX, y: pixelY, value: origPixels[y][x])
                     }
                 }
             }
@@ -363,8 +363,8 @@ class SelectionTool: BaseTool, CanvasTool {
 
     func restoreSelectionState(
         rect: CGRect?,
-        pixels: [[Color?]]?,
-        originalPixels: [[Color?]]?,
+        pixels: PixelGrid?,
+        originalPixels: PixelGrid?,
         originalRect: CGRect?,
         isFloating: Bool,
         freeformMask: [[Bool]]? = nil
@@ -397,21 +397,22 @@ class SelectionTool: BaseTool, CanvasTool {
 
         for y in 0..<pixels.count {
             for x in 0..<pixels[y].count {
-                if let color = pixels[y][x],
+                let pixelValue = pixels[y][x]
+                if pixelValue != .transparent,
                    let canvas = canvasViewModel {
                     let pixelX = startX + x
                     let pixelY = startY + y
                     if pixelX >= 0 && pixelX < canvas.canvas.width && pixelY >= 0 && pixelY < canvas.canvas.height {
-                        let oldColor = timelineViewModel?.getCurrentFramePixels(layerId: layerId)?[pixelY][pixelX]
-                        layerOldPixels.append(PixelChange(x: pixelX, y: pixelY, color: oldColor))
-                        layerNewPixels.append(PixelChange(x: pixelX, y: pixelY, color: color))
+                        let oldValue = timelineViewModel?.getCurrentFramePixels(layerId: layerId)?[pixelY][pixelX] ?? .transparent
+                        layerOldPixels.append(PixelChange(x: pixelX, y: pixelY, value: oldValue))
+                        layerNewPixels.append(PixelChange(x: pixelX, y: pixelY, value: pixelValue))
                     }
                 }
             }
         }
 
         for change in layerNewPixels {
-            timelineViewModel?.setPixel(layerId: layerId, x: change.x, y: change.y, color: change.color)
+            timelineViewModel?.setPixel(layerId: layerId, x: change.x, y: change.y, value: change.value)
         }
 
         clearSelection()
@@ -596,7 +597,7 @@ class SelectionTool: BaseTool, CanvasTool {
         let targetHeight = Int(origRect.height * scaleY)
         let scaledPixels = PixelTransform.scale(origPixels, toWidth: targetWidth, toHeight: targetHeight)
 
-        let transformedPixels: [[Color?]]
+        let transformedPixels: PixelGrid
         if abs(state.accumulatedRotation) > 0.001 {
             transformedPixels = PixelTransform.rotateByAngle(scaledPixels, angle: state.accumulatedRotation)
         } else {
@@ -688,7 +689,7 @@ class SelectionTool: BaseTool, CanvasTool {
             angle = snappedDegrees * .pi / 180.0
         }
 
-        let scaledPixels: [[Color?]]
+        let scaledPixels: PixelGrid
         if abs(state.accumulatedScale.width - 1.0) > 0.001 || abs(state.accumulatedScale.height - 1.0) > 0.001 {
             let targetWidth = Int(Double(origPixels[0].count) * state.accumulatedScale.width)
             let targetHeight = Int(Double(origPixels.count) * state.accumulatedScale.height)
@@ -792,7 +793,7 @@ class SelectionTool: BaseTool, CanvasTool {
         applyTransformedSelection(flipped)
     }
 
-    private func applyTransformedSelection(_ transformedPixels: [[Color?]]) {
+    private func applyTransformedSelection(_ transformedPixels: PixelGrid) {
         guard let oldRect = selectionRect,
               var oldPixels = selectionPixels,
               let oldMask = freeformMask else { return }
@@ -837,7 +838,7 @@ class SelectionTool: BaseTool, CanvasTool {
         commandManager.addExecutedCommand(command)
     }
 
-    func applyTransformFromCommand(pixels: [[Color?]], rect: CGRect) {
+    func applyTransformFromCommand(pixels: PixelGrid, rect: CGRect) {
         selectionPixels = pixels
         selectionRect = rect
         originalPixels = pixels
@@ -933,16 +934,16 @@ class SelectionTool: BaseTool, CanvasTool {
 
         for y in 0..<pixels.count {
             for x in 0..<pixels[y].count {
-                if pixels[y][x] != nil {
+                if pixels[y][x] != .transparent {
                     let pixelX = startX + x
                     let pixelY = startY + y
 
                     if pixelX >= 0 && pixelX < canvas.canvas.width && pixelY >= 0 && pixelY < canvas.canvas.height {
                         let layerId = layerViewModel.layers[currentLayerIndex].id
-                        let oldColor = timelineViewModel?.getCurrentFramePixels(layerId: layerId)?[pixelY][pixelX]
-                        oldPixels.append(PixelChange(x: pixelX, y: pixelY, color: oldColor))
-                        newPixels.append(PixelChange(x: pixelX, y: pixelY, color: nil))
-                        timelineViewModel?.setPixel(layerId: layerId, x: pixelX, y: pixelY, color: nil)
+                        let oldValue = timelineViewModel?.getCurrentFramePixels(layerId: layerId)?[pixelY][pixelX] ?? .transparent
+                        oldPixels.append(PixelChange(x: pixelX, y: pixelY, value: oldValue))
+                        newPixels.append(PixelChange(x: pixelX, y: pixelY, value: .transparent))
+                        timelineViewModel?.setPixel(layerId: layerId, x: pixelX, y: pixelY, value: .transparent)
                     }
                 }
             }

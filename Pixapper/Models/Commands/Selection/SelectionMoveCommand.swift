@@ -16,14 +16,14 @@ class SelectionMoveCommand: LayerPixelApplicable {
 
     // 이동 전 상태
     private let oldRect: CGRect
-    private let oldPixels: [[Color?]]
+    private let oldPixels: PixelGrid
     private let oldOriginalRect: CGRect
-    private let oldOriginalPixels: [[Color?]]
+    private let oldOriginalPixels: PixelGrid
     private let oldMask: [[Bool]]?
 
     // 이동 후 상태
     private let newRect: CGRect
-    private let newPixels: [[Color?]]
+    private let newPixels: PixelGrid
     private let newMask: [[Bool]]?
 
     // 레이어 픽셀 변경 정보
@@ -40,12 +40,12 @@ class SelectionMoveCommand: LayerPixelApplicable {
         timelineViewModel: TimelineViewModel?,
         layerIndex: Int,
         oldRect: CGRect,
-        oldPixels: [[Color?]],
+        oldPixels: PixelGrid,
         oldOriginalRect: CGRect,
-        oldOriginalPixels: [[Color?]],
+        oldOriginalPixels: PixelGrid,
         oldMask: [[Bool]]?,
         newRect: CGRect,
-        newPixels: [[Color?]],
+        newPixels: PixelGrid,
         newMask: [[Bool]]?
     ) {
         self.canvasViewModel = canvasViewModel

@@ -197,13 +197,22 @@ struct ContentView: View {
                         .frame(width: 48)
 
                     // Canvas in the center
-                    CanvasView(viewModel: canvasViewModel, timelineViewModel: timelineViewModel)
-                        .frame(minWidth: 400)
-                        .background(Constants.Theme.backgroundDark)
+                    CanvasView(
+                        viewModel: canvasViewModel,
+                        timelineViewModel: timelineViewModel,
+                        pixelStateManager: timelineViewModel.pixelStateManager
+                    )
+                    .frame(minWidth: 400)
+                    .background(Constants.Theme.backgroundDark)
 
                     // Color panel - 독립 열 (좁게)
-                    ColorPanel(colorManager: toolSettingsManager.colorManager)
-                        .frame(minWidth: 140, idealWidth: 140, maxWidth: 280)
+                    ColorPanel(
+                        colorManager: toolSettingsManager.colorManager,
+                        paletteManager: timelineViewModel.pixelStateManager.paletteManager,
+                        pixelStateManager: timelineViewModel.pixelStateManager,
+                        commandManager: commandManager
+                    )
+                    .frame(minWidth: 140, idealWidth: 140, maxWidth: 280)
 
                     // Properties panel - 독립 열
                     PropertiesPanel(toolSettingsManager: toolSettingsManager, viewModel: canvasViewModel)

@@ -17,14 +17,14 @@ class SelectionCaptureCommand: LayerPixelApplicable {
     // 선택 전 상태 (선택 없음)
     private let wasFloating: Bool
     private let oldRect: CGRect?
-    private let oldPixels: [[Color?]]?
+    private let oldPixels: PixelGrid?
     private let oldOriginalRect: CGRect?
-    private let oldOriginalPixels: [[Color?]]?
+    private let oldOriginalPixels: PixelGrid?
     private let oldFreeformMask: [[Bool]]?
 
     // 선택 후 상태
     private let newRect: CGRect
-    private let newPixels: [[Color?]]
+    private let newPixels: PixelGrid
     private let newFreeformMask: [[Bool]]?
 
     // 레이어 픽셀 변경 (선택 영역에서 제거)
@@ -42,12 +42,12 @@ class SelectionCaptureCommand: LayerPixelApplicable {
         layerIndex: Int,
         wasFloating: Bool,
         oldRect: CGRect?,
-        oldPixels: [[Color?]]?,
+        oldPixels: PixelGrid?,
         oldOriginalRect: CGRect?,
-        oldOriginalPixels: [[Color?]]?,
+        oldOriginalPixels: PixelGrid?,
         oldFreeformMask: [[Bool]]?,
         newRect: CGRect,
-        newPixels: [[Color?]],
+        newPixels: PixelGrid,
         newFreeformMask: [[Bool]]?,
         layerOldPixels: [PixelChange],
         layerNewPixels: [PixelChange]

@@ -232,7 +232,7 @@ struct TimelinePanel: View {
 
             // Thumbnail - 키프레임에만 표시
             if spanPosition == .keyframeStart, hasContent, let pixels = effectivePixels {
-                CellThumbnailView(pixels: pixels, size: cellSize - 8)
+                CellThumbnailView(pixels: pixels, size: cellSize - 8, palette: viewModel.pixelStateManager.currentPalette)
             }
 
             // Keyframe marker

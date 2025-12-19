@@ -78,10 +78,10 @@ class CanvasViewModel: ObservableObject {
     // MARK: - Selection Properties (@Published로 실시간 UI 업데이트)
     /// SelectionTool이 이 프로퍼티들을 직접 수정하여 UI를 업데이트합니다
     @Published var selectionRect: CGRect?
-    @Published var selectionPixels: [[Color?]]?
+    @Published var selectionPixels: PixelGrid?
     @Published var selectionOffset: CGPoint = .zero
     @Published var isFloatingSelection: Bool = false
-    @Published var originalPixels: [[Color?]]?
+    @Published var originalPixels: PixelGrid?
     @Published var originalRect: CGRect?
     @Published var selectionMode: SelectionTool.SelectionMode = .idle
     @Published var hoveredHandle: SelectionTool.ResizeHandle?
@@ -328,8 +328,8 @@ class CanvasViewModel: ObservableObject {
 
     func restoreSelectionState(
         rect: CGRect?,
-        pixels: [[Color?]]?,
-        originalPixels: [[Color?]]?,
+        pixels: PixelGrid?,
+        originalPixels: PixelGrid?,
         originalRect: CGRect?,
         isFloating: Bool,
         freeformMask: [[Bool]]? = nil
@@ -346,8 +346,8 @@ class CanvasViewModel: ObservableObject {
 
     func setFloatingSelection(
         rect: CGRect,
-        pixels: [[Color?]],
-        originalPixels: [[Color?]],
+        pixels: PixelGrid,
+        originalPixels: PixelGrid,
         originalRect: CGRect,
         freeformMask: [[Bool]]?
     ) {
@@ -391,7 +391,7 @@ class CanvasViewModel: ObservableObject {
         _selectionTool.flipSelectionVertical()
     }
 
-    func applyTransformFromCommand(pixels: [[Color?]], rect: CGRect) {
+    func applyTransformFromCommand(pixels: PixelGrid, rect: CGRect) {
         _selectionTool.applyTransformFromCommand(pixels: pixels, rect: rect)
     }
 
@@ -486,8 +486,8 @@ class CanvasViewModel: ObservableObject {
 
     /// PixelChange 계산 헬퍼 (Commands에서 사용)
     func calculatePixelChanges(
-        pixels: [[Color?]],
-        origPixels: [[Color?]]?,
+        pixels: PixelGrid,
+        origPixels: PixelGrid?,
         from origRect: CGRect,
         to newRect: CGRect,
         layerIndex: Int
@@ -506,13 +506,13 @@ class CanvasViewModel: ObservableObject {
 
         for y in 0..<pixelsToRemove.count {
             for x in 0..<pixelsToRemove[y].count {
-                if pixelsToRemove[y][x] != nil {
+                if pixelsToRemove[y][x] != .transparent {
                     let pixelX = origStartX + x
                     let pixelY = origStartY + y
                     if pixelX >= 0 && pixelX < canvas.width && pixelY >= 0 && pixelY < canvas.height {
-                        let oldColor = layerViewModel.layers[layerIndex].getPixel(x: pixelX, y: pixelY)
-                        oldPixels.append(PixelChange(x: pixelX, y: pixelY, color: oldColor))
-                        newPixels.append(PixelChange(x: pixelX, y: pixelY, color: nil))
+                        let oldValue = layerViewModel.layers[layerIndex].getPixel(x: pixelX, y: pixelY) ?? .transparent
+                        oldPixels.append(PixelChange(x: pixelX, y: pixelY, value: oldValue))
+                        newPixels.append(PixelChange(x: pixelX, y: pixelY, value: .transparent))
                     }
                 }
             }
@@ -524,15 +524,16 @@ class CanvasViewModel: ObservableObject {
 
         for y in 0..<pixels.count {
             for x in 0..<pixels[y].count {
-                if let color = pixels[y][x] {
+                let pixelValue = pixels[y][x]
+                if pixelValue != .transparent {
                     let pixelX = startX + x
                     let pixelY = startY + y
                     if pixelX >= 0 && pixelX < canvas.width && pixelY >= 0 && pixelY < canvas.height {
-                        let oldColor = layerViewModel.layers[layerIndex].getPixel(x: pixelX, y: pixelY)
+                        let oldValue = layerViewModel.layers[layerIndex].getPixel(x: pixelX, y: pixelY) ?? .transparent
                         if !oldPixels.contains(where: { $0.x == pixelX && $0.y == pixelY }) {
-                            oldPixels.append(PixelChange(x: pixelX, y: pixelY, color: oldColor))
+                            oldPixels.append(PixelChange(x: pixelX, y: pixelY, value: oldValue))
                         }
-                        newPixels.append(PixelChange(x: pixelX, y: pixelY, color: color))
+                        newPixels.append(PixelChange(x: pixelX, y: pixelY, value: pixelValue))
                     }
                 }
             }

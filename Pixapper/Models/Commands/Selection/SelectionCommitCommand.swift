@@ -16,9 +16,9 @@ class SelectionCommitCommand: LayerPixelApplicable {
 
     // 커밋 전 상태 (floating 선택 있음)
     private let oldRect: CGRect
-    private let oldPixels: [[Color?]]
+    private let oldPixels: PixelGrid
     private let oldOriginalRect: CGRect
-    private let oldOriginalPixels: [[Color?]]
+    private let oldOriginalPixels: PixelGrid
     private let oldFreeformMask: [[Bool]]?
 
     // 레이어 픽셀 변경 (새 위치에 배치)
@@ -35,9 +35,9 @@ class SelectionCommitCommand: LayerPixelApplicable {
         timelineViewModel: TimelineViewModel?,
         layerIndex: Int,
         oldRect: CGRect,
-        oldPixels: [[Color?]],
+        oldPixels: PixelGrid,
         oldOriginalRect: CGRect,
-        oldOriginalPixels: [[Color?]],
+        oldOriginalPixels: PixelGrid,
         oldFreeformMask: [[Bool]]?,
         layerOldPixels: [PixelChange],
         layerNewPixels: [PixelChange]

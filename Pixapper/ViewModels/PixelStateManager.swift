@@ -19,8 +19,8 @@ class PixelStateManager: ObservableObject {
 
     /// 현재 프레임의 모든 레이어 픽셀 (Single Source of Truth)
     /// - Key: Layer ID
-    /// - Value: 픽셀 배열 [[Color?]]
-    @Published private(set) var currentFramePixels: [UUID: [[Color?]]] = [:]
+    /// - Value: 픽셀 배열 PixelGrid
+    @Published private(set) var currentFramePixels: [UUID: PixelGrid] = [:]
 
     /// 현재 프레임 인덱스 (읽기 전용)
     @Published private(set) var currentFrameIndex: Int = 0
@@ -28,8 +28,16 @@ class PixelStateManager: ObservableObject {
     // MARK: - Dependencies
 
     private weak var layerViewModel: LayerViewModel?
+    let paletteManager: PaletteManager
     private let canvasWidth: Int
     private let canvasHeight: Int
+    private var paletteCancellable: AnyCancellable?
+
+    /// 현재 팔레트 (편의 접근자)
+    var currentPalette: ColorPalette {
+        get { paletteManager.currentPalette }
+        set { paletteManager.currentPalette = newValue }
+    }
 
     // MARK: - Performance Optimization
 
@@ -41,10 +49,16 @@ class PixelStateManager: ObservableObject {
 
     // MARK: - Initialization
 
-    init(canvasWidth: Int, canvasHeight: Int, layerViewModel: LayerViewModel) {
+    init(canvasWidth: Int, canvasHeight: Int, layerViewModel: LayerViewModel, paletteManager: PaletteManager = PaletteManager()) {
         self.canvasWidth = canvasWidth
         self.canvasHeight = canvasHeight
         self.layerViewModel = layerViewModel
+        self.paletteManager = paletteManager
+
+        // PaletteManager의 변경사항을 PixelStateManager에 전파
+        self.paletteCancellable = paletteManager.objectWillChange.sink { [weak self] _ in
+            self?.objectWillChange.send()
+        }
     }
 
     // MARK: - Public API: 읽기
@@ -52,17 +66,17 @@ class PixelStateManager: ObservableObject {
     /// 특정 레이어의 현재 프레임 픽셀 가져오기
     /// - Parameter layerId: 레이어 ID
     /// - Returns: 픽셀 배열 (캐싱됨, O(1) 조회)
-    func getPixels(layerId: UUID) -> [[Color?]]? {
+    func getPixels(layerId: UUID) -> PixelGrid? {
         return currentFramePixels[layerId]
     }
 
-    /// 특정 레이어의 단일 픽셀 색상 가져오기
+    /// 특정 레이어의 단일 픽셀 값 가져오기
     /// - Parameters:
     ///   - layerId: 레이어 ID
     ///   - x: X 좌표
     ///   - y: Y 좌표
-    /// - Returns: 색상 (nil = 투명)
-    func getPixel(layerId: UUID, x: Int, y: Int) -> Color? {
+    /// - Returns: 픽셀 값 (.transparent = 투명)
+    func getPixel(layerId: UUID, x: Int, y: Int) -> PixelValue? {
         guard let pixels = currentFramePixels[layerId],
               y >= 0, y < pixels.count,
               x >= 0, x < pixels[y].count else {
@@ -78,8 +92,8 @@ class PixelStateManager: ObservableObject {
     ///   - layerId: 레이어 ID
     ///   - x: X 좌표
     ///   - y: Y 좌표
-    ///   - color: 색상 (nil = 투명)
-    func setPixel(layerId: UUID, x: Int, y: Int, color: Color?) {
+    ///   - value: 픽셀 값 (.transparent = 투명)
+    func setPixel(layerId: UUID, x: Int, y: Int, value: PixelValue) {
         guard var pixels = currentFramePixels[layerId],
               y >= 0, y < pixels.count,
               x >= 0, x < pixels[y].count else {
@@ -87,7 +101,7 @@ class PixelStateManager: ObservableObject {
         }
 
         // 캐시 즉시 업데이트
-        pixels[y][x] = color
+        pixels[y][x] = value
         currentFramePixels[layerId] = pixels
 
         // Force UI update (SwiftUI doesn't always detect nested array changes)
@@ -113,7 +127,7 @@ class PixelStateManager: ObservableObject {
                   change.x >= 0, change.x < pixels[change.y].count else {
                 continue
             }
-            pixels[change.y][change.x] = change.color
+            pixels[change.y][change.x] = change.value
         }
 
         // 캐시 업데이트
@@ -133,7 +147,7 @@ class PixelStateManager: ObservableObject {
     /// - Parameters:
     ///   - layerId: 레이어 ID
     ///   - pixels: 픽셀 배열
-    func setAllPixels(layerId: UUID, pixels: [[Color?]]) {
+    func setAllPixels(layerId: UUID, pixels: PixelGrid) {
         currentFramePixels[layerId] = pixels
         dirtyLayers.insert(layerId)
     }
@@ -148,7 +162,7 @@ class PixelStateManager: ObservableObject {
         currentFrameIndex = frameIndex
 
         let emptyPixels = createEmptyPixels()
-        var newState: [UUID: [[Color?]]] = [:]
+        var newState: [UUID: PixelGrid] = [:]
 
         // 모든 레이어의 픽셀을 timeline에서 로드
         for layer in layerVM.layers {
@@ -218,12 +232,33 @@ class PixelStateManager: ObservableObject {
     }
 
     /// 빈 픽셀 배열 생성
-    private func createEmptyPixels() -> [[Color?]] {
+    private func createEmptyPixels() -> PixelGrid {
         return Layer.createEmptyPixels(width: canvasWidth, height: canvasHeight)
     }
 
     /// 레이어 추가/삭제 시 호출 (상태 재동기화)
     func invalidateState() {
         loadFrame(at: currentFrameIndex)
+    }
+
+    // MARK: - Color Usage Analysis
+
+    /// 현재 프레임에서 각 색상 인덱스의 사용 횟수 계산
+    /// - Returns: [색상 인덱스: 사용 횟수] 딕셔너리
+    func getColorUsage() -> [UInt8: Int] {
+        var usage: [UInt8: Int] = [:]
+
+        // 모든 레이어의 픽셀을 순회
+        for pixels in currentFramePixels.values {
+            for row in pixels {
+                for pixel in row {
+                    if case .indexed(let index) = pixel {
+                        usage[index, default: 0] += 1
+                    }
+                }
+            }
+        }
+
+        return usage
     }
 }

@@ -98,18 +98,26 @@ class PencilEraserTool: BaseTool, CanvasTool {
                 let layerId = layerViewModel.layers[currentLayerIndex].id
 
                 // 픽셀을 변경하기 **전에** 이전 값 저장
-                var oldColor: Color? = nil
+                var oldValue: PixelValue = .transparent
                 if let pixels = timelineViewModel?.getCurrentFramePixels(layerId: layerId),
                    py >= 0, py < pixels.count, px >= 0, px < pixels[py].count {
-                    oldColor = pixels[py][px]
+                    oldValue = pixels[py][px]
                 }
-                drawingState.oldStrokePixels.append(PixelChange(x: px, y: py, color: oldColor))
+                drawingState.oldStrokePixels.append(PixelChange(x: px, y: py, value: oldValue))
+
+                // Color → PixelValue 변환
+                let newValue: PixelValue
+                if let c = color, let colorIndex = timelineViewModel?.pixelStateManager.currentPalette.findClosest(c) {
+                    newValue = .indexed(colorIndex)
+                } else {
+                    newValue = .transparent
+                }
 
                 // 새로운 값 저장
-                drawingState.currentStrokePixels.append(PixelChange(x: px, y: py, color: color))
+                drawingState.currentStrokePixels.append(PixelChange(x: px, y: py, value: newValue))
 
                 // 픽셀 변경 - TimelineViewModel을 통해 즉시 timeline 반영
-                timelineViewModel?.setPixel(layerId: layerId, x: px, y: py, color: color)
+                timelineViewModel?.setPixel(layerId: layerId, x: px, y: py, value: newValue)
             }
         }
     }

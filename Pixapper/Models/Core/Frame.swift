@@ -9,12 +9,12 @@ import SwiftUI
 
 /// 레이어의 타임라인 - 키프레임만 저장하는 효율적인 구조
 struct LayerTimeline {
-    private var keyframes: [Int: [[Color?]]] = [:]  // frameIndex -> pixels
+    private var keyframes: [Int: PixelGrid] = [:]  // frameIndex -> pixels
     private var spanEndIndex: Int = 0  // 마지막 키프레임의 span 끝 인덱스
     private var sortedKeyframeIndices: [Int] = []  // 정렬된 키프레임 인덱스 (성능 최적화용)
 
     /// 특정 프레임에 키프레임 설정
-    mutating func setKeyframe(at frameIndex: Int, pixels: [[Color?]]) {
+    mutating func setKeyframe(at frameIndex: Int, pixels: PixelGrid) {
         let isNewKeyframe = keyframes[frameIndex] == nil
         keyframes[frameIndex] = pixels
         // spanEndIndex는 최소한 이 키프레임까지는 포함
@@ -46,7 +46,7 @@ struct LayerTimeline {
     }
 
     /// 특정 프레임의 유효한 픽셀 데이터 반환 (키프레임 또는 이전 키프레임)
-    func getEffectivePixels(at frameIndex: Int) -> [[Color?]]? {
+    func getEffectivePixels(at frameIndex: Int) -> PixelGrid? {
         // 현재 프레임이 키프레임이면 반환
         if let pixels = keyframes[frameIndex] {
             return pixels
@@ -104,8 +104,8 @@ struct LayerTimeline {
     }
 
     /// 특정 인덱스 이후의 키프레임 백업 (Undo용)
-    func backupKeyframesAfter(_ index: Int) -> [Int: [[Color?]]] {
-        var backup: [Int: [[Color?]]] = [:]
+    func backupKeyframesAfter(_ index: Int) -> [Int: PixelGrid] {
+        var backup: [Int: PixelGrid] = [:]
         for keyframeIndex in sortedKeyframeIndices where keyframeIndex > index {
             if let pixels = keyframes[keyframeIndex] {
                 backup[keyframeIndex] = pixels
@@ -146,7 +146,7 @@ struct LayerTimeline {
     mutating func shiftKeyframes(after index: Int, by offset: Int) {
         guard offset != 0 else { return }
 
-        var newKeyframes: [Int: [[Color?]]] = [:]
+        var newKeyframes: [Int: PixelGrid] = [:]
 
         for (frameIndex, pixels) in keyframes {
             if frameIndex > index {
@@ -173,7 +173,7 @@ struct LayerTimeline {
     }
 
     /// 특정 프레임의 키프레임 픽셀 데이터 반환 (키프레임이 아니면 nil)
-    func getKeyframe(at frameIndex: Int) -> [[Color?]]? {
+    func getKeyframe(at frameIndex: Int) -> PixelGrid? {
         return keyframes[frameIndex]
     }
 }
@@ -182,7 +182,7 @@ struct LayerTimeline {
 struct CellData: Identifiable {
     let id = UUID()
     let layerId: UUID
-    var pixels: [[Color?]]
+    var pixels: PixelGrid
     var isKeyframe: Bool
 
     init(width: Int, height: Int, layerId: UUID, isKeyframe: Bool = true) {
@@ -191,24 +191,24 @@ struct CellData: Identifiable {
         self.isKeyframe = isKeyframe
     }
 
-    init(pixels: [[Color?]], layerId: UUID, isKeyframe: Bool = true) {
+    init(pixels: PixelGrid, layerId: UUID, isKeyframe: Bool = true) {
         self.layerId = layerId
         self.pixels = pixels
         self.isKeyframe = isKeyframe
     }
 
-    func getPixel(x: Int, y: Int) -> Color? {
+    func getPixel(x: Int, y: Int) -> PixelValue? {
         guard y >= 0 && y < pixels.count && x >= 0 && x < pixels[0].count else {
             return nil
         }
         return pixels[y][x]
     }
 
-    mutating func setPixel(x: Int, y: Int, color: Color?) {
+    mutating func setPixel(x: Int, y: Int, value: PixelValue) {
         guard y >= 0 && y < pixels.count && x >= 0 && x < pixels[0].count else {
             return
         }
-        pixels[y][x] = color
+        pixels[y][x] = value
     }
 }
 

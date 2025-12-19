@@ -79,18 +79,27 @@ class ShapeTool: BaseTool, CanvasTool {
         var newPixels: [PixelChange] = []
 
         for pixel in canvas.shapePreview {
-            // Timeline에서 이전 색상 가져오기
-            var oldColor: Color? = nil
+            // Timeline에서 이전 픽셀 값 가져오기
+            var oldValue: PixelValue = .transparent
             if let pixels = timelineVM.getCurrentFramePixels(layerId: layerId),
                pixel.y >= 0, pixel.y < pixels.count,
                pixel.x >= 0, pixel.x < pixels[pixel.y].count {
-                oldColor = pixels[pixel.y][pixel.x]
+                oldValue = pixels[pixel.y][pixel.x]
             }
-            oldPixels.append(PixelChange(x: pixel.x, y: pixel.y, color: oldColor))
-            newPixels.append(PixelChange(x: pixel.x, y: pixel.y, color: pixel.color))
+
+            // Color → PixelValue 변환 (팔레트에서 가장 가까운 색상 찾기)
+            let newValue: PixelValue
+            if let colorIndex = timelineViewModel?.pixelStateManager.currentPalette.findClosest(pixel.color) {
+                newValue = .indexed(colorIndex)
+            } else {
+                newValue = .transparent
+            }
+
+            oldPixels.append(PixelChange(x: pixel.x, y: pixel.y, value: oldValue))
+            newPixels.append(PixelChange(x: pixel.x, y: pixel.y, value: newValue))
 
             // Timeline에 즉시 반영
-            timelineVM.setPixel(layerId: layerId, x: pixel.x, y: pixel.y, color: pixel.color)
+            timelineVM.setPixel(layerId: layerId, x: pixel.x, y: pixel.y, value: newValue)
         }
 
         // Command 생성 (이미 실행된 상태)

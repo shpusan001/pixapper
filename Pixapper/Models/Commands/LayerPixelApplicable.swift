@@ -25,7 +25,7 @@ extension LayerPixelApplicable {
 
         // TimelineViewModel을 통해 픽셀 변경 적용 (Single Source of Truth)
         for change in changes {
-            timelineVM.setPixel(layerId: layerId, x: change.x, y: change.y, color: change.color)
+            timelineVM.setPixel(layerId: layerId, x: change.x, y: change.y, value: change.value)
         }
     }
 }

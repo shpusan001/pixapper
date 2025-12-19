@@ -172,7 +172,8 @@ class AppViewModel: ObservableObject {
         let toolSettings = SerializableToolSettings(from: toolSettingsManager)
 
         // 현재 색상 팔레트 및 Primary/Secondary 색상 저장
-        let colorPalette = colorManager.palette.map { SerializableColor(from: $0) }
+        // PixelStateManager의 currentPalette 사용 (팔레트 시스템)
+        let colorPalette = timelineViewModel.pixelStateManager.currentPalette.toSerializableColors()
         let primaryColor = SerializableColor(from: colorManager.primaryColor)
         let secondaryColor = SerializableColor(from: colorManager.secondaryColor)
 
@@ -225,8 +226,9 @@ class AppViewModel: ObservableObject {
         // 툴 설정 복원
         document.toolSettings.applyTo(manager: toolSettingsManager)
 
-        // 색상 팔레트 복원
-        colorManager.palette = document.colorPalette.map { $0.toColor() }
+        // 색상 팔레트 복원 - PaletteManager에 적용
+        let loadedPalette = ColorPalette.fromSerializableColors(document.colorPalette, name: "Project Palette")
+        timelineViewModel.pixelStateManager.paletteManager.currentPalette = loadedPalette
 
         // Primary/Secondary 색상 복원 (이제 항상 존재)
         colorManager.primaryColor = document.primaryColor.toColor()

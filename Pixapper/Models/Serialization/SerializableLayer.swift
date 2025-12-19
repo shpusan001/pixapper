@@ -32,7 +32,7 @@ struct SerializableLayerTimeline: Codable {
         var timeline = LayerTimeline()
 
         for (frameIndex, serializedPixels) in keyframes {
-            let pixels = serializedPixels.toColors()
+            let pixels = serializedPixels.toPixelGrid()
             timeline.setKeyframe(at: frameIndex, pixels: pixels)
         }
 

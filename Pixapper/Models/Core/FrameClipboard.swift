@@ -16,7 +16,7 @@ struct FrameClipboard {
 
     /// 상대 인덱스 -> 키프레임 픽셀 데이터
     /// - Example: 프레임 3-5를 복사하면 [0: pixels3, 2: pixels5]로 저장
-    let keyframes: [Int: [[Color?]]]
+    let keyframes: [Int: PixelGrid]
 
     /// 원본 레이어 ID (참고용, 붙여넣기 시 사용하지 않음)
     let sourceLayerId: UUID?
@@ -26,7 +26,7 @@ struct FrameClipboard {
         return frameCount == 0 && keyframes.isEmpty
     }
 
-    init(frameCount: Int, keyframes: [Int: [[Color?]]], sourceLayerId: UUID? = nil) {
+    init(frameCount: Int, keyframes: [Int: PixelGrid], sourceLayerId: UUID? = nil) {
         self.frameCount = frameCount
         self.keyframes = keyframes
         self.sourceLayerId = sourceLayerId

@@ -13,7 +13,7 @@ class ClearFrameContentCommand: Command {
     private weak var timelineViewModel: TimelineViewModel?
     private let frameIndex: Int
     private let layerId: UUID
-    private var oldPixels: [[Color?]]?
+    private var oldPixels: PixelGrid?
 
     var description: String {
         "Clear frame content at \(frameIndex)"

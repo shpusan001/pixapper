@@ -15,8 +15,8 @@ class AddKeyframeWithContentCommand: Command {
     private var insertedIndex: Int?
     private var previousTotalFrames: Int = 0
     private var previousCurrentFrameIndex: Int = 0
-    private var shiftedKeyframes: [Int: [[Color?]]] = [:]
-    private var insertedPixels: [[Color?]]?
+    private var shiftedKeyframes: [Int: PixelGrid] = [:]
+    private var insertedPixels: PixelGrid?
 
     var description: String {
         "Add keyframe with content"

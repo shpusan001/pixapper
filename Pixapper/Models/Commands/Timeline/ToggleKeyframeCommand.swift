@@ -14,7 +14,7 @@ class ToggleKeyframeCommand: Command {
     private let frameIndex: Int
     private let layerId: UUID
     private var wasKeyframe: Bool = false
-    private var oldPixels: [[Color?]]?
+    private var oldPixels: PixelGrid?
 
     var description: String {
         "Toggle keyframe at frame \(frameIndex)"

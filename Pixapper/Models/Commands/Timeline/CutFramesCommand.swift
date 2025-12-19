@@ -15,7 +15,7 @@ class CutFramesCommand: Command {
     private let frameIndices: Set<Int>
     private var previousTotalFrames: Int = 0
     private var previousCurrentFrameIndex: Int = 0
-    private var deletedKeyframes: [Int: [[Color?]]] = [:]
+    private var deletedKeyframes: [Int: PixelGrid] = [:]
     private var previousClipboard: FrameClipboard = .empty
 
     var description: String {

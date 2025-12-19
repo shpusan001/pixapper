@@ -10,8 +10,8 @@ import SwiftUI
 /// 선택 영역 변형 커맨드 (회전, 뒤집기, 크기 조절 등)
 class SelectionTransformCommand: Command {
     private weak var canvasViewModel: CanvasViewModel?
-    private let oldPixels: [[Color?]]
-    private let newPixels: [[Color?]]
+    private let oldPixels: PixelGrid
+    private let newPixels: PixelGrid
     private let oldRect: CGRect
     private let newRect: CGRect
     private let oldMask: [[Bool]]?
@@ -23,8 +23,8 @@ class SelectionTransformCommand: Command {
 
     init(
         canvasViewModel: CanvasViewModel,
-        oldPixels: [[Color?]],
-        newPixels: [[Color?]],
+        oldPixels: PixelGrid,
+        newPixels: PixelGrid,
         oldRect: CGRect,
         newRect: CGRect,
         oldMask: [[Bool]]?,

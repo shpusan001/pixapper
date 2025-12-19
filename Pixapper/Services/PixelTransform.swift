@@ -12,14 +12,14 @@ struct PixelTransform {
     // MARK: - Scaling
 
     /// 픽셀 배열을 지정한 크기로 스케일링 (nearest-neighbor 알고리즘)
-    static func scale(_ pixels: [[Color?]], toWidth newWidth: Int, toHeight newHeight: Int) -> [[Color?]] {
+    static func scale(_ pixels: PixelGrid, toWidth newWidth: Int, toHeight newHeight: Int) -> PixelGrid {
         let oldHeight = pixels.count
         let oldWidth = pixels[0].count
 
-        var scaled: [[Color?]] = []
+        var scaled: PixelGrid = []
 
         for y in 0..<newHeight {
-            var row: [Color?] = []
+            var row: [PixelValue] = []
             let srcY = Int(Double(y) * Double(oldHeight) / Double(newHeight))
 
             for x in 0..<newWidth {
@@ -35,10 +35,10 @@ struct PixelTransform {
     // MARK: - Rotation (90도 단위)
 
     /// 픽셀 배열을 시계 방향으로 90도 회전
-    static func rotate90CW(_ pixels: [[Color?]]) -> [[Color?]] {
+    static func rotate90CW(_ pixels: PixelGrid) -> PixelGrid {
         let oldHeight = pixels.count
         let oldWidth = pixels[0].count
-        var rotated: [[Color?]] = Array(repeating: Array(repeating: nil, count: oldHeight), count: oldWidth)
+        var rotated: PixelGrid = Array(repeating: Array(repeating: .transparent, count: oldHeight), count: oldWidth)
 
         for y in 0..<oldHeight {
             for x in 0..<oldWidth {
@@ -50,10 +50,10 @@ struct PixelTransform {
     }
 
     /// 픽셀 배열을 반시계 방향으로 90도 회전
-    static func rotate90CCW(_ pixels: [[Color?]]) -> [[Color?]] {
+    static func rotate90CCW(_ pixels: PixelGrid) -> PixelGrid {
         let oldHeight = pixels.count
         let oldWidth = pixels[0].count
-        var rotated: [[Color?]] = Array(repeating: Array(repeating: nil, count: oldHeight), count: oldWidth)
+        var rotated: PixelGrid = Array(repeating: Array(repeating: .transparent, count: oldHeight), count: oldWidth)
 
         for y in 0..<oldHeight {
             for x in 0..<oldWidth {
@@ -65,10 +65,10 @@ struct PixelTransform {
     }
 
     /// 픽셀 배열을 180도 회전
-    static func rotate180(_ pixels: [[Color?]]) -> [[Color?]] {
+    static func rotate180(_ pixels: PixelGrid) -> PixelGrid {
         let height = pixels.count
         let width = pixels[0].count
-        var rotated: [[Color?]] = Array(repeating: Array(repeating: nil, count: width), count: height)
+        var rotated: PixelGrid = Array(repeating: Array(repeating: .transparent, count: width), count: height)
 
         for y in 0..<height {
             for x in 0..<width {
@@ -83,7 +83,7 @@ struct PixelTransform {
 
     /// 픽셀 배열을 임의 각도로 회전 (라디안 단위)
     /// 회전 후 바운딩 박스에 맞게 자동 크기 조정
-    static func rotateByAngle(_ pixels: [[Color?]], angle: Double) -> [[Color?]] {
+    static func rotateByAngle(_ pixels: PixelGrid, angle: Double) -> PixelGrid {
         let oldHeight = pixels.count
         let oldWidth = pixels.isEmpty ? 0 : pixels[0].count
         let pivotX = Double(oldWidth) / 2.0
@@ -118,7 +118,7 @@ struct PixelTransform {
         let newWidth = Int(ceil(maxX - minX))
         let newHeight = Int(ceil(maxY - minY))
 
-        var rotated: [[Color?]] = Array(repeating: Array(repeating: nil, count: newWidth), count: newHeight)
+        var rotated: PixelGrid = Array(repeating: Array(repeating: .transparent, count: newWidth), count: newHeight)
 
         for y in 0..<newHeight {
             for x in 0..<newWidth {
@@ -179,10 +179,10 @@ struct PixelTransform {
     // MARK: - Flip
 
     /// 픽셀 배열을 수평으로 뒤집기
-    static func flipHorizontal(_ pixels: [[Color?]]) -> [[Color?]] {
+    static func flipHorizontal(_ pixels: PixelGrid) -> PixelGrid {
         let height = pixels.count
         let width = pixels[0].count
-        var flipped: [[Color?]] = Array(repeating: Array(repeating: nil, count: width), count: height)
+        var flipped: PixelGrid = Array(repeating: Array(repeating: .transparent, count: width), count: height)
 
         for y in 0..<height {
             for x in 0..<width {
@@ -194,10 +194,10 @@ struct PixelTransform {
     }
 
     /// 픽셀 배열을 수직으로 뒤집기
-    static func flipVertical(_ pixels: [[Color?]]) -> [[Color?]] {
+    static func flipVertical(_ pixels: PixelGrid) -> PixelGrid {
         let height = pixels.count
         let width = pixels[0].count
-        var flipped: [[Color?]] = Array(repeating: Array(repeating: nil, count: width), count: height)
+        var flipped: PixelGrid = Array(repeating: Array(repeating: .transparent, count: width), count: height)
 
         for y in 0..<height {
             for x in 0..<width {
@@ -212,7 +212,7 @@ struct PixelTransform {
 
     /// 픽셀 배열을 내용물 기준으로 크롭 (nil이 아닌 픽셀만 포함)
     /// Returns: (크롭된 픽셀 배열, 크롭 오프셋)
-    static func cropToContent(_ pixels: [[Color?]]) -> ([[Color?]], offset: (x: Int, y: Int)) {
+    static func cropToContent(_ pixels: PixelGrid) -> (PixelGrid, offset: (x: Int, y: Int)) {
         guard !pixels.isEmpty, !pixels[0].isEmpty else {
             return (pixels, (0, 0))
         }
@@ -224,7 +224,7 @@ struct PixelTransform {
 
         for y in 0..<pixels.count {
             for x in 0..<pixels[y].count {
-                if pixels[y][x] != nil {
+                if pixels[y][x] != .transparent {
                     minX = min(minX, x)
                     minY = min(minY, y)
                     maxX = max(maxX, x)
@@ -234,12 +234,12 @@ struct PixelTransform {
         }
 
         if maxX < 0 {
-            return ([[nil]], (0, 0))
+            return ([[.transparent]], (0, 0))
         }
 
         let cropWidth = maxX - minX + 1
         let cropHeight = maxY - minY + 1
-        var cropped: [[Color?]] = Array(repeating: Array(repeating: nil, count: cropWidth), count: cropHeight)
+        var cropped: PixelGrid = Array(repeating: Array(repeating: .transparent, count: cropWidth), count: cropHeight)
 
         for y in 0..<cropHeight {
             for x in 0..<cropWidth {
@@ -253,7 +253,7 @@ struct PixelTransform {
     // MARK: - Mask Operations
 
     /// 마스크를 픽셀에 적용 (마스크 밖 픽셀을 nil로 변경)
-    static func applyMask(to pixels: inout [[Color?]], mask: [[Bool]]) {
+    static func applyMask(to pixels: inout PixelGrid, mask: [[Bool]]) {
         guard !pixels.isEmpty && !pixels[0].isEmpty else { return }
         guard !mask.isEmpty && !mask[0].isEmpty else { return }
 
@@ -263,14 +263,14 @@ struct PixelTransform {
         for y in 0..<height {
             for x in 0..<width {
                 if !mask[y][x] {
-                    pixels[y][x] = nil
+                    pixels[y][x] = .transparent
                 }
             }
         }
     }
 
     /// 픽셀에서 마스크 생성 (nil이 아닌 부분을 true로)
-    static func createMask(from pixels: [[Color?]]) -> [[Bool]] {
+    static func createMask(from pixels: PixelGrid) -> [[Bool]] {
         guard !pixels.isEmpty && !pixels[0].isEmpty else { return [] }
 
         let height = pixels.count
@@ -280,7 +280,7 @@ struct PixelTransform {
 
         for y in 0..<height {
             for x in 0..<width {
-                mask[y][x] = (pixels[y][x] != nil)
+                mask[y][x] = (pixels[y][x] != .transparent)
             }
         }
 

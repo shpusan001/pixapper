@@ -123,7 +123,7 @@ struct FrameCellView: View {
 
     private func generateThumbnail() -> NSImage? {
         // 픽셀 데이터 가져오기
-        let pixels: [[Color?]]?
+        let pixels: PixelGrid?
         if frameIndex == pixelStateManager.currentFrameIndex {
             pixels = pixelStateManager.currentFramePixels[layerId]
         } else {
@@ -146,7 +146,19 @@ struct FrameCellView: View {
         // 픽셀 렌더링
         for y in 0..<height {
             for x in 0..<width {
-                if let color = pixels[y][x] {
+                let pixelValue = pixels[y][x]
+                if pixelValue != .transparent {
+                    // Convert PixelValue to Color using default palette
+                    let color: Color
+                    switch pixelValue {
+                    case .transparent:
+                        continue
+                    case .indexed(let colorIndex):
+                        color = pixelStateManager.currentPalette.getColor(at: colorIndex) ?? .clear
+                    case .gradient:
+                        color = .clear
+                    }
+
                     NSColor(color).setFill()
                     NSRect(x: x, y: height - 1 - y, width: 1, height: 1).fill()
                 }

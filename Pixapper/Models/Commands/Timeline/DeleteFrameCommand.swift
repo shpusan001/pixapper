@@ -15,7 +15,7 @@ class DeleteFrameCommand: Command {
     private var previousFrameIndex: Int
     private var previousTotalFrames: Int
     // 삭제된 프레임의 키프레임 데이터 백업 (레이어별)
-    private var deletedKeyframeData: [UUID: [[Color?]]] = [:]
+    private var deletedKeyframeData: [UUID: PixelGrid] = [:]
 
     var description: String {
         "Delete frame at index \(deletedIndex)"

@@ -208,17 +208,25 @@ class TextTool: BaseTool, CanvasTool {
 
         // 프리뷰 픽셀을 실제로 적용
         for pixel in state.previewPixels {
-            var oldColor: Color? = nil
+            var oldValue: PixelValue = .transparent
             if let framePixels = timelineVM.getCurrentFramePixels(layerId: layerId),
                pixel.y >= 0, pixel.y < framePixels.count,
                pixel.x >= 0, pixel.x < framePixels[pixel.y].count {
-                oldColor = framePixels[pixel.y][pixel.x]
+                oldValue = framePixels[pixel.y][pixel.x]
             }
 
-            oldPixels.append(PixelChange(x: pixel.x, y: pixel.y, color: oldColor))
-            newPixels.append(PixelChange(x: pixel.x, y: pixel.y, color: pixel.color))
+            // Color → PixelValue 변환 (팔레트에서 가장 가까운 색상 찾기)
+            let newValue: PixelValue
+            if let colorIndex = timelineViewModel?.pixelStateManager.currentPalette.findClosest(pixel.color) {
+                newValue = .indexed(colorIndex)
+            } else {
+                newValue = .transparent
+            }
 
-            timelineVM.setPixel(layerId: layerId, x: pixel.x, y: pixel.y, color: pixel.color)
+            oldPixels.append(PixelChange(x: pixel.x, y: pixel.y, value: oldValue))
+            newPixels.append(PixelChange(x: pixel.x, y: pixel.y, value: newValue))
+
+            timelineVM.setPixel(layerId: layerId, x: pixel.x, y: pixel.y, value: newValue)
         }
 
         // Command 생성

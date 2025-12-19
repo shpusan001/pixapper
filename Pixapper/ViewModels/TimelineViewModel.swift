@@ -152,7 +152,7 @@ class TimelineViewModel: ObservableObject, PlaybackControllerDelegate {
     /// 레이어의 현재 프레임 픽셀 가져오기 (PixelStateManager로 위임)
     /// - Parameter layerId: 레이어 ID
     /// - Returns: 픽셀 배열 (Reactive - 자동 업데이트됨)
-    func getCurrentFramePixels(layerId: UUID) -> [[Color?]]? {
+    func getCurrentFramePixels(layerId: UUID) -> PixelGrid? {
         return pixelStateManager.getPixels(layerId: layerId)
     }
 
@@ -161,9 +161,9 @@ class TimelineViewModel: ObservableObject, PlaybackControllerDelegate {
     ///   - layerId: 레이어 ID
     ///   - x: X 좌표
     ///   - y: Y 좌표
-    ///   - color: 색상 (nil = 투명)
-    func setPixel(layerId: UUID, x: Int, y: Int, color: Color?) {
-        pixelStateManager.setPixel(layerId: layerId, x: x, y: y, color: color)
+    ///   - value: 픽셀 값 (.transparent = 투명)
+    func setPixel(layerId: UUID, x: Int, y: Int, value: PixelValue) {
+        pixelStateManager.setPixel(layerId: layerId, x: x, y: y, value: value)
     }
 
     /// 대량 픽셀 변경 (Command용 - PixelStateManager로 위임)
@@ -510,12 +510,12 @@ class TimelineViewModel: ObservableObject, PlaybackControllerDelegate {
     // MARK: - Helper Methods
 
     /// 빈 픽셀 배열 생성 (중복 코드 제거)
-    private func createEmptyPixels() -> [[Color?]] {
+    private func createEmptyPixels() -> PixelGrid {
         return Layer.createEmptyPixels(width: canvasWidth, height: canvasHeight)
     }
 
     /// 특정 프레임의 유효한 픽셀 반환 (TimelinePanel에서 사용)
-    func getEffectivePixels(frameIndex: Int, layerId: UUID) -> [[Color?]]? {
+    func getEffectivePixels(frameIndex: Int, layerId: UUID) -> PixelGrid? {
         guard let layer = layerViewModel.layers.first(where: { $0.id == layerId }) else { return nil }
         return layer.timeline.getEffectivePixels(at: frameIndex)
     }
@@ -531,7 +531,7 @@ class TimelineViewModel: ObservableObject, PlaybackControllerDelegate {
         guard let pixels = getEffectivePixels(frameIndex: frameIndex, layerId: layerId) else {
             return false
         }
-        return pixels.contains(where: { row in row.contains(where: { $0 != nil }) })
+        return pixels.contains(where: { row in row.contains(where: { $0 != .transparent }) })
     }
 
     /// 셀이 키프레임 span의 어느 위치인지 반환
@@ -721,7 +721,7 @@ class TimelineViewModel: ObservableObject, PlaybackControllerDelegate {
         let frameCount = sortedIndices.count
 
         // 키프레임 데이터를 상대 인덱스로 저장
-        var keyframes: [Int: [[Color?]]] = [:]
+        var keyframes: [Int: PixelGrid] = [:]
 
         for frameIndex in sortedIndices {
             if layer.timeline.isKeyframe(at: frameIndex),
