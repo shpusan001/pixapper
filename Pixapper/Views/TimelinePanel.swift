@@ -409,9 +409,9 @@ struct TimelinePanel: View {
 
         // Delete Frame - 복수 선택 허용
         Button("Delete Frame", role: .destructive) {
-            let command = DeleteFrameInLayerCommand(
+            let command = DeleteFramesCommand(
                 timelineViewModel: viewModel,
-                index: frameIndex,
+                frameIndices: [frameIndex],
                 layerId: layer.id
             )
             commandManager.performCommand(command)

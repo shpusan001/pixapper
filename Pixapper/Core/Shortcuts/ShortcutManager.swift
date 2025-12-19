@@ -190,10 +190,10 @@ struct ShortcutManager {
             }
 
         case .delete:
-            // Context: Selection이 있으면 Delete Selection, Frames 선택되면 Delete Frames
+            // Context: Selection이 있으면 Delete Selection, 아니면 현재 프레임 삭제
             if let canvas = canvasViewModel, canvas.selectionRect != nil {
                 canvas.deleteSelection()
-            } else if let timeline = timelineViewModel, !timeline.selectedFrameIndices.isEmpty {
+            } else if let timeline = timelineViewModel {
                 executeDeleteFrames(timelineViewModel: timeline, commandManager: commandManager)
             }
 
@@ -420,9 +420,15 @@ struct ShortcutManager {
 
     private static func executeDeleteFrames(timelineViewModel: TimelineViewModel, commandManager: CommandManager?) {
         guard let layerId = timelineViewModel.layerViewModel.layers[safe: timelineViewModel.layerViewModel.selectedLayerIndex]?.id else { return }
+
+        // selectedFrameIndices가 비어있으면 currentFrameIndex만 삭제
+        let indicesToDelete = timelineViewModel.selectedFrameIndices.isEmpty ?
+            [timelineViewModel.currentFrameIndex] :
+            timelineViewModel.selectedFrameIndices
+
         let command = DeleteFramesCommand(
             timelineViewModel: timelineViewModel,
-            frameIndices: timelineViewModel.selectedFrameIndices,
+            frameIndices: indicesToDelete,
             layerId: layerId
         )
         commandManager?.performCommand(command)

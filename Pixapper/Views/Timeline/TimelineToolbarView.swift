@@ -87,9 +87,9 @@ struct TimelineToolbarView: View {
                 }
 
                 toolbarButton(icon: "minus.square", text: "Remove", tooltip: "Remove Frame") {
-                    let command = DeleteFrameInLayerCommand(
+                    let command = DeleteFramesCommand(
                         timelineViewModel: viewModel,
-                        index: viewModel.currentFrameIndex,
+                        frameIndices: [viewModel.currentFrameIndex],
                         layerId: layerId
                     )
                     commandManager.performCommand(command)

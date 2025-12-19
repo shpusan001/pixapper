@@ -364,45 +364,6 @@ class TimelineViewModel: ObservableObject, PlaybackControllerDelegate {
         loadFrame(at: insertIndex)
     }
 
-    /// 현재 레이어의 프레임 삭제 (레이어별 독립 동작)
-    /// - Note: 현재 레이어의 해당 프레임만 제거하고 뒤의 키프레임들을 당깁니다.
-    ///         다른 레이어는 영향을 받지 않습니다.
-    func deleteFrameInCurrentLayer(at index: Int) {
-        guard let layerIndex = validateSelectedLayer() else { return }
-
-        let layer = layerViewModel.layers[layerIndex]
-
-        // 해당 레이어에 키프레임이 하나라도 있는지 확인
-        guard layer.timeline.keyframeCount > 0 else { return }
-
-        // 해당 위치에 키프레임이 있으면 제거
-        if layer.timeline.isKeyframe(at: index) {
-            layerViewModel.layers[layerIndex].timeline.removeKeyframe(at: index)
-        } else {
-            // 키프레임이 아닌 경우 (extended frame), span을 축소
-            // index 이후에 다른 키프레임이 있는지 확인
-            let hasKeyframesAfter = layer.timeline.getAllKeyframeIndices().contains(where: { $0 > index })
-
-            if !hasKeyframesAfter {
-                // index 이후에 키프레임이 없으면, span 끝을 축소
-                layerViewModel.layers[layerIndex].timeline.shrinkSpanEnd(by: 1)
-            }
-        }
-
-        // 현재 레이어의 index 이후 키프레임들을 -1로 이동
-        layerViewModel.layers[layerIndex].timeline.shiftKeyframes(after: index, by: -1)
-
-        // totalFrames 자동 업데이트 (다른 레이어가 더 길면 유지됨)
-        updateTotalFrames()
-
-        // 현재 프레임 인덱스 조정
-        if currentFrameIndex >= totalFrames && totalFrames > 0 {
-            currentFrameIndex = totalFrames - 1
-        }
-
-        loadFrame(at: currentFrameIndex)
-    }
-
     /// 모든 레이어의 모든 프레임 크기를 변경합니다
     func resizeAllFrames(width: Int, height: Int) {
         canvasWidth = width

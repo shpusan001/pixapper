@@ -530,16 +530,12 @@ struct TimelinePanelNew: View {
 
         Button("Delete", role: .destructive) {
             // 선택된 프레임 삭제 로직
-            for index in selectedIndices.sorted(by: >) {
-                if viewModel.layerViewModel.layers.first(where: { $0.id == layerId })?.timeline.isKeyframe(at: index) == true {
-                    let command = DeleteFrameInLayerCommand(
-                        timelineViewModel: viewModel,
-                        index: index,
-                        layerId: layerId
-                    )
-                    commandManager.performCommand(command)
-                }
-            }
+            let command = DeleteFramesCommand(
+                timelineViewModel: viewModel,
+                frameIndices: selectedIndices,
+                layerId: layerId
+            )
+            commandManager.performCommand(command)
             viewModel.selectedFrameIndices.removeAll()
         }
     }
