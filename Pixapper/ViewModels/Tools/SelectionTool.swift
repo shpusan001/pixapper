@@ -297,8 +297,13 @@ class SelectionTool: BaseTool, CanvasTool {
         state.resetTransformState()
 
         if !layerOldPixels.isEmpty {
+            guard let canvasVM = canvasViewModel else {
+                assertionFailure("CanvasViewModel should exist when creating selection")
+                return
+            }
+
             let command = SelectionCaptureCommand(
-                canvasViewModel: canvasViewModel!,
+                canvasViewModel: canvasVM,
                 layerViewModel: layerViewModel,
                 timelineViewModel: timelineViewModel,
                 layerIndex: currentLayerIndex,
@@ -419,8 +424,13 @@ class SelectionTool: BaseTool, CanvasTool {
         clearSelection()
 
         if !layerNewPixels.isEmpty {
+            guard let canvasVM = canvasViewModel else {
+                assertionFailure("CanvasViewModel should exist when committing selection")
+                return
+            }
+
             let command = SelectionCommitCommand(
-                canvasViewModel: canvasViewModel!,
+                canvasViewModel: canvasVM,
                 layerViewModel: layerViewModel,
                 timelineViewModel: timelineViewModel,
                 layerIndex: currentLayerIndex,
@@ -477,8 +487,15 @@ class SelectionTool: BaseTool, CanvasTool {
         }
 
         if oldRect != newRect {
+            guard let canvasVM = canvasViewModel else {
+                assertionFailure("CanvasViewModel should exist when committing selection move")
+                selectionMode = .idle
+                state.resetMoveState()
+                return
+            }
+
             let command = SelectionTransformCommand(
-                canvasViewModel: canvasViewModel!,
+                canvasViewModel: canvasVM,
                 oldPixels: pixels,
                 newPixels: pixels,
                 oldRect: oldRect,
@@ -623,8 +640,15 @@ class SelectionTool: BaseTool, CanvasTool {
         }
 
         if oldRect != newRect {
+            guard let canvasVM = canvasViewModel else {
+                assertionFailure("CanvasViewModel should exist when committing selection resize")
+                selectionMode = .idle
+                state.resetResizeState()
+                return
+            }
+
             let command = SelectionTransformCommand(
-                canvasViewModel: canvasViewModel!,
+                canvasViewModel: canvasVM,
                 oldPixels: oldPixels,
                 newPixels: newPixels,
                 oldRect: oldRect,
@@ -732,6 +756,13 @@ class SelectionTool: BaseTool, CanvasTool {
         }
 
         if abs(state.currentRotationAngle) > 0.01 {
+            guard let canvasVM = canvasViewModel else {
+                assertionFailure("CanvasViewModel should exist when committing selection rotation")
+                selectionMode = .idle
+                state.resetRotateState()
+                return
+            }
+
             let centerX = newRect.midX
             let centerY = newRect.midY
             let oldHeight = oldPixels.count
@@ -744,7 +775,7 @@ class SelectionTool: BaseTool, CanvasTool {
             )
 
             let command = SelectionTransformCommand(
-                canvasViewModel: canvasViewModel!,
+                canvasViewModel: canvasVM,
                 oldPixels: oldPixels,
                 newPixels: newPixels,
                 oldRect: oldRect,
@@ -828,8 +859,13 @@ class SelectionTool: BaseTool, CanvasTool {
         let newMask = PixelTransform.createMask(from: finalPixels)
         freeformMask = newMask
 
+        guard let canvasVM = canvasViewModel else {
+            assertionFailure("CanvasViewModel should exist when rotating selection")
+            return
+        }
+
         let command = SelectionTransformCommand(
-            canvasViewModel: canvasViewModel!,
+            canvasViewModel: canvasVM,
             oldPixels: oldPixels,
             newPixels: finalPixels,
             oldRect: oldRect,

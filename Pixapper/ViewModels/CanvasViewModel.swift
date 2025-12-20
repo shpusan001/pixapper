@@ -504,13 +504,17 @@ class CanvasViewModel: ObservableObject {
         let origStartY = Int(origRect.minY)
         let pixelsToRemove = origPixels ?? pixels
 
+        // 직접 픽셀 배열 접근으로 최적화 (getPixel() 반복 호출 방지)
+        let layerPixels = layerViewModel.layers[layerIndex].pixels
+
         for y in 0..<pixelsToRemove.count {
             for x in 0..<pixelsToRemove[y].count {
                 if pixelsToRemove[y][x] != .transparent {
                     let pixelX = origStartX + x
                     let pixelY = origStartY + y
-                    if pixelX >= 0 && pixelX < canvas.width && pixelY >= 0 && pixelY < canvas.height {
-                        let oldValue = layerViewModel.layers[layerIndex].getPixel(x: pixelX, y: pixelY) ?? .transparent
+                    if pixelX >= 0 && pixelX < canvas.width && pixelY >= 0 && pixelY < canvas.height,
+                       pixelY < layerPixels.count && pixelX < layerPixels[pixelY].count {
+                        let oldValue = layerPixels[pixelY][pixelX]
                         oldPixels.append(PixelChange(x: pixelX, y: pixelY, value: oldValue))
                         newPixels.append(PixelChange(x: pixelX, y: pixelY, value: .transparent))
                     }
@@ -528,8 +532,9 @@ class CanvasViewModel: ObservableObject {
                 if pixelValue != .transparent {
                     let pixelX = startX + x
                     let pixelY = startY + y
-                    if pixelX >= 0 && pixelX < canvas.width && pixelY >= 0 && pixelY < canvas.height {
-                        let oldValue = layerViewModel.layers[layerIndex].getPixel(x: pixelX, y: pixelY) ?? .transparent
+                    if pixelX >= 0 && pixelX < canvas.width && pixelY >= 0 && pixelY < canvas.height,
+                       pixelY < layerPixels.count && pixelX < layerPixels[pixelY].count {
+                        let oldValue = layerPixels[pixelY][pixelX]
                         if !oldPixels.contains(where: { $0.x == pixelX && $0.y == pixelY }) {
                             oldPixels.append(PixelChange(x: pixelX, y: pixelY, value: oldValue))
                         }

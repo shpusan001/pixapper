@@ -94,23 +94,30 @@ class AppViewModel: ObservableObject {
 
     /// 새 프로젝트 생성
     func newProject(width: Int = 32, height: Int = 32) {
-        // 기존 내용 초기화
-        let newLayerVM = LayerViewModel(width: width, height: height)
-        _ = TimelineViewModel(width: width, height: height, layerViewModel: newLayerVM)
-
-        // 데이터 복사
-        layerViewModel.layers = newLayerVM.layers
+        // 기존 ViewModel 재사용하여 리셋
+        let emptyLayer = Layer(name: "Layer 1", width: width, height: height)
+        layerViewModel.layers = [emptyLayer]
         layerViewModel.selectedLayerIndex = 0
 
         timelineViewModel.totalFrames = 1
         timelineViewModel.currentFrameIndex = 0
         timelineViewModel.settings = AnimationSettings()
+        timelineViewModel.canvasWidth = width
+        timelineViewModel.canvasHeight = height
 
         canvasViewModel.canvas = PixelCanvas(width: width, height: height)
         canvasViewModel.zoomLevel = 400.0
 
         toolSettingsManager.resetToDefaults()
         commandManager.clear()
+
+        // PixelStateManager 재초기화
+        timelineViewModel.pixelStateManager = PixelStateManager(
+            canvasWidth: width,
+            canvasHeight: height,
+            layerViewModel: layerViewModel
+        )
+        layerViewModel.pixelStateManager = timelineViewModel.pixelStateManager
 
         timelineViewModel.loadFrame(at: 0)
 

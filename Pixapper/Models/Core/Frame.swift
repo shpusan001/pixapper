@@ -20,9 +20,9 @@ struct LayerTimeline {
         // spanEndIndex는 최소한 이 키프레임까지는 포함
         spanEndIndex = max(spanEndIndex, frameIndex)
 
-        // 정렬된 인덱스 업데이트
+        // 정렬된 인덱스 업데이트 (이진 탐색으로 삽입 - O(n) 최적화)
         if isNewKeyframe {
-            updateSortedIndices()
+            insertSortedIndex(frameIndex)
         }
     }
 
@@ -36,8 +36,8 @@ struct LayerTimeline {
             spanEndIndex = 0
         }
 
-        // 정렬된 인덱스 업데이트
-        updateSortedIndices()
+        // 정렬된 인덱스 업데이트 (이진 탐색으로 제거 - O(n) 최적화)
+        removeSortedIndex(frameIndex)
     }
 
     /// 특정 프레임이 키프레임인지 확인
@@ -98,9 +98,22 @@ struct LayerTimeline {
         return sortedKeyframeIndices
     }
 
-    /// 정렬된 키프레임 인덱스 업데이트 (private 헬퍼)
+    /// 정렬된 키프레임 인덱스 업데이트 (private 헬퍼) - 전체 재정렬
     private mutating func updateSortedIndices() {
         sortedKeyframeIndices = keyframes.keys.sorted()
+    }
+
+    /// 정렬된 배열에 인덱스 삽입 (O(n) - 전체 재정렬보다 빠름)
+    private mutating func insertSortedIndex(_ index: Int) {
+        let insertionPoint = sortedKeyframeIndices.firstIndex(where: { $0 > index }) ?? sortedKeyframeIndices.count
+        sortedKeyframeIndices.insert(index, at: insertionPoint)
+    }
+
+    /// 정렬된 배열에서 인덱스 제거 (O(n))
+    private mutating func removeSortedIndex(_ index: Int) {
+        if let position = sortedKeyframeIndices.firstIndex(of: index) {
+            sortedKeyframeIndices.remove(at: position)
+        }
     }
 
     /// 특정 인덱스 이후의 키프레임 백업 (Undo용)
