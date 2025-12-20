@@ -189,14 +189,27 @@ struct ContentView: View {
                 .fill(Constants.Theme.divider)
                 .frame(height: 1)
 
-            VSplitView {
-                // Top section: Tool + Canvas + Color + Properties (모두 별도 열)
-                HSplitView {
-                    // Tool panel on the left - Adobe style (narrow)
-                    ToolPanel(viewModel: canvasViewModel, toolSettingsManager: toolSettingsManager)
-                        .frame(width: 48)
+            // Properties Panel - 가로 레이아웃 (탑 메뉴 바로 밑)
+            PropertiesPanel(toolSettingsManager: toolSettingsManager, viewModel: canvasViewModel)
 
-                    // Canvas in the center
+            Rectangle()
+                .fill(Constants.Theme.divider)
+                .frame(height: 1)
+
+            // Main content - 좌우 분할
+            HSplitView {
+                // Left: Color Panel (세로 전체)
+                ColorPanel(
+                    colorManager: toolSettingsManager.colorManager,
+                    paletteManager: timelineViewModel.pixelStateManager.paletteManager,
+                    pixelStateManager: timelineViewModel.pixelStateManager,
+                    commandManager: commandManager
+                )
+                .frame(minWidth: 140, idealWidth: 200, maxWidth: 280)
+
+                // Center: Canvas + Timeline (상하 분할)
+                VSplitView {
+                    // Canvas
                     CanvasView(
                         viewModel: canvasViewModel,
                         timelineViewModel: timelineViewModel,
@@ -205,23 +218,14 @@ struct ContentView: View {
                     .frame(minWidth: 400)
                     .background(Constants.Theme.backgroundDark)
 
-                    // Color panel - 독립 열 (좁게)
-                    ColorPanel(
-                        colorManager: toolSettingsManager.colorManager,
-                        paletteManager: timelineViewModel.pixelStateManager.paletteManager,
-                        pixelStateManager: timelineViewModel.pixelStateManager,
-                        commandManager: commandManager
-                    )
-                    .frame(minWidth: 140, idealWidth: 140, maxWidth: 280)
-
-                    // Properties panel - 독립 열
-                    PropertiesPanel(toolSettingsManager: toolSettingsManager, viewModel: canvasViewModel)
-                        .frame(minWidth: 140, idealWidth: 140, maxWidth: 280)
+                    // Timeline
+                    TimelinePanel(viewModel: timelineViewModel, commandManager: commandManager)
+                        .frame(minHeight: 150, idealHeight: 250, maxHeight: 500)
                 }
 
-                // Timeline panel at the bottom
-                TimelinePanel(viewModel: timelineViewModel, commandManager: commandManager)
-                    .frame(minHeight: 150, idealHeight: 250, maxHeight: 500)
+                // Right: Tool Panel
+                ToolPanel(viewModel: canvasViewModel, toolSettingsManager: toolSettingsManager)
+                    .frame(width: 48)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)

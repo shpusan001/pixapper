@@ -12,33 +12,17 @@ struct PropertiesPanel: View {
     @ObservedObject var viewModel: CanvasViewModel
 
     var body: some View {
-        VStack(spacing: 0) {
-            // Header
-            HStack {
-                Text("PROPERTIES")
-                    .font(.system(size: 9, weight: .bold))
-                    .foregroundColor(Constants.Theme.textSecondary)
-                    .tracking(0.5)
-                Spacer()
-            }
-            .padding(.horizontal, 8)
-            .padding(.vertical, 6)
-            .background(Constants.Theme.sectionBackground)
-
-            Rectangle()
-                .fill(Constants.Theme.divider)
-                .frame(height: 1)
-
+        HStack(spacing: 0) {
             // Tool properties content
-            ScrollView(showsIndicators: false) {
-                VStack(alignment: .leading, spacing: 0) {
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(alignment: .center, spacing: 12) {
                     toolPropertiesView
                 }
-                .padding(.horizontal, 8)
-                .padding(.vertical, 6)
+                .padding(.horizontal, 10)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
+        .frame(height: 42)
         .background(Constants.Theme.panelBackground)
     }
 
@@ -92,29 +76,32 @@ struct MirrorPropertiesView: View {
     @Binding var settings: MirrorSettings
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            PropertySectionHeader(title: "Mirror")
+        HStack(spacing: 8) {
+            Text("MIRROR")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundColor(Constants.Theme.textSecondary)
+                .tracking(0.3)
 
-            VStack(alignment: .leading, spacing: 6) {
-                PropertyRow(label: "Size") {
-                    LabeledSlider(value: $settings.brushSize, range: 1...10, step: 1)
-                }
-
-                PropertyDivider()
-
-                PropertyRow(label: "Mode") {
-                    Picker("", selection: $settings.mode) {
-                        ForEach(MirrorMode.allCases) { mode in
-                            Text(mode.displayName).tag(mode)
-                        }
-                    }
-                    .labelsHidden()
-                    .pickerStyle(.menu)
-                    .font(.system(size: 9))
-                }
+            PropertyRow(label: "Size") {
+                LabeledSlider(value: $settings.brushSize, range: 1...10, step: 1)
+                    .frame(width: 100)
             }
-            .padding(.horizontal, 8)
-            .padding(.vertical, 8)
+
+            Rectangle()
+                .fill(Constants.Theme.divider)
+                .frame(width: 1, height: 20)
+
+            PropertyRow(label: "Mode") {
+                Picker("", selection: $settings.mode) {
+                    ForEach(MirrorMode.allCases) { mode in
+                        Text(mode.displayName).tag(mode)
+                    }
+                }
+                .labelsHidden()
+                .pickerStyle(.menu)
+                .font(.system(size: 11))
+                .frame(width: 100)
+            }
         }
     }
 }
@@ -124,40 +111,56 @@ struct DitheringPropertiesView: View {
     @Binding var settings: DitheringSettings
     @ObservedObject var colorManager: ColorManager
 
+    @State private var showCustomEditor = false
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            PropertySectionHeader(title: "Dithering")
+        HStack(spacing: 8) {
+            Text("DITHERING")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundColor(Constants.Theme.textSecondary)
+                .tracking(0.3)
 
-            VStack(alignment: .leading, spacing: 6) {
-                PropertyRow(label: "Size") {
-                    LabeledSlider(value: $settings.brushSize, range: 1...10, step: 1)
-                }
+            PropertyRow(label: "Size") {
+                LabeledSlider(value: $settings.brushSize, range: 1...10, step: 1)
+                    .frame(width: 100)
+            }
 
-                PropertyDivider()
+            Rectangle()
+                .fill(Constants.Theme.divider)
+                .frame(width: 1, height: 20)
 
-                PropertyRow(label: "Pattern") {
-                    Picker("", selection: $settings.pattern) {
-                        ForEach(DitheringPattern.allCases) { pattern in
-                            Text(pattern.displayName).tag(pattern)
-                        }
+            PropertyRow(label: "Pattern") {
+                Picker("", selection: $settings.pattern) {
+                    ForEach(DitheringPattern.allCases) { pattern in
+                        Text(pattern.displayName).tag(pattern)
                     }
-                    .labelsHidden()
-                    .pickerStyle(.menu)
-                    .font(.system(size: 9))
                 }
+                .labelsHidden()
+                .pickerStyle(.menu)
+                .font(.system(size: 11))
+                .frame(width: 100)
+            }
 
-                // Custom Pattern Editor
-                if settings.pattern == .custom {
-                    PropertyDivider()
+            if settings.pattern == .custom {
+                Rectangle()
+                    .fill(Constants.Theme.divider)
+                    .frame(width: 1, height: 20)
 
-                    VStack(alignment: .leading, spacing: 6) {
+                Button("Edit") {
+                    showCustomEditor.toggle()
+                }
+                .buttonStyle(.plain)
+                .font(.system(size: 11))
+                .padding(.horizontal, 6)
+                .padding(.vertical, 4)
+                .background(Constants.Theme.sectionBackground)
+                .cornerRadius(3)
+                .popover(isPresented: $showCustomEditor) {
+                    VStack(spacing: 8) {
                         HStack {
-                            Text("Grid Size")
-                                .font(.system(size: 9, weight: .medium))
-                                .foregroundColor(Constants.Theme.textSecondary)
-
+                            Text("Custom Pattern")
+                                .font(.system(size: 11, weight: .semibold))
                             Spacer()
-
                             Picker("", selection: Binding(
                                 get: { settings.customPatternSize },
                                 set: { newSize in
@@ -171,8 +174,7 @@ struct DitheringPropertiesView: View {
                             }
                             .labelsHidden()
                             .pickerStyle(.menu)
-                            .font(.system(size: 9))
-                            .frame(width: 70)
+                            .font(.system(size: 11))
                         }
 
                         CustomPatternEditor(
@@ -182,11 +184,10 @@ struct DitheringPropertiesView: View {
                             color2: colorManager.secondaryColor
                         )
                     }
-                    .padding(.vertical, 4)
+                    .padding(12)
+                    .frame(width: 220)
                 }
             }
-            .padding(.horizontal, 8)
-            .padding(.vertical, 8)
         }
     }
 }
@@ -243,16 +244,16 @@ struct PencilPropertiesView: View {
     @Binding var settings: PencilSettings
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            PropertySectionHeader(title: "Pencil")
+        HStack(spacing: 8) {
+            Text("PENCIL")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundColor(Constants.Theme.textSecondary)
+                .tracking(0.3)
 
-            VStack(alignment: .leading, spacing: 6) {
-                PropertyRow(label: "Size") {
-                    LabeledSlider(value: $settings.brushSize, range: 1...10, step: 1)
-                }
+            PropertyRow(label: "Size") {
+                LabeledSlider(value: $settings.brushSize, range: 1...10, step: 1)
+                    .frame(width: 100)
             }
-            .padding(.horizontal, 8)
-            .padding(.vertical, 8)
         }
     }
 }
@@ -262,16 +263,16 @@ struct EraserPropertiesView: View {
     @Binding var settings: EraserSettings
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            PropertySectionHeader(title: "Eraser")
+        HStack(spacing: 8) {
+            Text("ERASER")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundColor(Constants.Theme.textSecondary)
+                .tracking(0.3)
 
-            VStack(alignment: .leading, spacing: 6) {
-                PropertyRow(label: "Size") {
-                    LabeledSlider(value: $settings.brushSize, range: 1...10, step: 1)
-                }
+            PropertyRow(label: "Size") {
+                LabeledSlider(value: $settings.brushSize, range: 1...10, step: 1)
+                    .frame(width: 100)
             }
-            .padding(.horizontal, 8)
-            .padding(.vertical, 8)
         }
     }
 }
@@ -281,28 +282,28 @@ struct FillPropertiesView: View {
     @Binding var settings: FillSettings
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            PropertySectionHeader(title: "Fill")
+        HStack(spacing: 8) {
+            Text("FILL")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundColor(Constants.Theme.textSecondary)
+                .tracking(0.3)
 
-            VStack(alignment: .leading, spacing: 6) {
-                PropertyRow(label: "Tolerance") {
-                    HStack(spacing: 6) {
-                        Slider(value: $settings.tolerance, in: 0...1, step: 0.01)
-                            .tint(Constants.Theme.accentBlue)
+            PropertyRow(label: "Tolerance") {
+                HStack(spacing: 4) {
+                    Slider(value: $settings.tolerance, in: 0...1, step: 0.01)
+                        .tint(Constants.Theme.accentBlue)
+                        .frame(width: 80)
 
-                        Text(String(format: "%.0f%%", settings.tolerance * 100))
-                            .font(.system(size: 9, design: .monospaced))
-                            .foregroundColor(Constants.Theme.textPrimary)
-                            .frame(width: 32, alignment: .trailing)
-                            .padding(.horizontal, 4)
-                            .padding(.vertical, 2)
-                            .background(Constants.Theme.sectionBackground)
-                            .cornerRadius(2)
-                    }
+                    Text(String(format: "%.0f%%", settings.tolerance * 100))
+                        .font(.system(size: 11, design: .monospaced))
+                        .foregroundColor(Constants.Theme.textPrimary)
+                        .frame(width: 32, alignment: .trailing)
+                        .padding(.horizontal, 4)
+                        .padding(.vertical, 2)
+                        .background(Constants.Theme.sectionBackground)
+                        .cornerRadius(2)
                 }
             }
-            .padding(.horizontal, 8)
-            .padding(.vertical, 8)
         }
     }
 }
@@ -313,25 +314,27 @@ struct ShapePropertiesView: View {
     let toolName: String
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            PropertySectionHeader(title: toolName)
+        HStack(spacing: 8) {
+            Text(toolName.uppercased())
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundColor(Constants.Theme.textSecondary)
+                .tracking(0.3)
 
-            VStack(alignment: .leading, spacing: 6) {
-                PropertyRow(label: "Width") {
-                    LabeledSlider(value: $settings.strokeWidth, range: 1...10, step: 1)
-                }
-
-                PropertyDivider()
-
-                PropertyRow(label: "Fill") {
-                    Toggle("", isOn: $settings.isFilled)
-                        .labelsHidden()
-                        .toggleStyle(.switch)
-                        .controlSize(.mini)
-                }
+            PropertyRow(label: "Width") {
+                LabeledSlider(value: $settings.strokeWidth, range: 1...10, step: 1)
+                    .frame(width: 100)
             }
-            .padding(.horizontal, 8)
-            .padding(.vertical, 8)
+
+            Rectangle()
+                .fill(Constants.Theme.divider)
+                .frame(width: 1, height: 20)
+
+            PropertyRow(label: "Fill") {
+                Toggle("", isOn: $settings.isFilled)
+                    .labelsHidden()
+                    .toggleStyle(.switch)
+                    .controlSize(.mini)
+            }
         }
     }
 }
@@ -342,137 +345,87 @@ struct SelectionPropertiesView: View {
     @Binding var settings: SelectionSettings
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            PropertySectionHeader(title: "Selection")
+        HStack(spacing: 8) {
+            Text("SELECTION")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundColor(Constants.Theme.textSecondary)
+                .tracking(0.3)
 
-            // Selection Mode
-            VStack(alignment: .leading, spacing: 6) {
-                PropertyRow(label: "Mode") {
-                    Picker("", selection: $settings.selectionType) {
-                        ForEach(SelectionType.allCases) { type in
-                            HStack {
-                                Image(systemName: type.icon)
-                                    .font(.system(size: 8))
-                                Text(type.displayName)
-                            }
-                            .tag(type)
+            PropertyRow(label: "Mode") {
+                Picker("", selection: $settings.selectionType) {
+                    ForEach(SelectionType.allCases) { type in
+                        HStack {
+                            Image(systemName: type.icon)
+                                .font(.system(size: 9))
+                            Text(type.displayName)
                         }
+                        .tag(type)
                     }
-                    .labelsHidden()
-                    .pickerStyle(.menu)
-                    .font(.system(size: 9))
                 }
+                .labelsHidden()
+                .pickerStyle(.menu)
+                .font(.system(size: 11))
+                .frame(width: 100)
             }
-            .padding(.horizontal, 8)
-            .padding(.vertical, 8)
-
-            PropertyDivider()
 
             if let rect = viewModel.selectionRect, viewModel.selectionPixels != nil {
-                VStack(alignment: .leading, spacing: 6) {
-                    PropertyRow(label: "Size") {
-                        Text("\(Int(rect.width)) × \(Int(rect.height))")
-                            .font(.system(size: 9, design: .monospaced))
-                            .foregroundColor(Constants.Theme.textPrimary)
-                    }
+                Rectangle()
+                    .fill(Constants.Theme.divider)
+                    .frame(width: 1, height: 20)
 
-                    PropertyDivider()
+                Text("\(Int(rect.width))×\(Int(rect.height))")
+                    .font(.system(size: 11, design: .monospaced))
+                    .foregroundColor(Constants.Theme.textSecondary)
 
-                    PropertyRow(label: "Position") {
-                        Text("(\(Int(rect.minX)), \(Int(rect.minY)))")
-                            .font(.system(size: 9, design: .monospaced))
-                            .foregroundColor(Constants.Theme.textPrimary)
-                    }
+                Rectangle()
+                    .fill(Constants.Theme.divider)
+                    .frame(width: 1, height: 20)
 
-                    PropertyDivider()
-
-                    // Transform
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("Transform")
-                            .font(.system(size: 9, weight: .medium))
-                            .foregroundColor(Constants.Theme.textSecondary)
-
-                        // Rotate
-                        HStack(spacing: 4) {
-                            TransformButton(icon: "rotate.left", tooltip: "Rotate CCW", action: viewModel.rotateSelectionCCW)
-                            TransformButton(icon: "rotate.right", tooltip: "Rotate CW", action: viewModel.rotateSelectionCW)
-                            TransformButton(icon: "arrow.triangle.2.circlepath", tooltip: "Rotate 180°", action: viewModel.rotateSelection180)
-                        }
-
-                        // Flip
-                        HStack(spacing: 4) {
-                            TransformButton(icon: "arrow.left.and.right", tooltip: "Flip Horizontal", action: viewModel.flipSelectionHorizontal)
-                            TransformButton(icon: "arrow.up.and.down", tooltip: "Flip Vertical", action: viewModel.flipSelectionVertical)
-                            Spacer()
-                        }
-                    }
-
-                PropertyDivider()
-
-                // Actions
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("Actions")
-                        .font(.system(size: 9, weight: .medium))
-                        .foregroundColor(Constants.Theme.textSecondary)
-
-                    VStack(spacing: 4) {
-                        // Commit button
-                        Button(action: {
-                            viewModel.commitSelection()
-                        }) {
-                            HStack(spacing: 4) {
-                                Image(systemName: "checkmark")
-                                    .font(.system(size: 9))
-                                Text("Commit")
-                                    .font(.system(size: 9, weight: .medium))
-                                Spacer()
-                            }
-                            .padding(.horizontal, 8)
-                            .frame(height: 24)
-                            .contentShape(Rectangle())
-                        }
-                        .buttonStyle(.plain)
-                        .background(
-                            Rectangle()
-                                .fill(Constants.Theme.accentBlue.opacity(0.15))
-                        )
-                        .foregroundColor(Constants.Theme.accentBlue)
-                        .help("Commit Selection (⏎)")
-                        .disabled(!viewModel.isFloatingSelection)
-
-                        // Delete button
-                        Button(action: {
-                            viewModel.deleteSelection()
-                        }) {
-                            HStack(spacing: 4) {
-                                Image(systemName: "trash")
-                                    .font(.system(size: 9))
-                                Text("Delete")
-                                    .font(.system(size: 9, weight: .medium))
-                                Spacer()
-                            }
-                            .padding(.horizontal, 8)
-                            .frame(height: 24)
-                            .contentShape(Rectangle())
-                        }
-                        .buttonStyle(.plain)
-                        .background(
-                            Rectangle()
-                                .fill(Color.red.opacity(0.1))
-                        )
-                        .foregroundColor(.red)
-                        .help("Delete Selection (⌫)")
-                    }
+                // Transform buttons
+                HStack(spacing: 4) {
+                    CompactTransformButton(icon: "rotate.left", tooltip: "Rotate CCW", action: viewModel.rotateSelectionCCW)
+                    CompactTransformButton(icon: "rotate.right", tooltip: "Rotate CW", action: viewModel.rotateSelectionCW)
+                    CompactTransformButton(icon: "arrow.left.and.right", tooltip: "Flip H", action: viewModel.flipSelectionHorizontal)
+                    CompactTransformButton(icon: "arrow.up.and.down", tooltip: "Flip V", action: viewModel.flipSelectionVertical)
                 }
+
+                Rectangle()
+                    .fill(Constants.Theme.divider)
+                    .frame(width: 1, height: 20)
+
+                // Action buttons
+                HStack(spacing: 4) {
+                    Button(action: viewModel.commitSelection) {
+                        Image(systemName: "checkmark")
+                            .font(.system(size: 10))
+                            .frame(width: 24, height: 24)
+                    }
+                    .buttonStyle(.plain)
+                    .background(Constants.Theme.accentBlue.opacity(0.15))
+                    .foregroundColor(Constants.Theme.accentBlue)
+                    .cornerRadius(3)
+                    .help("Commit (⏎)")
+                    .disabled(!viewModel.isFloatingSelection)
+
+                    Button(action: viewModel.deleteSelection) {
+                        Image(systemName: "trash")
+                            .font(.system(size: 10))
+                            .frame(width: 24, height: 24)
+                    }
+                    .buttonStyle(.plain)
+                    .background(Color.red.opacity(0.1))
+                    .foregroundColor(.red)
+                    .cornerRadius(3)
+                    .help("Delete (⌫)")
                 }
-                .padding(.horizontal, 8)
-                .padding(.vertical, 8)
             } else {
-                Text("Select area to see properties")
-                    .font(.system(size: 9))
+                Rectangle()
+                    .fill(Constants.Theme.divider)
+                    .frame(width: 1, height: 20)
+
+                Text("No active selection")
+                    .font(.system(size: 11))
                     .foregroundColor(Constants.Theme.textDisabled)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 8)
             }
         }
     }
@@ -514,14 +467,14 @@ struct PropertyRow<Content: View>: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
+        HStack(spacing: 4) {
             Text(label)
-                .font(.system(size: 9, weight: .medium))
+                .font(.system(size: 8, weight: .medium))
                 .foregroundColor(Constants.Theme.textSecondary)
+                .frame(minWidth: 32)
 
             content
         }
-        .padding(.vertical, 2)
     }
 }
 
@@ -552,13 +505,40 @@ struct TransformButton: View {
     }
 }
 
+struct CompactTransformButton: View {
+    let icon: String
+    let tooltip: String
+    let action: () -> Void
+
+    @State private var isHovered = false
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: icon)
+                .font(.system(size: 8))
+                .frame(width: 20, height: 20)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .background(
+            Rectangle()
+                .fill(isHovered ? Constants.Theme.hoverBackground : Constants.Theme.sectionBackground)
+        )
+        .foregroundColor(Constants.Theme.textPrimary)
+        .help(tooltip)
+        .onHover { hovering in
+            isHovered = hovering
+        }
+    }
+}
+
 struct LabeledSlider: View {
     let value: Binding<Int>
     let range: ClosedRange<Int>
     let step: Int
 
     var body: some View {
-        HStack(spacing: 6) {
+        HStack(spacing: 4) {
             Slider(
                 value: Binding(
                     get: { Double(value.wrappedValue) },
@@ -570,11 +550,11 @@ struct LabeledSlider: View {
             .tint(Constants.Theme.accentBlue)
 
             Text("\(value.wrappedValue)")
-                .font(.system(size: 9, design: .monospaced))
+                .font(.system(size: 8, design: .monospaced))
                 .foregroundColor(Constants.Theme.textPrimary)
-                .frame(width: 20, alignment: .trailing)
-                .padding(.horizontal, 4)
-                .padding(.vertical, 2)
+                .frame(width: 18, alignment: .trailing)
+                .padding(.horizontal, 3)
+                .padding(.vertical, 1)
                 .background(Constants.Theme.sectionBackground)
                 .cornerRadius(2)
         }
@@ -605,50 +585,61 @@ struct TextPropertiesView: View {
     }()
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            PropertySectionHeader(title: "Text")
+        HStack(spacing: 8) {
+            Text("TEXT")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundColor(Constants.Theme.textSecondary)
+                .tracking(0.3)
 
-            VStack(alignment: .leading, spacing: 6) {
-                // Font
-                PropertyRow(label: "Font") {
-                    Picker("", selection: $settings.fontName) {
-                        ForEach(availableFonts, id: \.self) { fontName in
-                            Text(fontName)
-                                .font(.custom(fontName, size: 12))
-                                .tag(fontName)
-                        }
+            PropertyRow(label: "Font") {
+                Picker("", selection: $settings.fontName) {
+                    ForEach(availableFonts, id: \.self) { fontName in
+                        Text(fontName)
+                            .font(.custom(fontName, size: 11))
+                            .tag(fontName)
                     }
-                    .labelsHidden()
-                    .frame(maxWidth: .infinity)
                 }
+                .labelsHidden()
+                .pickerStyle(.menu)
+                .font(.system(size: 11))
+                .frame(width: 100)
+            }
 
-                // Size
-                PropertyRow(label: "Size") {
-                    LabeledSlider(
-                        value: Binding(
-                            get: { Int(settings.fontSize) },
-                            set: { settings.fontSize = CGFloat($0) }
-                        ),
-                        range: 6...24,
-                        step: 2
-                    )
-                }
+            Rectangle()
+                .fill(Constants.Theme.divider)
+                .frame(width: 1, height: 20)
 
-                // Style toggles
-                PropertyRow(label: "Style") {
-                    HStack(spacing: 8) {
-                        Toggle("Bold", isOn: $settings.isBold)
-                            .toggleStyle(.button)
-                            .controlSize(.small)
+            PropertyRow(label: "Size") {
+                LabeledSlider(
+                    value: Binding(
+                        get: { Int(settings.fontSize) },
+                        set: { settings.fontSize = CGFloat($0) }
+                    ),
+                    range: 6...24,
+                    step: 2
+                )
+                .frame(width: 100)
+            }
 
-                        Toggle("Italic", isOn: $settings.isItalic)
-                            .toggleStyle(.button)
-                            .controlSize(.small)
-                    }
+            Rectangle()
+                .fill(Constants.Theme.divider)
+                .frame(width: 1, height: 20)
+
+            PropertyRow(label: "Style") {
+                HStack(spacing: 4) {
+                    Toggle("B", isOn: $settings.isBold)
+                        .toggleStyle(.button)
+                        .font(.system(size: 10, weight: .bold))
+                        .controlSize(.mini)
+                        .frame(width: 24, height: 24)
+
+                    Toggle("I", isOn: $settings.isItalic)
+                        .toggleStyle(.button)
+                        .font(.system(size: 10).italic())
+                        .controlSize(.mini)
+                        .frame(width: 24, height: 24)
                 }
             }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 8)
         }
     }
 }
