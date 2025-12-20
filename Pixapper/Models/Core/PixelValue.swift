@@ -7,16 +7,31 @@
 
 import Foundation
 
+/// RGBA 색상 (8bit per channel)
+struct RGBA8: Codable, Hashable, Sendable {
+    let r: UInt8
+    let g: UInt8
+    let b: UInt8
+    let a: UInt8
+
+    init(r: UInt8, g: UInt8, b: UInt8, a: UInt8 = 255) {
+        self.r = r
+        self.g = g
+        self.b = b
+        self.a = a
+    }
+}
+
 /// 픽셀 값 - 모든 가능한 픽셀 타입을 표현
 /// 확장 가능한 설계: 새로운 픽셀 타입 추가가 쉬움
 enum PixelValue: Codable, Hashable, Sendable {
     case transparent                    // 투명 픽셀
     case indexed(UInt8)                 // 팔레트 인덱스 (0-255)
-    case gradient(UUID)                 // 그라디언트 참조
+    case gradient(UUID)                 // 그라디언트 참조 (곧 삭제 예정)
+    case directColor(RGBA8)             // 직접 색상 (그래디언트용)
 
     // 향후 확장 가능:
     // case pattern(UUID)               // 패턴 참조
-    // case directColor(RGBA8)          // 직접 색상 (팔레트 외)
     // case reference(LayerRef, Point)  // 다른 레이어 참조 (심볼)
 }
 
@@ -69,12 +84,14 @@ extension PixelValue {
         case type
         case index
         case gradientId
+        case color
     }
 
     enum ValueType: String, Codable {
         case transparent
         case indexed
         case gradient
+        case directColor
     }
 
     init(from decoder: Decoder) throws {
@@ -92,6 +109,10 @@ extension PixelValue {
         case .gradient:
             let id = try container.decode(UUID.self, forKey: .gradientId)
             self = .gradient(id)
+
+        case .directColor:
+            let color = try container.decode(RGBA8.self, forKey: .color)
+            self = .directColor(color)
         }
     }
 
@@ -109,6 +130,10 @@ extension PixelValue {
         case .gradient(let id):
             try container.encode(ValueType.gradient, forKey: .type)
             try container.encode(id, forKey: .gradientId)
+
+        case .directColor(let color):
+            try container.encode(ValueType.directColor, forKey: .type)
+            try container.encode(color, forKey: .color)
         }
     }
 }

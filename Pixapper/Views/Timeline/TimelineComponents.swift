@@ -107,6 +107,13 @@ struct CellThumbnailView: View {
                         color = palette.getColor(at: colorIndex) ?? .clear
                     case .gradient:
                         color = .clear
+                    case .directColor(let rgba8):
+                        color = Color(
+                            red: Double(rgba8.r) / 255.0,
+                            green: Double(rgba8.g) / 255.0,
+                            blue: Double(rgba8.b) / 255.0,
+                            opacity: Double(rgba8.a) / 255.0
+                        )
                     }
 
                     NSColor(color).setFill()

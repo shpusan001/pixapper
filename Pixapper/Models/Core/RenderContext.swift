@@ -48,6 +48,14 @@ struct DefaultRenderContext: RenderContext {
             // 좌표 없이는 그라디언트 렌더링 불가
             // 첫 번째 정지점 색상 반환 (fallback)
             return nil
+
+        case .directColor(let rgba8):
+            return Color(
+                red: Double(rgba8.r) / 255.0,
+                green: Double(rgba8.g) / 255.0,
+                blue: Double(rgba8.b) / 255.0,
+                opacity: Double(rgba8.a) / 255.0
+            )
         }
     }
 
@@ -62,6 +70,14 @@ struct DefaultRenderContext: RenderContext {
         case .gradient(let id):
             guard let gradient = gradients[id] else { return nil }
             return interpolateGradient(gradient, at: point)
+
+        case .directColor(let rgba8):
+            return Color(
+                red: Double(rgba8.r) / 255.0,
+                green: Double(rgba8.g) / 255.0,
+                blue: Double(rgba8.b) / 255.0,
+                opacity: Double(rgba8.a) / 255.0
+            )
         }
     }
 

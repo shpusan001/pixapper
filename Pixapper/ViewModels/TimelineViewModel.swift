@@ -81,16 +81,17 @@ class TimelineViewModel: ObservableObject, PlaybackControllerDelegate {
     /// - Note: Reactive + State Manager 패턴으로 완벽한 동기화 보장
     @Published var pixelStateManager: PixelStateManager!
 
-    init(width: Int, height: Int, layerViewModel: LayerViewModel) {
+    init(width: Int, height: Int, layerViewModel: LayerViewModel, paletteManager: PaletteManager) {
         self.canvasWidth = width
         self.canvasHeight = height
         self.layerViewModel = layerViewModel
 
-        // PixelStateManager 초기화
+        // PixelStateManager 초기화 (올바른 PaletteManager 전달)
         self.pixelStateManager = PixelStateManager(
             canvasWidth: width,
             canvasHeight: height,
-            layerViewModel: layerViewModel
+            layerViewModel: layerViewModel,
+            paletteManager: paletteManager
         )
 
         // LayerViewModel에 PixelStateManager 연결 (양방향 weak 참조)

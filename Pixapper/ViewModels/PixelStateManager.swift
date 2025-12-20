@@ -29,6 +29,7 @@ class PixelStateManager: ObservableObject {
 
     private weak var layerViewModel: LayerViewModel?
     let paletteManager: PaletteManager
+    var gradientLibrary: GradientLibrary = GradientLibrary()
     private let canvasWidth: Int
     private let canvasHeight: Int
     private var paletteCancellable: AnyCancellable?

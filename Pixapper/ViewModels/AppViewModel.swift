@@ -19,6 +19,7 @@ class AppViewModel: ObservableObject {
 
     // MARK: - ViewModels (내부 관리)
     let colorManager: ColorManager
+    let paletteManager: PaletteManager
     let layerViewModel: LayerViewModel
     let timelineViewModel: TimelineViewModel
     let canvasViewModel: CanvasViewModel
@@ -30,6 +31,7 @@ class AppViewModel: ObservableObject {
     init(width: Int = 32, height: Int = 32) {
         // ViewModels 초기화 (기존 ContentView와 동일)
         let colorMgr = ColorManager()
+        let paletteMgr = PaletteManager()
         let layerVM = LayerViewModel(width: width, height: height)
         let cmdManager = CommandManager()
         let toolManager = ToolSettingsManager(colorManager: colorMgr)
@@ -45,10 +47,12 @@ class AppViewModel: ObservableObject {
         let timelineVM = TimelineViewModel(
             width: width,
             height: height,
-            layerViewModel: layerVM
+            layerViewModel: layerVM,
+            paletteManager: paletteMgr
         )
 
         self.colorManager = colorMgr
+        self.paletteManager = paletteMgr
         self.layerViewModel = layerVM
         self.commandManager = cmdManager
         self.toolSettingsManager = toolManager
@@ -115,7 +119,8 @@ class AppViewModel: ObservableObject {
         timelineViewModel.pixelStateManager = PixelStateManager(
             canvasWidth: width,
             canvasHeight: height,
-            layerViewModel: layerViewModel
+            layerViewModel: layerViewModel,
+            paletteManager: paletteManager
         )
         layerViewModel.pixelStateManager = timelineViewModel.pixelStateManager
 

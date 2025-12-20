@@ -90,6 +90,9 @@ struct CanvasView: View {
                         // 도형 프리뷰 (전체 영역)
                         renderShapePreview(marginX: marginX, marginY: marginY)
 
+                        // 그래디언트 프리뷰 (Fill Tool 드래그 시)
+                        renderGradientPreview(marginX: marginX, marginY: marginY)
+
                         // 텍스트 프리뷰 (실시간)
                         renderTextPreview(marginX: marginX, marginY: marginY)
 
@@ -185,6 +188,13 @@ struct CanvasView: View {
     private func renderShapePreview(marginX: CGFloat, marginY: CGFloat) -> some View {
         if !viewModel.shapePreview.isEmpty {
             ShapePreviewView(preview: viewModel.shapePreview, pixelSize: pixelSize, marginX: marginX, marginY: marginY)
+        }
+    }
+
+    @ViewBuilder
+    private func renderGradientPreview(marginX: CGFloat, marginY: CGFloat) -> some View {
+        if let preview = viewModel.gradientPreview {
+            GradientPreviewView(preview: preview, pixelSize: pixelSize, marginX: marginX, marginY: marginY)
         }
     }
 
@@ -724,7 +734,20 @@ struct PixelGridView: View {
                         case .indexed(let colorIndex):
                             color = pixelStateManager.currentPalette.getColor(at: colorIndex) ?? .clear
                         case .gradient:
-                            color = .clear
+                            // RenderContext로 그래디언트 렌더링
+                            let renderContext = DefaultRenderContext(
+                                palette: pixelStateManager.currentPalette,
+                                gradients: pixelStateManager.gradientLibrary
+                            )
+                            let point = PixelPoint(x, y)
+                            color = renderContext.resolve(pixelValue, at: point) ?? .clear
+                        case .directColor(let rgba8):
+                            color = Color(
+                                red: Double(rgba8.r) / 255.0,
+                                green: Double(rgba8.g) / 255.0,
+                                blue: Double(rgba8.b) / 255.0,
+                                opacity: Double(rgba8.a) / 255.0
+                            )
                         }
 
                         let rect = CGRect(
@@ -787,6 +810,89 @@ struct ShapePreviewView: View {
                     height: pixelSize + 1
                 )
                 context.fill(Path(rect), with: .color(pixel.color.opacity(Constants.Opacity.Canvas.shapePreview)))
+            }
+        }
+    }
+}
+
+struct GradientPreviewView: View {
+    let preview: GradientPreview
+    let pixelSize: CGFloat
+    let marginX: CGFloat
+    let marginY: CGFloat
+
+    var body: some View {
+        Canvas { context, size in
+            switch preview {
+            case .linear(let start, let end):
+                // 픽셀 좌표를 화면 좌표로 변환
+                let startPoint = CGPoint(
+                    x: marginX + start.x * pixelSize + pixelSize / 2,
+                    y: marginY + start.y * pixelSize + pixelSize / 2
+                )
+                let endPoint = CGPoint(
+                    x: marginX + end.x * pixelSize + pixelSize / 2,
+                    y: marginY + end.y * pixelSize + pixelSize / 2
+                )
+
+                // 선 그리기
+                var path = Path()
+                path.move(to: startPoint)
+                path.addLine(to: endPoint)
+                context.stroke(path, with: .color(.blue), lineWidth: 2.0)
+
+                // 화살표 머리 그리기
+                let dx = endPoint.x - startPoint.x
+                let dy = endPoint.y - startPoint.y
+                let length = sqrt(dx * dx + dy * dy)
+                if length > 0 {
+                    let angle = atan2(dy, dx)
+                    let arrowLength: CGFloat = 12
+                    let arrowAngle: CGFloat = .pi / 6
+
+                    let arrowPoint1 = CGPoint(
+                        x: endPoint.x - arrowLength * cos(angle - arrowAngle),
+                        y: endPoint.y - arrowLength * sin(angle - arrowAngle)
+                    )
+                    let arrowPoint2 = CGPoint(
+                        x: endPoint.x - arrowLength * cos(angle + arrowAngle),
+                        y: endPoint.y - arrowLength * sin(angle + arrowAngle)
+                    )
+
+                    var arrowPath = Path()
+                    arrowPath.move(to: arrowPoint1)
+                    arrowPath.addLine(to: endPoint)
+                    arrowPath.addLine(to: arrowPoint2)
+                    context.stroke(arrowPath, with: .color(.blue), lineWidth: 2.0)
+                }
+
+                // 시작점 원 그리기
+                let startCircle = Circle()
+                    .path(in: CGRect(x: startPoint.x - 4, y: startPoint.y - 4, width: 8, height: 8))
+                context.fill(startCircle, with: .color(.blue))
+
+            case .radial(let center, let radius):
+                // 픽셀 좌표를 화면 좌표로 변환
+                let centerPoint = CGPoint(
+                    x: marginX + center.x * pixelSize + pixelSize / 2,
+                    y: marginY + center.y * pixelSize + pixelSize / 2
+                )
+                let screenRadius = radius * pixelSize
+
+                // 원 그리기
+                let circle = Circle()
+                    .path(in: CGRect(
+                        x: centerPoint.x - screenRadius,
+                        y: centerPoint.y - screenRadius,
+                        width: screenRadius * 2,
+                        height: screenRadius * 2
+                    ))
+                context.stroke(circle, with: .color(.blue), lineWidth: 2.0)
+
+                // 중심점 그리기
+                let centerCircle = Circle()
+                    .path(in: CGRect(x: centerPoint.x - 4, y: centerPoint.y - 4, width: 8, height: 8))
+                context.fill(centerCircle, with: .color(.blue))
             }
         }
     }
@@ -901,6 +1007,13 @@ struct OnionSkinLayerView: View {
                             color = palette.getColor(at: colorIndex) ?? .clear
                         case .gradient:
                             color = .clear
+                        case .directColor(let rgba8):
+                            color = Color(
+                                red: Double(rgba8.r) / 255.0,
+                                green: Double(rgba8.g) / 255.0,
+                                blue: Double(rgba8.b) / 255.0,
+                                opacity: Double(rgba8.a) / 255.0
+                            )
                         }
 
                         let rect = CGRect(
@@ -1039,6 +1152,13 @@ struct SelectionRectView: View {
                         color = palette.getColor(at: colorIndex) ?? .clear
                     case .gradient:
                         color = .clear
+                    case .directColor(let rgba8):
+                        color = Color(
+                            red: Double(rgba8.r) / 255.0,
+                            green: Double(rgba8.g) / 255.0,
+                            blue: Double(rgba8.b) / 255.0,
+                            opacity: Double(rgba8.a) / 255.0
+                        )
                     }
 
                     let pixelRect = CGRect(

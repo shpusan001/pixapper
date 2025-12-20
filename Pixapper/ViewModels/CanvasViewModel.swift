@@ -28,6 +28,12 @@ struct TextEditState {
     var cursorVisible: Bool = true  // 깜박임 상태
 }
 
+/// 그래디언트 프리뷰 상태 (Fill Tool 드래그 중 시각적 피드백)
+enum GradientPreview {
+    case linear(start: CGPoint, end: CGPoint)
+    case radial(center: CGPoint, radius: Double)
+}
+
 @MainActor
 class CanvasViewModel: ObservableObject {
     // MARK: - Canvas State
@@ -45,6 +51,7 @@ class CanvasViewModel: ObservableObject {
     }
     @Published var textEditState: TextEditState? = nil  // 텍스트 편집 상태
     @Published var textBoxHoveredHandle: TextBoxHandle? = nil  // 텍스트 박스 호버 핸들
+    @Published var gradientPreview: GradientPreview? = nil  // 그래디언트 프리뷰 (Fill Tool 드래그 시)
 
     // MARK: - View Toggle Methods
 

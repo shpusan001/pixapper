@@ -112,6 +112,15 @@ extension Array where Element == [PixelValue] {
                 case .gradient:
                     // 그라디언트는 아직 미구현, 투명으로 처리
                     return nil
+                case .directColor(let rgba8):
+                    // RGB 직접 저장된 색상을 SerializableColor로 변환
+                    let color = Color(
+                        red: Double(rgba8.r) / 255.0,
+                        green: Double(rgba8.g) / 255.0,
+                        blue: Double(rgba8.b) / 255.0,
+                        opacity: Double(rgba8.a) / 255.0
+                    )
+                    return SerializableColor(from: color)
                 }
             }
         }

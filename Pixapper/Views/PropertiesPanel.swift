@@ -34,7 +34,11 @@ struct PropertiesPanel: View {
         case .eraser:
             EraserPropertiesView(settings: $toolSettingsManager.eraserSettings)
         case .fill:
-            FillPropertiesView(settings: $toolSettingsManager.fillSettings)
+            FillPropertiesView(
+                settings: $toolSettingsManager.fillSettings,
+                colorManager: toolSettingsManager.colorManager,
+                paletteManager: viewModel.timelineViewModel?.pixelStateManager.paletteManager ?? PaletteManager()
+            )
         case .rectangle:
             ShapePropertiesView(
                 settings: $toolSettingsManager.rectangleSettings,
@@ -280,6 +284,8 @@ struct EraserPropertiesView: View {
 // MARK: - Fill Properties
 struct FillPropertiesView: View {
     @Binding var settings: FillSettings
+    @ObservedObject var colorManager: ColorManager
+    @ObservedObject var paletteManager: PaletteManager
 
     var body: some View {
         HStack(spacing: 8) {
@@ -288,6 +294,19 @@ struct FillPropertiesView: View {
                 .foregroundColor(Constants.Theme.textSecondary)
                 .tracking(0.3)
 
+            // Fill Type
+            PropertyRow(label: "Type") {
+                Picker("", selection: $settings.fillType) {
+                    Text("Solid").tag(FillType.solid)
+                    Text("Linear").tag(FillType.linear)
+                    Text("Radial").tag(FillType.radial)
+                }
+                .pickerStyle(.segmented)
+                .frame(width: 160)
+                .help("Solid: Single color\nLinear: Drag to set gradient direction\nRadial: Drag to set gradient radius")
+            }
+
+            // Tolerance
             PropertyRow(label: "Tolerance") {
                 HStack(spacing: 4) {
                     Slider(value: $settings.tolerance, in: 0...1, step: 0.01)
@@ -303,6 +322,15 @@ struct FillPropertiesView: View {
                         .background(Constants.Theme.sectionBackground)
                         .cornerRadius(2)
                 }
+                .help("Color similarity threshold: 0% = exact match only, 100% = fill all colors")
+            }
+
+            // Gradient hint
+            if settings.fillType != .solid {
+                Text(settings.fillType == .linear ? "Drag to set gradient direction" : "Drag from center to set radius")
+                    .font(.system(size: 10))
+                    .foregroundColor(Constants.Theme.textSecondary)
+                    .padding(.leading, 4)
             }
         }
     }
@@ -641,5 +669,281 @@ struct TextPropertiesView: View {
                 }
             }
         }
+    }
+}
+
+// MARK: - Gradient Stop Editor (Adobe Style)
+struct GradientStopEditor: View {
+    @Binding var stops: [GradientStop]
+    @ObservedObject var paletteManager: PaletteManager
+    @State private var selectedStopIndex: Int? = nil
+    @State private var draggingIndex: Int? = nil
+    @State private var showingPalettePicker = false
+
+    private let barHeight: CGFloat = 24
+    private let barWidth: CGFloat = 200
+    private let markerSize: CGFloat = 12
+
+    var body: some View {
+        VStack(spacing: 8) {
+            // 그래디언트 바 + 마커
+            ZStack(alignment: .topLeading) {
+                // 그래디언트 미리보기 바
+                GradientPreviewBar(stops: stops, paletteManager: paletteManager)
+                    .frame(width: barWidth, height: barHeight)
+                    .cornerRadius(4)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 4)
+                            .stroke(Constants.Theme.divider, lineWidth: 1)
+                    )
+                    .onTapGesture { location in
+                        addStopAt(location: location)
+                    }
+
+                // 마커들 (바 위에 배치)
+                ForEach(stops.indices, id: \.self) { index in
+                    GradientStopMarker(
+                        stop: $stops[index],
+                        isSelected: selectedStopIndex == index,
+                        color: paletteManager.currentPalette.getColor(at: stops[index].colorIndex) ?? .clear
+                    )
+                    .position(
+                        x: CGFloat(stops[index].position) * barWidth,
+                        y: -markerSize / 2
+                    )
+                    .gesture(
+                        DragGesture(minimumDistance: 0)
+                            .onChanged { value in
+                                handleDrag(index: index, value: value)
+                            }
+                            .onEnded { value in
+                                handleDragEnd(index: index, value: value)
+                            }
+                    )
+                    .onTapGesture {
+                        selectedStopIndex = index
+                        showingPalettePicker = true
+                    }
+                }
+            }
+            .frame(width: barWidth, height: barHeight + markerSize)
+            .padding(.top, markerSize)
+
+            // 힌트 텍스트
+            Text("Click marker: change color | Drag: move | Drag down: delete")
+                .font(.system(size: 9))
+                .foregroundColor(Constants.Theme.textSecondary)
+        }
+        .popover(isPresented: $showingPalettePicker) {
+            if let index = selectedStopIndex {
+                PalettePickerPopover(
+                    selectedIndex: Binding(
+                        get: { stops[index].colorIndex },
+                        set: { newIndex in
+                            stops[index] = GradientStop(position: stops[index].position, colorIndex: newIndex)
+                        }
+                    ),
+                    paletteManager: paletteManager
+                )
+            }
+        }
+    }
+
+    private func addStopAt(location: CGPoint) {
+        guard stops.count < 8 else { return }
+
+        let position = min(max(location.x / barWidth, 0.0), 1.0)
+        let colorIndex = UInt8(0)
+
+        stops.append(GradientStop(position: position, colorIndex: colorIndex))
+        stops.sort { $0.position < $1.position }
+    }
+
+    private func handleDrag(index: Int, value: DragGesture.Value) {
+        draggingIndex = index
+        selectedStopIndex = index
+
+        // 수평 위치 업데이트
+        let newX = value.location.x
+        let newPosition = min(max(newX / barWidth, 0.0), 1.0)
+
+        stops[index] = GradientStop(position: newPosition, colorIndex: stops[index].colorIndex)
+    }
+
+    private func handleDragEnd(index: Int, value: DragGesture.Value) {
+        draggingIndex = nil
+
+        // 아래로 드래그하면 삭제 (최소 2개 유지)
+        if value.location.y > barHeight + markerSize * 2 && stops.count > 2 {
+            stops.remove(at: index)
+            selectedStopIndex = nil
+        } else {
+            // 정렬
+            stops.sort { $0.position < $1.position }
+        }
+    }
+}
+
+// MARK: - Gradient Stop Marker
+struct GradientStopMarker: View {
+    @Binding var stop: GradientStop
+    let isSelected: Bool
+    let color: Color
+
+    var body: some View {
+        ZStack {
+            // 마커 모양 (삼각형)
+            MarkerTriangle()
+                .fill(isSelected ? Color.blue : Color.white)
+                .frame(width: 12, height: 12)
+                .overlay(
+                    MarkerTriangle()
+                        .stroke(Color.black, lineWidth: 1)
+                )
+
+            // 색상 프리뷰 (작은 원)
+            Circle()
+                .fill(color)
+                .frame(width: 6, height: 6)
+                .offset(y: -2)
+        }
+    }
+}
+
+// 마커용 삼각형 Shape
+struct MarkerTriangle: Shape {
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        path.move(to: CGPoint(x: rect.midX, y: rect.minY))
+        path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY))
+        path.addLine(to: CGPoint(x: rect.minX, y: rect.maxY))
+        path.closeSubpath()
+        return path
+    }
+}
+
+// MARK: - Color Swatch Button (팔레트에서 색상 선택)
+struct ColorSwatchButton: View {
+    @Binding var colorIndex: UInt8
+    @ObservedObject var paletteManager: PaletteManager
+    @State private var showingPalettePicker = false
+
+    var body: some View {
+        Button(action: {
+            showingPalettePicker.toggle()
+        }) {
+            RoundedRectangle(cornerRadius: 3)
+                .fill(paletteManager.currentPalette.getColor(at: colorIndex) ?? .clear)
+                .frame(width: 24, height: 24)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 3)
+                        .stroke(Constants.Theme.divider, lineWidth: 1)
+                )
+        }
+        .buttonStyle(.plain)
+        .popover(isPresented: $showingPalettePicker) {
+            PalettePickerPopover(selectedIndex: $colorIndex, paletteManager: paletteManager)
+        }
+    }
+}
+
+// MARK: - Palette Picker Popover
+struct PalettePickerPopover: View {
+    @Binding var selectedIndex: UInt8
+    @ObservedObject var paletteManager: PaletteManager
+
+    var body: some View {
+        VStack(spacing: 8) {
+            Text("Select Color")
+                .font(.system(size: 11, weight: .semibold))
+
+            LazyVGrid(columns: Array(repeating: GridItem(.fixed(24), spacing: 4), count: 8), spacing: 4) {
+                ForEach(0..<min(256, paletteManager.currentPalette.count), id: \.self) { index in
+                    Button(action: {
+                        selectedIndex = UInt8(index)
+                    }) {
+                        RoundedRectangle(cornerRadius: 3)
+                            .fill(paletteManager.currentPalette.getColor(at: UInt8(index)) ?? .clear)
+                            .frame(width: 24, height: 24)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 3)
+                                    .stroke(selectedIndex == index ? Color.blue : Constants.Theme.divider, lineWidth: selectedIndex == index ? 2 : 1)
+                            )
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+        .padding(8)
+        .frame(width: 220)
+    }
+}
+
+// MARK: - Gradient Preview Bar
+struct GradientPreviewBar: View {
+    let stops: [GradientStop]
+    @ObservedObject var paletteManager: PaletteManager
+
+    var body: some View {
+        Canvas { context, size in
+            for x in 0..<Int(size.width) {
+                let position = Double(x) / size.width
+                let color = interpolateColor(at: position)
+
+                let rect = CGRect(x: CGFloat(x), y: 0, width: 1, height: size.height)
+                context.fill(Path(rect), with: .color(color))
+            }
+        }
+        .overlay(
+            RoundedRectangle(cornerRadius: 3)
+                .stroke(Constants.Theme.divider, lineWidth: 1)
+        )
+    }
+
+    private func interpolateColor(at position: Double) -> Color {
+        // 정렬된 stops 가정
+        let sortedStops = stops.sorted { $0.position < $1.position }
+
+        // 범위 밖
+        if position <= sortedStops.first!.position {
+            return paletteManager.currentPalette.getColor(at: sortedStops.first!.colorIndex) ?? .clear
+        }
+        if position >= sortedStops.last!.position {
+            return paletteManager.currentPalette.getColor(at: sortedStops.last!.colorIndex) ?? .clear
+        }
+
+        // 두 정지점 사이 찾기
+        for i in 0..<(sortedStops.count - 1) {
+            let stop1 = sortedStops[i]
+            let stop2 = sortedStops[i + 1]
+
+            if position >= stop1.position && position <= stop2.position {
+                let range = stop2.position - stop1.position
+                let t = (position - stop1.position) / range
+
+                guard let color1 = paletteManager.currentPalette.getColor(at: stop1.colorIndex),
+                      let color2 = paletteManager.currentPalette.getColor(at: stop2.colorIndex) else {
+                    return .clear
+                }
+
+                return interpolateColors(color1, color2, t: t)
+            }
+        }
+
+        return .clear
+    }
+
+    private func interpolateColors(_ color1: Color, _ color2: Color, t: Double) -> Color {
+        guard let rgb1 = color1.rgbComponents(),
+              let rgb2 = color2.rgbComponents() else {
+            return .clear
+        }
+
+        let r = rgb1.r + (rgb2.r - rgb1.r) * t
+        let g = rgb1.g + (rgb2.g - rgb1.g) * t
+        let b = rgb1.b + (rgb2.b - rgb1.b) * t
+        let a = rgb1.a + (rgb2.a - rgb1.a) * t
+
+        return Color(red: r, green: g, blue: b, opacity: a)
     }
 }
