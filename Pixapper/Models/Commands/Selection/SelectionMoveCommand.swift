@@ -13,6 +13,7 @@ class SelectionMoveCommand: LayerPixelApplicable {
     weak var layerViewModel: LayerViewModel?
     weak var timelineViewModel: TimelineViewModel?
     let layerIndex: Int
+    let frameIndex: Int
 
     // 이동 전 상태
     private let oldRect: CGRect
@@ -39,6 +40,7 @@ class SelectionMoveCommand: LayerPixelApplicable {
         layerViewModel: LayerViewModel,
         timelineViewModel: TimelineViewModel?,
         layerIndex: Int,
+        frameIndex: Int,
         oldRect: CGRect,
         oldPixels: PixelGrid,
         oldOriginalRect: CGRect,
@@ -52,6 +54,7 @@ class SelectionMoveCommand: LayerPixelApplicable {
         self.layerViewModel = layerViewModel
         self.timelineViewModel = timelineViewModel
         self.layerIndex = layerIndex
+        self.frameIndex = frameIndex
         self.oldRect = oldRect
         self.oldPixels = oldPixels
         self.oldOriginalRect = oldOriginalRect

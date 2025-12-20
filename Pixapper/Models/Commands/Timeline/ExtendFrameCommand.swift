@@ -49,11 +49,12 @@ class ExtendFrameCommand: Command {
         let endIndex = span.start + span.length - 1
         spanEnd = endIndex
 
-        // spanEnd 이후의 모든 키프레임 백업 (Undo용)
+        // spanEnd 이후의 실제 키프레임만 백업 (Undo용)
         let allKeyframeIndices = layer.timeline.getAllKeyframeIndices()
         for keyframeIndex in allKeyframeIndices {
             if keyframeIndex > endIndex {
-                if let pixels = layer.timeline.getEffectivePixels(at: keyframeIndex) {
+                // getKeyframe 사용 (실제 키프레임만, getEffectivePixels는 이전 키프레임 반환 가능)
+                if let pixels = layer.timeline.getKeyframe(at: keyframeIndex) {
                     shiftedKeyframes[keyframeIndex] = pixels
                 }
             }
@@ -80,28 +81,23 @@ class ExtendFrameCommand: Command {
             return
         }
 
-        // 마지막 키프레임이었을 경우 span 축소
+        // execute의 역순으로 실행:
+
+        // 1. shift 되돌리기
         if shiftedKeyframes.isEmpty {
+            // 마지막 키프레임이었을 경우 span 축소
             timelineViewModel.layerViewModel.layers[layerIndex].timeline.shrinkSpanEnd(by: 1)
         } else {
             // 이동된 키프레임들을 -1로 다시 이동
+            // shiftKeyframes가 원래 위치로 이동시키므로 백업 복원 불필요
             timelineViewModel.layerViewModel.layers[layerIndex].timeline.shiftKeyframes(after: originalSpanEnd, by: -1)
-
-            // 백업된 키프레임 복원
-            for (originalIndex, pixels) in shiftedKeyframes {
-                timelineViewModel.layerViewModel.layers[layerIndex].timeline.setKeyframe(at: originalIndex, pixels: pixels)
-            }
         }
 
-        // totalFrames 복원
-        timelineViewModel.totalFrames = previousTotalFrames
-
-        // currentFrameIndex 복원
-        if previousCurrentFrameIndex < timelineViewModel.totalFrames {
-            timelineViewModel.currentFrameIndex = previousCurrentFrameIndex
-        }
-
+        // 2. 상태 복원
         timelineViewModel.updateTotalFrames()
-        timelineViewModel.loadFrame(at: timelineViewModel.currentFrameIndex)
+
+        // currentFrameIndex 범위 검증
+        let validIndex = min(previousCurrentFrameIndex, max(0, timelineViewModel.totalFrames - 1))
+        timelineViewModel.selectFrame(at: validIndex, clearSelection: false)
     }
 }

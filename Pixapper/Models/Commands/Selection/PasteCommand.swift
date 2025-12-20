@@ -14,6 +14,7 @@ class PasteCommand: LayerPixelApplicable {
     weak var layerViewModel: LayerViewModel?
     weak var timelineViewModel: TimelineViewModel?
     let layerIndex: Int
+    let frameIndex: Int
 
     // 이전 선택 상태 (undo 시 복원)
     private let previousSelectionRect: CGRect?
@@ -44,6 +45,7 @@ class PasteCommand: LayerPixelApplicable {
         layerViewModel: LayerViewModel,
         timelineViewModel: TimelineViewModel?,
         layerIndex: Int,
+        frameIndex: Int,
         previousSelectionRect: CGRect?,
         previousSelectionPixels: PixelGrid?,
         previousOriginalPixels: PixelGrid?,
@@ -57,6 +59,7 @@ class PasteCommand: LayerPixelApplicable {
         self.layerViewModel = layerViewModel
         self.timelineViewModel = timelineViewModel
         self.layerIndex = layerIndex
+        self.frameIndex = frameIndex
         self.previousSelectionRect = previousSelectionRect
         self.previousSelectionPixels = previousSelectionPixels
         self.previousOriginalPixels = previousOriginalPixels

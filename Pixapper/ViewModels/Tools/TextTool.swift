@@ -234,6 +234,7 @@ class TextTool: BaseTool, CanvasTool {
             let command = DrawCommand(
                 timelineViewModel: timelineVM,
                 layerId: layerId,
+                frameIndex: timelineVM.currentFrameIndex,
                 oldPixels: oldPixels,
                 newPixels: newPixels
             )

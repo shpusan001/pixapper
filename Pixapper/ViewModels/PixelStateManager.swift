@@ -91,12 +91,13 @@ class PixelStateManager: ObservableObject {
 
     // MARK: - Public API: 쓰기
 
-    /// 단일 픽셀 수정 (즉시 캐시 업데이트 + debounced timeline 동기화)
+    /// 단일 픽셀 수정 (즉시 캐시 업데이트 + 즉시 timeline 동기화)
     /// - Parameters:
     ///   - layerId: 레이어 ID
     ///   - x: X 좌표
     ///   - y: Y 좌표
     ///   - value: 픽셀 값 (.transparent = 투명)
+    @MainActor
     func setPixel(layerId: UUID, x: Int, y: Int, value: PixelValue) {
         guard var pixels = currentFramePixels[layerId],
               y >= 0, y < pixels.count,
@@ -114,14 +115,15 @@ class PixelStateManager: ObservableObject {
         // Dirty tracking
         dirtyLayers.insert(layerId)
 
-        // Timeline 동기화 스케줄 (debounced)
-        scheduleSyncToTimeline()
+        // Timeline 즉시 동기화 (debounce 제거 - 실시간 미리보기 및 Undo/Redo 일관성 보장)
+        syncToTimelineImmediate()
     }
 
     /// 대량 픽셀 변경 (Command용 - 배치 처리)
     /// - Parameters:
     ///   - layerId: 레이어 ID
     ///   - changes: 픽셀 변경 배열
+    @MainActor
     func applyPixelChanges(layerId: UUID, changes: [PixelChange]) {
         guard var pixels = currentFramePixels[layerId] else { return }
 

@@ -68,24 +68,19 @@ class AddKeyframeWithContentCommand: Command {
             return
         }
 
-        // 삽입된 키프레임 제거
+        // execute의 역순으로 실행:
+
+        // 1. 삽입된 키프레임 제거
         timelineViewModel.layerViewModel.layers[layerIndex].timeline.removeKeyframe(at: inserted)
 
-        // shift된 키프레임들을 다시 -1로 이동
+        // 2. shift 되돌리기 (shiftKeyframes가 원래 위치로 이동시키므로 백업 복원 불필요)
         timelineViewModel.layerViewModel.layers[layerIndex].timeline.shiftKeyframes(after: previousCurrentFrameIndex, by: -1)
 
-        // 백업된 키프레임 복원
-        for (originalIndex, pixels) in shiftedKeyframes {
-            timelineViewModel.layerViewModel.layers[layerIndex].timeline.setKeyframe(at: originalIndex, pixels: pixels)
-        }
-
-        // totalFrames 복원
-        timelineViewModel.totalFrames = previousTotalFrames
-
-        // currentFrameIndex 복원
-        timelineViewModel.currentFrameIndex = previousCurrentFrameIndex
-
+        // 3. 상태 복원
         timelineViewModel.updateTotalFrames()
-        timelineViewModel.loadFrame(at: previousCurrentFrameIndex)
+
+        // currentFrameIndex 범위 검증
+        let validIndex = min(previousCurrentFrameIndex, max(0, timelineViewModel.totalFrames - 1))
+        timelineViewModel.selectFrame(at: validIndex, clearSelection: false)
     }
 }

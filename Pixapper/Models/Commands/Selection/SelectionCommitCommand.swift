@@ -13,6 +13,7 @@ class SelectionCommitCommand: LayerPixelApplicable {
     weak var layerViewModel: LayerViewModel?
     weak var timelineViewModel: TimelineViewModel?
     let layerIndex: Int
+    let frameIndex: Int
 
     // 커밋 전 상태 (floating 선택 있음)
     private let oldRect: CGRect
@@ -34,6 +35,7 @@ class SelectionCommitCommand: LayerPixelApplicable {
         layerViewModel: LayerViewModel,
         timelineViewModel: TimelineViewModel?,
         layerIndex: Int,
+        frameIndex: Int,
         oldRect: CGRect,
         oldPixels: PixelGrid,
         oldOriginalRect: CGRect,
@@ -46,6 +48,7 @@ class SelectionCommitCommand: LayerPixelApplicable {
         self.layerViewModel = layerViewModel
         self.timelineViewModel = timelineViewModel
         self.layerIndex = layerIndex
+        self.frameIndex = frameIndex
         self.oldRect = oldRect
         self.oldPixels = oldPixels
         self.oldOriginalRect = oldOriginalRect

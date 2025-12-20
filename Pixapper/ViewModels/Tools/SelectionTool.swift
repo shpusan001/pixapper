@@ -302,6 +302,7 @@ class SelectionTool: BaseTool, CanvasTool {
                 layerViewModel: layerViewModel,
                 timelineViewModel: timelineViewModel,
                 layerIndex: currentLayerIndex,
+                frameIndex: timelineViewModel?.currentFrameIndex ?? 0,
                 wasFloating: false,
                 oldRect: nil,
                 oldPixels: nil,
@@ -423,6 +424,7 @@ class SelectionTool: BaseTool, CanvasTool {
                 layerViewModel: layerViewModel,
                 timelineViewModel: timelineViewModel,
                 layerIndex: currentLayerIndex,
+                frameIndex: timelineViewModel?.currentFrameIndex ?? 0,
                 oldRect: rect,
                 oldPixels: pixels,
                 oldOriginalRect: origRect,
@@ -906,6 +908,7 @@ class SelectionTool: BaseTool, CanvasTool {
             layerViewModel: layerViewModel,
             timelineViewModel: timelineViewModel,
             layerIndex: currentLayerIndex,
+            frameIndex: timelineViewModel?.currentFrameIndex ?? 0,
             previousSelectionRect: prevRect,
             previousSelectionPixels: prevPixels,
             previousOriginalPixels: prevOriginalPixels,
@@ -954,6 +957,7 @@ class SelectionTool: BaseTool, CanvasTool {
             let command = DrawCommand(
                 timelineViewModel: timelineViewModel,
                 layerId: layerId,
+                frameIndex: timelineViewModel?.currentFrameIndex ?? 0,
                 oldPixels: oldPixels,
                 newPixels: newPixels
             )

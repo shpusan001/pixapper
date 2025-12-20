@@ -62,15 +62,33 @@ class CommandManager: ObservableObject {
     /// 마지막 명령을 취소하고 이전 상태로 되돌립니다
     func undo() {
         guard let command = undoStack.popLast() else { return }
+
+        #if DEBUG
+        print("⏪ Undo: \(command.description)")
+        #endif
+
         command.undo()
         redoStack.append(command)
+
+        #if DEBUG
+        print("📚 Undo stack: \(undoStack.count), Redo stack: \(redoStack.count)")
+        #endif
     }
 
     /// 마지막으로 취소한 명령을 다시 실행합니다
     func redo() {
         guard let command = redoStack.popLast() else { return }
+
+        #if DEBUG
+        print("⏩ Redo: \(command.description)")
+        #endif
+
         command.execute()
         undoStack.append(command)
+
+        #if DEBUG
+        print("📚 Undo stack: \(undoStack.count), Redo stack: \(redoStack.count)")
+        #endif
     }
 
     /// 모든 히스토리를 초기화합니다

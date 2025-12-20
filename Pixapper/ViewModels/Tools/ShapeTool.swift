@@ -108,6 +108,7 @@ class ShapeTool: BaseTool, CanvasTool {
             let command = DrawCommand(
                 timelineViewModel: timelineViewModel,
                 layerId: layerId,
+                frameIndex: timelineVM.currentFrameIndex,
                 oldPixels: oldPixels,
                 newPixels: newPixels
             )

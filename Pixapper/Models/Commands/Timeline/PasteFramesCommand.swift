@@ -66,23 +66,22 @@ class PasteFramesCommand: Command {
             return
         }
 
-        // 붙여넣은 키프레임들 제거
+        // execute의 역순으로 실행:
+
+        // 1. 붙여넣은 키프레임들 제거 (execute의 setKeyframe 취소)
         for targetIndex in pastedKeyframes.keys {
             timelineViewModel.layerViewModel.layers[layerIndex].timeline.removeKeyframe(at: targetIndex)
         }
 
-        // shift된 키프레임들을 원래 위치로 복원
+        // 2. shift 되돌리기 (execute의 shiftKeyframes 취소)
+        // shiftKeyframes가 키프레임을 원래 위치로 이동시키므로 backup 복원 불필요
         timelineViewModel.layerViewModel.layers[layerIndex].timeline.shiftKeyframes(after: startIndex - 1, by: -pastedFrameCount)
 
-        // 백업된 키프레임 복원
-        for (originalIndex, pixels) in shiftedKeyframes {
-            timelineViewModel.layerViewModel.layers[layerIndex].timeline.setKeyframe(at: originalIndex, pixels: pixels)
-        }
+        // 3. 상태 복원
+        timelineViewModel.updateTotalFrames()  // totalFrames는 자동 계산됨
 
-        // 상태 복원
-        timelineViewModel.totalFrames = previousTotalFrames
-        timelineViewModel.currentFrameIndex = previousCurrentFrameIndex
-        timelineViewModel.updateTotalFrames()
-        timelineViewModel.loadFrame(at: previousCurrentFrameIndex)
+        // currentFrameIndex 범위 검증
+        let validIndex = min(previousCurrentFrameIndex, max(0, timelineViewModel.totalFrames - 1))
+        timelineViewModel.selectFrame(at: validIndex, clearSelection: false)
     }
 }

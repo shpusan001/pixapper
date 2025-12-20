@@ -75,10 +75,11 @@ class BaseTool {
         drawingState.reset()
     }
 
-    /// 스트로크 완료 - Command 생성 및 타임라인 동기화
+    /// 스트로크 완료 - Command 생성
     func finishStroke() {
         guard !drawingState.currentStrokePixels.isEmpty,
-              let layerId = currentLayerId else {
+              let layerId = currentLayerId,
+              let timeline = timelineViewModel else {
             drawingState.reset()
             return
         }
@@ -86,14 +87,14 @@ class BaseTool {
         let command = DrawCommand(
             timelineViewModel: timelineViewModel,
             layerId: layerId,
+            frameIndex: timeline.currentFrameIndex,
             oldPixels: drawingState.oldStrokePixels,
             newPixels: drawingState.currentStrokePixels
         )
         commandManager.addExecutedCommand(command)
         drawingState.reset()
 
-        // 타임라인에 즉시 동기화
-        timelineViewModel?.pixelStateManager?.syncToTimeline()
+        // syncToTimeline() 제거 - setPixel()에서 이미 즉시 동기화됨
     }
 }
 

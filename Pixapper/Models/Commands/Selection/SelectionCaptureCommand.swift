@@ -13,6 +13,7 @@ class SelectionCaptureCommand: LayerPixelApplicable {
     weak var layerViewModel: LayerViewModel?
     weak var timelineViewModel: TimelineViewModel?
     let layerIndex: Int
+    let frameIndex: Int
 
     // 선택 전 상태 (선택 없음)
     private let wasFloating: Bool
@@ -40,6 +41,7 @@ class SelectionCaptureCommand: LayerPixelApplicable {
         layerViewModel: LayerViewModel,
         timelineViewModel: TimelineViewModel?,
         layerIndex: Int,
+        frameIndex: Int,
         wasFloating: Bool,
         oldRect: CGRect?,
         oldPixels: PixelGrid?,
@@ -56,6 +58,7 @@ class SelectionCaptureCommand: LayerPixelApplicable {
         self.layerViewModel = layerViewModel
         self.timelineViewModel = timelineViewModel
         self.layerIndex = layerIndex
+        self.frameIndex = frameIndex
         self.wasFloating = wasFloating
         self.oldRect = oldRect
         self.oldPixels = oldPixels

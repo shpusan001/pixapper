@@ -45,17 +45,27 @@ class DeleteFrameCommand: Command {
     func undo() {
         guard let timelineViewModel = timelineViewModel else { return }
 
-        // totalFrames 복원
-        timelineViewModel.totalFrames = previousTotalFrames
+        // execute의 deleteFrame 로직을 역순으로 실행:
+        // deleteFrame에서 모든 레이어에 대해 shiftKeyframes(after: index, by: -1) 실행했으므로
+        // undo에서는 모든 레이어에 대해 shiftKeyframes(after: deletedIndex - 1, by: 1) 실행
 
-        // 백업된 키프레임 데이터 복원
+        for layerIndex in timelineViewModel.layerViewModel.layers.indices {
+            // 1. shift 취소 (deletedIndex 이후를 +1씩 뒤로 이동)
+            timelineViewModel.layerViewModel.layers[layerIndex].timeline.shiftKeyframes(after: deletedIndex - 1, by: 1)
+        }
+
+        // 2. 백업된 키프레임 데이터 복원
         for (layerId, pixels) in deletedKeyframeData {
             if let layerIndex = timelineViewModel.getLayerIndex(for: layerId) {
                 timelineViewModel.layerViewModel.layers[layerIndex].timeline.setKeyframe(at: deletedIndex, pixels: pixels)
             }
         }
 
-        // 이전 프레임 위치로 복원
-        timelineViewModel.selectFrame(at: previousFrameIndex)
+        // 3. totalFrames 업데이트 (자동 계산)
+        timelineViewModel.updateTotalFrames()
+
+        // 4. 이전 프레임 위치로 복원 (범위 검증 포함)
+        let validIndex = min(previousFrameIndex, max(0, timelineViewModel.totalFrames - 1))
+        timelineViewModel.selectFrame(at: validIndex, clearSelection: false)
     }
 }
