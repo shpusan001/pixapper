@@ -57,9 +57,11 @@ class ColorManager: ObservableObject {
 
     /// Primary와 Secondary 색상을 교체합니다 (단축키: X)
     func swapColors() {
-        let temp = primaryColor
-        primaryColor = secondaryColor
-        secondaryColor = temp
+        Task { @MainActor in
+            let temp = primaryColor
+            primaryColor = secondaryColor
+            secondaryColor = temp
+        }
     }
 
     /// 기본 색상으로 리셋 (Black/White)

@@ -22,13 +22,13 @@ struct ColorPanel: View {
             // Header
             HStack {
                 Text("COLOR")
-                    .font(.system(size: 9, weight: .bold))
-                    .foregroundColor(Constants.Theme.textSecondary)
+                    .font(.system(size: Constants.Layout.Header.fontSize, weight: .semibold))
+                    .foregroundColor(Constants.Theme.textPrimary)
                     .tracking(0.5)
                 Spacer()
             }
-            .padding(.horizontal, 8)
-            .padding(.vertical, 6)
+            .padding(.horizontal, 10)
+            .frame(height: Constants.Layout.Header.standardHeight)
             .background(Constants.Theme.sectionBackground)
 
             Rectangle()

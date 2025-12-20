@@ -310,7 +310,7 @@ struct ToolbarTextButton: View {
                 Text(text)
                     .font(.system(size: 11))
             }
-            .padding(.horizontal, 8)
+            .padding(.horizontal, Constants.Layout.Button.paddingHorizontal)
             .padding(.vertical, 5)
             .contentShape(Rectangle())
         }
@@ -318,7 +318,7 @@ struct ToolbarTextButton: View {
         .foregroundColor(isDisabled ? Constants.Theme.textDisabled : Constants.Theme.textPrimary)
         .disabled(isDisabled)
         .help(tooltip)
-        .hoverEffect()
+        .hoverEffect(cornerRadius: Constants.Layout.Button.cornerRadius)
     }
 }
 
@@ -332,14 +332,14 @@ struct ToolbarIconButton: View {
         Button(action: action) {
             Image(systemName: icon)
                 .font(.system(size: 12))
-                .frame(width: 26, height: 26)
+                .frame(width: Constants.Layout.Button.iconSize, height: Constants.Layout.Button.iconSize)
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .foregroundColor(isDisabled ? Constants.Theme.textDisabled : Constants.Theme.textSecondary)
         .disabled(isDisabled)
         .help(tooltip)
-        .hoverEffect()
+        .hoverEffect(cornerRadius: Constants.Layout.Button.cornerRadius)
     }
 }
 
@@ -364,18 +364,18 @@ struct ToolbarToggleButton: View {
         Button(action: action) {
             Image(systemName: icon)
                 .font(.system(size: 12))
-                .frame(width: 26, height: 26)
+                .frame(width: Constants.Layout.Button.iconSize, height: Constants.Layout.Button.iconSize)
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .foregroundColor(isOn ? Constants.Theme.accentBlue : Constants.Theme.textSecondary)
         .background(
-            RoundedRectangle(cornerRadius: 3)
+            RoundedRectangle(cornerRadius: Constants.Layout.Button.cornerRadius)
                 .fill(isOn ? Constants.Theme.accentBlue.opacity(0.15) : (isHovered ? Constants.Theme.hoverBackground : Color.clear))
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 3)
-                .strokeBorder(isOn ? Constants.Theme.accentBlue.opacity(0.3) : Color.clear, lineWidth: 1)
+            RoundedRectangle(cornerRadius: Constants.Layout.Button.cornerRadius)
+                .strokeBorder(isOn ? Constants.Theme.accentBlue.opacity(0.5) : Color.clear, lineWidth: 1)
         )
         .help(tooltip)
         .onHover { hovering in

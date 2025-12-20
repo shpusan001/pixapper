@@ -49,7 +49,7 @@ class PixelStateManager: ObservableObject {
 
     // MARK: - Initialization
 
-    init(canvasWidth: Int, canvasHeight: Int, layerViewModel: LayerViewModel, paletteManager: PaletteManager = PaletteManager()) {
+    init(canvasWidth: Int, canvasHeight: Int, layerViewModel: LayerViewModel, paletteManager: PaletteManager) {
         self.canvasWidth = canvasWidth
         self.canvasHeight = canvasHeight
         self.layerViewModel = layerViewModel
@@ -59,6 +59,10 @@ class PixelStateManager: ObservableObject {
         self.paletteCancellable = paletteManager.objectWillChange.sink { [weak self] _ in
             self?.objectWillChange.send()
         }
+    }
+
+    convenience init(canvasWidth: Int, canvasHeight: Int, layerViewModel: LayerViewModel) {
+        self.init(canvasWidth: canvasWidth, canvasHeight: canvasHeight, layerViewModel: layerViewModel, paletteManager: PaletteManager())
     }
 
     // MARK: - Public API: 읽기

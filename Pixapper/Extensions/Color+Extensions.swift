@@ -119,6 +119,35 @@ extension Color {
 
         return Color(red: r, green: g, blue: b)
     }
+
+    /// 색상의 상대 휘도 계산 (0.0 ~ 1.0)
+    /// - Returns: 휘도 값 (어두우면 0에 가깝고, 밝으면 1에 가까움)
+    /// - Note: W3C WCAG 2.0 권장 공식 사용
+    func luminance() -> Double {
+        guard let rgb = rgbComponents() else { return 0.5 }
+
+        // sRGB to linear RGB conversion
+        let linearize = { (component: Double) -> Double in
+            if component <= 0.03928 {
+                return component / 12.92
+            } else {
+                return pow((component + 0.055) / 1.055, 2.4)
+            }
+        }
+
+        let r = linearize(rgb.r)
+        let g = linearize(rgb.g)
+        let b = linearize(rgb.b)
+
+        // Relative luminance formula
+        return 0.2126 * r + 0.7152 * g + 0.0722 * b
+    }
+
+    /// 배경색에 대한 최적의 대비 색상 반환 (흰색 또는 검은색)
+    /// - Returns: 배경이 어두우면 흰색, 밝으면 검은색
+    func contrastColor() -> Color {
+        return luminance() > 0.5 ? .black : .white
+    }
 }
 
 extension Double {

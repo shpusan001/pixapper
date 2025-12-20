@@ -10,21 +10,22 @@ import SwiftUI
 /// 색상 팔레트 (최대 256색)
 /// Aseprite 스타일의 인덱스 기반 색상 관리
 struct ColorPalette: Codable, Identifiable, Hashable {
+    static let maxColors: Int = 256
+
     let id: UUID
     var name: String
     private(set) var colors: [SerializableColor]
-    let maxColors: Int = 256
 
     init(id: UUID = UUID(), name: String = "Unnamed Palette", colors: [Color] = []) {
         self.id = id
         self.name = name
-        self.colors = colors.prefix(maxColors).map { SerializableColor(from: $0) }
+        self.colors = colors.prefix(Self.maxColors).map { SerializableColor(from: $0) }
     }
 
     init(id: UUID = UUID(), name: String = "Unnamed Palette", serializableColors: [SerializableColor]) {
         self.id = id
         self.name = name
-        self.colors = Array(serializableColors.prefix(maxColors))
+        self.colors = Array(serializableColors.prefix(Self.maxColors))
     }
 
     // Hashable conformance
@@ -45,7 +46,7 @@ struct ColorPalette: Codable, Identifiable, Hashable {
             return UInt8(index)
         }
 
-        guard colors.count < maxColors else { return nil }
+        guard colors.count < Self.maxColors else { return nil }
         colors.append(SerializableColor(from: color))
         return UInt8(colors.count - 1)
     }

@@ -23,7 +23,7 @@ struct PaletteSelectorView: View {
             // Header
             HStack {
                 Text("Palettes")
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(.system(size: Constants.Layout.Header.fontSize, weight: .semibold))
                     .foregroundColor(Constants.Theme.textPrimary)
 
                 Spacer()
@@ -53,14 +53,16 @@ struct PaletteSelectorView: View {
                         exportPalette()
                     }
                 } label: {
-                    Image(systemName: "plus.circle")
-                        .font(.system(size: 12))
+                    Image(systemName: "plus.circle.fill")
+                        .font(.system(size: 13))
+                        .foregroundColor(Constants.Theme.textPrimary)
+                        .frame(width: 20, height: 20)
                 }
                 .menuStyle(.borderlessButton)
-                .frame(width: 20, height: 20)
+                .help("Palette Actions")
             }
             .padding(.horizontal, 10)
-            .padding(.vertical, 8)
+            .frame(height: Constants.Layout.Header.standardHeight)
             .background(Constants.Theme.sectionBackground)
 
             Divider()

@@ -254,8 +254,10 @@ class TextTool: BaseTool, CanvasTool {
 
     private func startCursorTimer() {
         cursorTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] _ in
-            Task { @MainActor in
-                self?.canvasViewModel?.textEditState?.cursorVisible.toggle()
+            guard let self = self else { return }
+            Task { @MainActor [weak self] in
+                guard let self = self else { return }
+                self.canvasViewModel?.textEditState?.cursorVisible.toggle()
             }
         }
     }
@@ -271,8 +273,10 @@ class TextTool: BaseTool, CanvasTool {
         settingsCancellable = toolSettingsManager.$textSettings
             .dropFirst()  // 초기값 무시
             .sink { [weak self] _ in
-                Task { @MainActor in
-                    self?.renderText()
+                guard let self = self else { return }
+                Task { @MainActor [weak self] in
+                    guard let self = self else { return }
+                    self.renderText()
                 }
             }
     }

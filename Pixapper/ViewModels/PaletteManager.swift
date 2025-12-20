@@ -10,6 +10,7 @@ import Combine
 
 /// 여러 팔레트를 관리하는 매니저
 /// Single Source of Truth for palettes
+@MainActor
 class PaletteManager: ObservableObject {
     @Published private(set) var palettes: [UUID: ColorPalette] = [:]
     @Published var currentPaletteId: UUID

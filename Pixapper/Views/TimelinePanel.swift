@@ -86,7 +86,7 @@ struct TimelinePanel: View {
                         )
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-                    .onChange(of: viewModel.currentFrameIndex) { newIndex in
+                    .onChange(of: viewModel.currentFrameIndex) { _, newIndex in
                         withAnimation(.easeOut(duration: 0.2)) {
                             scrollProxy.scrollTo("frame_\(newIndex)", anchor: .center)
                         }

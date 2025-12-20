@@ -16,8 +16,6 @@ struct TimelineButton: View {
     let tooltip: String
     let action: () -> Void
 
-    @State private var isHovered = false
-
     var body: some View {
         Button(action: action) {
             Image(systemName: icon)
@@ -27,14 +25,8 @@ struct TimelineButton: View {
         }
         .buttonStyle(.plain)
         .foregroundColor(Constants.Theme.textPrimary)
-        .background(
-            RoundedRectangle(cornerRadius: 2)
-                .fill(isHovered ? Constants.Theme.hoverBackground : Color.clear)
-        )
         .help(tooltip)
-        .onHover { hovering in
-            isHovered = hovering
-        }
+        .hoverEffect(cornerRadius: Constants.Layout.Button.cornerRadius)
     }
 }
 
@@ -49,25 +41,25 @@ struct TimelineToggleButton: View {
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 3) {
+            HStack(spacing: Constants.Layout.Button.iconSpacing) {
                 Image(systemName: icon)
-                    .font(.system(size: 10))
+                    .font(.system(size: 11))
                 Text(text)
-                    .font(.system(size: 9, weight: .medium))
+                    .font(.system(size: 11, weight: .medium))
             }
-            .padding(.horizontal, 8)
-            .padding(.vertical, 6)
-            .frame(minWidth: 44, minHeight: 28)
+            .padding(.horizontal, Constants.Layout.Button.paddingHorizontal)
+            .padding(.vertical, Constants.Layout.Button.paddingVertical)
+            .frame(minWidth: Constants.Layout.Button.minWidth, minHeight: Constants.Layout.Button.minHeight)
             .foregroundColor(isOn ? Constants.Theme.accentBlue : Constants.Theme.textSecondary)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .background(
-            RoundedRectangle(cornerRadius: 2)
+            RoundedRectangle(cornerRadius: Constants.Layout.Button.cornerRadius)
                 .fill(isOn ? Constants.Theme.accentBlue.opacity(0.15) : (isHovered ? Constants.Theme.hoverBackground : Constants.Theme.panelBackground))
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 2)
+            RoundedRectangle(cornerRadius: Constants.Layout.Button.cornerRadius)
                 .strokeBorder(isOn ? Constants.Theme.accentBlue.opacity(0.5) : Color.clear, lineWidth: 1)
         )
         .help(tooltip)
@@ -286,21 +278,21 @@ struct TimelineToolbarButton: View {
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 2) {
+            HStack(spacing: Constants.Layout.Button.iconSpacing) {
                 Image(systemName: icon)
-                    .font(.system(size: 10))
+                    .font(.system(size: 11))
                 Text(text)
-                    .font(.system(size: 9, weight: .medium))
+                    .font(.system(size: 11, weight: .medium))
             }
-            .padding(.horizontal, 8)
-            .padding(.vertical, 6)
-            .frame(minWidth: 44, minHeight: 28)
+            .padding(.horizontal, Constants.Layout.Button.paddingHorizontal)
+            .padding(.vertical, Constants.Layout.Button.paddingVertical)
+            .frame(minWidth: Constants.Layout.Button.minWidth, minHeight: Constants.Layout.Button.minHeight)
             .foregroundColor(disabled ? Constants.Theme.textDisabled : Constants.Theme.textPrimary)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .background(
-            RoundedRectangle(cornerRadius: 2)
+            RoundedRectangle(cornerRadius: Constants.Layout.Button.cornerRadius)
                 .fill(disabled ? Constants.Theme.panelBackground :
                       (isHovered ? Constants.Theme.hoverBackground : Constants.Theme.sectionBackground))
         )

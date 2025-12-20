@@ -31,7 +31,7 @@ struct PaletteView: View {
             // Header
             HStack {
                 Text("Palette: \(paletteManager.currentPalette.name)")
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(.system(size: Constants.Layout.Header.fontSize, weight: .semibold))
                     .foregroundColor(Constants.Theme.textPrimary)
 
                 Spacer()
@@ -45,16 +45,18 @@ struct PaletteView: View {
                     newColor = colorManager.primaryColor
                     showingAddColorPicker = true
                 }) {
-                    Image(systemName: "plus.circle")
-                        .font(.system(size: 12))
+                    Image(systemName: "plus.circle.fill")
+                        .font(.system(size: 13))
                         .foregroundColor(Constants.Theme.textPrimary)
+                        .frame(width: 20, height: 20)
                 }
                 .buttonStyle(.plain)
                 .help("Add Color to Palette")
+                .hoverEffect(cornerRadius: Constants.Layout.Button.cornerRadius)
                 .disabled(paletteManager.currentPalette.count >= 256)
             }
             .padding(.horizontal, 10)
-            .padding(.vertical, 8)
+            .frame(height: Constants.Layout.Header.standardHeight)
             .background(Constants.Theme.sectionBackground)
 
             Divider()
@@ -126,25 +128,14 @@ struct PaletteGridCell: View {
         )
         .overlay(
                 // Primary/Secondary indicators
-                VStack {
-                    HStack {
-                        if isPrimary {
-                            Circle()
-                                .fill(Color.white)
-                                .frame(width: 4, height: 4)
-                                .padding(2)
-                        }
-                        Spacer()
+                ZStack {
+                    if isPrimary {
+                        CornerTriangle(corner: .topLeft)
+                            .fill(color.contrastColor())
                     }
-                    Spacer()
                     if isSecondary {
-                        HStack {
-                            Spacer()
-                            Circle()
-                                .fill(Color.black)
-                                .frame(width: 4, height: 4)
-                                .padding(2)
-                        }
+                        CornerTriangle(corner: .bottomRight)
+                            .fill(color.contrastColor())
                     }
                 }
             )
@@ -206,5 +197,41 @@ struct ColorPickerSheet: View {
         }
         .padding()
         .frame(width: 300, height: 200)
+    }
+}
+
+// MARK: - Corner Triangle Shape
+
+/// 모서리 삼각형 (Primary/Secondary 표시용)
+struct CornerTriangle: Shape {
+    enum Corner {
+        case topLeft
+        case bottomRight
+    }
+
+    let corner: Corner
+
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+
+        let size: CGFloat = min(rect.width, rect.height) * 0.35 // 셀 크기의 35%
+
+        switch corner {
+        case .topLeft:
+            // 왼쪽 위 삼각형
+            path.move(to: CGPoint(x: rect.minX, y: rect.minY))
+            path.addLine(to: CGPoint(x: rect.minX + size, y: rect.minY))
+            path.addLine(to: CGPoint(x: rect.minX, y: rect.minY + size))
+            path.closeSubpath()
+
+        case .bottomRight:
+            // 오른쪽 아래 삼각형
+            path.move(to: CGPoint(x: rect.maxX, y: rect.maxY))
+            path.addLine(to: CGPoint(x: rect.maxX - size, y: rect.maxY))
+            path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY - size))
+            path.closeSubpath()
+        }
+
+        return path
     }
 }

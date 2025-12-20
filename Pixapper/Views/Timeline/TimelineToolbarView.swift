@@ -121,7 +121,7 @@ struct TimelineToolbarView: View {
         }
         .frame(height: Constants.Layout.Timeline.rowHeight)
         .padding(.horizontal, 10)
-        .background(Constants.Theme.sectionBackground)
+        .background(Constants.Theme.panelBackground)
     }
 
     // MARK: - Toolbar Helpers

@@ -107,10 +107,36 @@ enum Constants {
             static let layerColumnWidth: CGFloat = 180
             /// 프레임 셀 크기 (기본값)
             static let cellSize: CGFloat = 64
-            /// 타임라인 행 높이 (헤더, 툴바 모두 동일)
-            static let rowHeight: CGFloat = 32
+            /// 타임라인 행 높이 (헤더, 툴바 모두 동일) - 전역 헤더 높이와 통일
+            static let rowHeight: CGFloat = 42
             /// Playback 버튼 크기
             static let playbackButtonSize: CGFloat = 24
+        }
+
+        /// 전역 UI 높이 상수
+        enum Header {
+            /// 모든 헤더/메뉴바의 표준 높이 (Top Menu, Properties Panel, Timeline 등)
+            static let standardHeight: CGFloat = 42
+            /// 헤더 텍스트 폰트 크기
+            static let fontSize: CGFloat = 11
+            /// 섹션 헤더 폰트 크기 (작은 헤더)
+            static let sectionFontSize: CGFloat = 9
+        }
+
+        /// 버튼 스타일 상수
+        enum Button {
+            /// 버튼 모서리 둥글기
+            static let cornerRadius: CGFloat = 3
+            /// 아이콘 버튼 크기
+            static let iconSize: CGFloat = 26
+            /// 텍스트+아이콘 버튼 최소 크기
+            static let minWidth: CGFloat = 44
+            static let minHeight: CGFloat = 28
+            /// 버튼 padding
+            static let paddingHorizontal: CGFloat = 8
+            static let paddingVertical: CGFloat = 6
+            /// 아이콘 간격
+            static let iconSpacing: CGFloat = 3
         }
 
         /// Tool 패널 레이아웃

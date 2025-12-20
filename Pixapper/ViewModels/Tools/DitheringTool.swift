@@ -58,7 +58,7 @@ class DitheringTool: BaseTool, CanvasTool {
         let color1 = toolSettingsManager.colorManager.primaryColor
         let color2 = toolSettingsManager.colorManager.secondaryColor
         let brushSize = settings.brushSize
-        let density = settings.density
+        let _ = settings.density  // Reserved for future density-based dithering
 
         let radius = brushSize / 2
         for dy in -radius...radius {

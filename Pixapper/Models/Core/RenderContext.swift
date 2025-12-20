@@ -93,7 +93,7 @@ struct DefaultRenderContext: RenderContext {
         // TODO: Phase 4에서 구현
         // 각도를 고려한 선형 위치 계산
         let angle = gradient.angle ?? 0
-        let radians = angle * .pi / 180.0
+        let _ = angle * .pi / 180.0  // Will be used in Phase 4
 
         // 간단한 구현 (수평 그라디언트)
         // 실제로는 각도 회전 변환 필요
