@@ -143,27 +143,21 @@ struct FrameCellView: View {
         image.lockFocus()
         defer { image.unlockFocus() }
 
+        // RenderContext로 모든 픽셀 값 변환 (단일 진입점)
+        let renderContext = DefaultRenderContext(
+            palette: pixelStateManager.currentPalette,
+            gradients: pixelStateManager.gradientLibrary
+        )
+
         // 픽셀 렌더링
         for y in 0..<height {
             for x in 0..<width {
                 let pixelValue = pixels[y][x]
                 if pixelValue != .transparent {
-                    // Convert PixelValue to Color using default palette
-                    let color: Color
-                    switch pixelValue {
-                    case .transparent:
+                    // RenderContext로 통일된 렌더링
+                    let point = PixelPoint(x, y)
+                    guard let color = renderContext.resolve(pixelValue, at: point) else {
                         continue
-                    case .indexed(let colorIndex):
-                        color = pixelStateManager.currentPalette.getColor(at: colorIndex) ?? .clear
-                    case .gradient:
-                        color = .clear
-                    case .directColor(let rgba8):
-                        color = Color(
-                            red: Double(rgba8.r) / 255.0,
-                            green: Double(rgba8.g) / 255.0,
-                            blue: Double(rgba8.b) / 255.0,
-                            opacity: Double(rgba8.a) / 255.0
-                        )
                     }
 
                     NSColor(color).setFill()

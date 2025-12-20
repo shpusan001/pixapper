@@ -7,28 +7,33 @@
 
 import Foundation
 
-/// RGBA 색상 (8bit per channel)
-struct RGBA8: Codable, Hashable, Sendable {
-    let r: UInt8
-    let g: UInt8
-    let b: UInt8
-    let a: UInt8
+/// 팔레트 기반 그래디언트 픽셀 (동적 색상)
+struct PaletteGradientPixel: Codable, Hashable, Sendable {
+    let startIndex: UInt8  // 시작 팔레트 인덱스
+    let endIndex: UInt8    // 끝 팔레트 인덱스
+    let position: UInt16   // 보간 위치 (0~65535, 0.0~1.0을 65536단계로)
 
-    init(r: UInt8, g: UInt8, b: UInt8, a: UInt8 = 255) {
-        self.r = r
-        self.g = g
-        self.b = b
-        self.a = a
+    init(startIndex: UInt8, endIndex: UInt8, position: Double) {
+        self.startIndex = startIndex
+        self.endIndex = endIndex
+        // Double (0.0~1.0) → UInt16 (0~65535)
+        let scaled = position * 65535.0
+        let clamped = max(0.0, min(65535.0, scaled))
+        self.position = UInt16(clamped)
+    }
+
+    /// 보간 위치를 0.0~1.0 범위로 반환
+    var normalizedPosition: Double {
+        return Double(position) / 65535.0
     }
 }
 
 /// 픽셀 값 - 모든 가능한 픽셀 타입을 표현
 /// 확장 가능한 설계: 새로운 픽셀 타입 추가가 쉬움
 enum PixelValue: Codable, Hashable, Sendable {
-    case transparent                    // 투명 픽셀
-    case indexed(UInt8)                 // 팔레트 인덱스 (0-255)
-    case gradient(UUID)                 // 그라디언트 참조 (곧 삭제 예정)
-    case directColor(RGBA8)             // 직접 색상 (그래디언트용)
+    case transparent                         // 투명 픽셀
+    case indexed(UInt8)                      // 팔레트 인덱스 (0-255)
+    case paletteGradient(PaletteGradientPixel)  // 팔레트 기반 동적 그래디언트
 
     // 향후 확장 가능:
     // case pattern(UUID)               // 패턴 참조
@@ -50,12 +55,6 @@ extension PixelValue {
     /// 팔레트 인덱스 추출 (있으면)
     var paletteIndex: UInt8? {
         if case .indexed(let index) = self { return index }
-        return nil
-    }
-
-    /// 그라디언트 ID 추출 (있으면)
-    var gradientId: UUID? {
-        if case .gradient(let id) = self { return id }
         return nil
     }
 }
@@ -83,15 +82,13 @@ extension PixelValue {
     enum CodingKeys: String, CodingKey {
         case type
         case index
-        case gradientId
-        case color
+        case paletteGradient
     }
 
     enum ValueType: String, Codable {
         case transparent
         case indexed
-        case gradient
-        case directColor
+        case paletteGradient
     }
 
     init(from decoder: Decoder) throws {
@@ -106,13 +103,9 @@ extension PixelValue {
             let index = try container.decode(UInt8.self, forKey: .index)
             self = .indexed(index)
 
-        case .gradient:
-            let id = try container.decode(UUID.self, forKey: .gradientId)
-            self = .gradient(id)
-
-        case .directColor:
-            let color = try container.decode(RGBA8.self, forKey: .color)
-            self = .directColor(color)
+        case .paletteGradient:
+            let gradPixel = try container.decode(PaletteGradientPixel.self, forKey: .paletteGradient)
+            self = .paletteGradient(gradPixel)
         }
     }
 
@@ -127,13 +120,9 @@ extension PixelValue {
             try container.encode(ValueType.indexed, forKey: .type)
             try container.encode(index, forKey: .index)
 
-        case .gradient(let id):
-            try container.encode(ValueType.gradient, forKey: .type)
-            try container.encode(id, forKey: .gradientId)
-
-        case .directColor(let color):
-            try container.encode(ValueType.directColor, forKey: .type)
-            try container.encode(color, forKey: .color)
+        case .paletteGradient(let gradPixel):
+            try container.encode(ValueType.paletteGradient, forKey: .type)
+            try container.encode(gradPixel, forKey: .paletteGradient)
         }
     }
 }

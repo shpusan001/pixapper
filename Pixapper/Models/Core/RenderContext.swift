@@ -27,9 +27,13 @@ protocol RenderContext {
 }
 
 /// 기본 렌더링 컨텍스트 구현
-struct DefaultRenderContext: RenderContext {
+class DefaultRenderContext: RenderContext {
     let palette: ColorPalette
     let gradients: GradientLibrary
+
+    // 색상 캐시: (startIndex, endIndex, position) → Color
+    private var colorCache: [String: Color] = [:]
+    private let maxCacheSize = 2000
 
     init(palette: ColorPalette, gradients: GradientLibrary = GradientLibrary()) {
         self.palette = palette
@@ -44,18 +48,37 @@ struct DefaultRenderContext: RenderContext {
         case .indexed(let index):
             return palette[index]
 
-        case .gradient:
-            // 좌표 없이는 그라디언트 렌더링 불가
-            // 첫 번째 정지점 색상 반환 (fallback)
-            return nil
+        case .paletteGradient(let grad):
+            // 캐시 확인
+            let cacheKey = "\(grad.startIndex),\(grad.endIndex),\(grad.position)"
+            if let cachedColor = colorCache[cacheKey] {
+                return cachedColor
+            }
 
-        case .directColor(let rgba8):
-            return Color(
-                red: Double(rgba8.r) / 255.0,
-                green: Double(rgba8.g) / 255.0,
-                blue: Double(rgba8.b) / 255.0,
-                opacity: Double(rgba8.a) / 255.0
-            )
+            // 팔레트 기반 그래디언트 색상 계산
+            guard let color1 = palette.getColor(at: grad.startIndex),
+                  let color2 = palette.getColor(at: grad.endIndex) else {
+                #if DEBUG
+                print("⚠️ RenderContext: Palette gradient color not found - startIndex: \(grad.startIndex), endIndex: \(grad.endIndex)")
+                #endif
+                return nil
+            }
+            let color = Color.lerp(color1, color2, t: grad.normalizedPosition)
+
+            // 캐시 저장 (메모리 제한 체크)
+            if colorCache.count < maxCacheSize {
+                colorCache[cacheKey] = color
+            } else if colorCache.count >= maxCacheSize {
+                // 캐시가 가득 차면 절반 제거 (간단한 메모리 관리)
+                let removeCount = maxCacheSize / 2
+                let keysToRemove = Array(colorCache.keys.prefix(removeCount))
+                for key in keysToRemove {
+                    colorCache.removeValue(forKey: key)
+                }
+                colorCache[cacheKey] = color
+            }
+
+            return color
         }
     }
 
@@ -67,17 +90,37 @@ struct DefaultRenderContext: RenderContext {
         case .indexed(let index):
             return palette[index]
 
-        case .gradient(let id):
-            guard let gradient = gradients[id] else { return nil }
-            return interpolateGradient(gradient, at: point)
+        case .paletteGradient(let grad):
+            // 캐시 확인 (좌표와 무관하므로 resolve()와 동일)
+            let cacheKey = "\(grad.startIndex),\(grad.endIndex),\(grad.position)"
+            if let cachedColor = colorCache[cacheKey] {
+                return cachedColor
+            }
 
-        case .directColor(let rgba8):
-            return Color(
-                red: Double(rgba8.r) / 255.0,
-                green: Double(rgba8.g) / 255.0,
-                blue: Double(rgba8.b) / 255.0,
-                opacity: Double(rgba8.a) / 255.0
-            )
+            // 팔레트 기반 그래디언트 색상 계산
+            guard let color1 = palette.getColor(at: grad.startIndex),
+                  let color2 = palette.getColor(at: grad.endIndex) else {
+                #if DEBUG
+                print("⚠️ RenderContext: Palette gradient color not found - startIndex: \(grad.startIndex), endIndex: \(grad.endIndex)")
+                #endif
+                return nil
+            }
+            let color = Color.lerp(color1, color2, t: grad.normalizedPosition)
+
+            // 캐시 저장 (메모리 제한 체크)
+            if colorCache.count < maxCacheSize {
+                colorCache[cacheKey] = color
+            } else if colorCache.count >= maxCacheSize {
+                // 캐시가 가득 차면 절반 제거 (간단한 메모리 관리)
+                let removeCount = maxCacheSize / 2
+                let keysToRemove = Array(colorCache.keys.prefix(removeCount))
+                for key in keysToRemove {
+                    colorCache.removeValue(forKey: key)
+                }
+                colorCache[cacheKey] = color
+            }
+
+            return color
         }
     }
 

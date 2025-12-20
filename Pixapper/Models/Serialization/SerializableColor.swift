@@ -98,30 +98,20 @@ extension Array where Element == [PixelValue] {
     /// PixelGrid → [[SerializableColor?]] (저장용)
     /// - Parameter palette: 인덱스를 색상으로 변환할 팔레트 (기본값: 기본 팔레트)
     func toSerializable(palette: ColorPalette = ColorPalette.default) -> [[SerializableColor?]] {
-        self.map { row in
-            row.map { pixelValue -> SerializableColor? in
-                switch pixelValue {
-                case .transparent:
+        // RenderContext로 모든 픽셀 값 변환 (단일 진입점)
+        let renderContext = DefaultRenderContext(
+            palette: palette,
+            gradients: GradientLibrary()
+        )
+
+        return self.enumerated().map { y, row in
+            row.enumerated().map { x, pixelValue -> SerializableColor? in
+                // RenderContext로 통일된 렌더링
+                let point = PixelPoint(x, y)
+                guard let color = renderContext.resolve(pixelValue, at: point) else {
                     return nil
-                case .indexed(let colorIndex):
-                    // 팔레트에서 색상 가져오기
-                    if let color = palette.getColor(at: colorIndex) {
-                        return SerializableColor(from: color)
-                    }
-                    return nil
-                case .gradient:
-                    // 그라디언트는 아직 미구현, 투명으로 처리
-                    return nil
-                case .directColor(let rgba8):
-                    // RGB 직접 저장된 색상을 SerializableColor로 변환
-                    let color = Color(
-                        red: Double(rgba8.r) / 255.0,
-                        green: Double(rgba8.g) / 255.0,
-                        blue: Double(rgba8.b) / 255.0,
-                        opacity: Double(rgba8.a) / 255.0
-                    )
-                    return SerializableColor(from: color)
                 }
+                return SerializableColor(from: color)
             }
         }
     }

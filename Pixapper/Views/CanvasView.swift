@@ -722,32 +722,20 @@ struct PixelGridView: View {
             // Single Source of Truth: PixelStateManager에서 픽셀 직접 조회 (Reactive)
             let pixels = pixelStateManager.currentFramePixels[layer.id] ?? []
 
+            // RenderContext로 모든 픽셀 값 변환 (단일 진입점)
+            let renderContext = DefaultRenderContext(
+                palette: pixelStateManager.currentPalette,
+                gradients: pixelStateManager.gradientLibrary
+            )
+
             for y in 0..<pixels.count {
                 for x in 0..<pixels[y].count {
                     let pixelValue = pixels[y][x]
                     if pixelValue != .transparent {
-                        // Convert PixelValue to Color
-                        let color: Color
-                        switch pixelValue {
-                        case .transparent:
+                        // RenderContext로 통일된 렌더링
+                        let point = PixelPoint(x, y)
+                        guard let color = renderContext.resolve(pixelValue, at: point) else {
                             continue
-                        case .indexed(let colorIndex):
-                            color = pixelStateManager.currentPalette.getColor(at: colorIndex) ?? .clear
-                        case .gradient:
-                            // RenderContext로 그래디언트 렌더링
-                            let renderContext = DefaultRenderContext(
-                                palette: pixelStateManager.currentPalette,
-                                gradients: pixelStateManager.gradientLibrary
-                            )
-                            let point = PixelPoint(x, y)
-                            color = renderContext.resolve(pixelValue, at: point) ?? .clear
-                        case .directColor(let rgba8):
-                            color = Color(
-                                red: Double(rgba8.r) / 255.0,
-                                green: Double(rgba8.g) / 255.0,
-                                blue: Double(rgba8.b) / 255.0,
-                                opacity: Double(rgba8.a) / 255.0
-                            )
                         }
 
                         let rect = CGRect(
@@ -994,26 +982,20 @@ struct OnionSkinLayerView: View {
 
     var body: some View {
         Canvas { context, size in
+            // RenderContext로 모든 픽셀 값 변환 (단일 진입점)
+            let renderContext = DefaultRenderContext(
+                palette: palette,
+                gradients: GradientLibrary()
+            )
+
             for y in 0..<layer.pixels.count {
                 for x in 0..<layer.pixels[y].count {
                     let pixelValue = layer.pixels[y][x]
                     if pixelValue != .transparent {
-                        // Convert PixelValue to Color
-                        let color: Color
-                        switch pixelValue {
-                        case .transparent:
+                        // RenderContext로 통일된 렌더링
+                        let point = PixelPoint(x, y)
+                        guard let color = renderContext.resolve(pixelValue, at: point) else {
                             continue
-                        case .indexed(let colorIndex):
-                            color = palette.getColor(at: colorIndex) ?? .clear
-                        case .gradient:
-                            color = .clear
-                        case .directColor(let rgba8):
-                            color = Color(
-                                red: Double(rgba8.r) / 255.0,
-                                green: Double(rgba8.g) / 255.0,
-                                blue: Double(rgba8.b) / 255.0,
-                                opacity: Double(rgba8.a) / 255.0
-                            )
                         }
 
                         let rect = CGRect(
@@ -1137,28 +1119,22 @@ struct SelectionRectView: View {
         // 항상 마스크 기반으로 렌더링 (Rectangle도 마스크 사용)
         guard let mask = freeformMask else { return }
 
+        // RenderContext로 모든 픽셀 값 변환 (단일 진입점)
+        let renderContext = DefaultRenderContext(
+            palette: palette,
+            gradients: GradientLibrary()
+        )
+
         for y in 0..<pixels.count {
             for x in 0..<pixels[y].count {
                 guard y < mask.count && x < mask[y].count && mask[y][x] else { continue }
 
                 let pixelValue = pixels[y][x]
                 if pixelValue != .transparent {
-                    // Convert PixelValue to Color
-                    let color: Color
-                    switch pixelValue {
-                    case .transparent:
+                    // RenderContext로 통일된 렌더링
+                    let point = PixelPoint(x, y)
+                    guard let color = renderContext.resolve(pixelValue, at: point) else {
                         continue
-                    case .indexed(let colorIndex):
-                        color = palette.getColor(at: colorIndex) ?? .clear
-                    case .gradient:
-                        color = .clear
-                    case .directColor(let rgba8):
-                        color = Color(
-                            red: Double(rgba8.r) / 255.0,
-                            green: Double(rgba8.g) / 255.0,
-                            blue: Double(rgba8.b) / 255.0,
-                            opacity: Double(rgba8.a) / 255.0
-                        )
                     }
 
                     let pixelRect = CGRect(

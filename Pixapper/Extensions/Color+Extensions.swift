@@ -148,6 +148,28 @@ extension Color {
     func contrastColor() -> Color {
         return luminance() > 0.5 ? .black : .white
     }
+
+    /// 두 색상 사이 선형 보간 (Linear Interpolation)
+    /// - Parameters:
+    ///   - color1: 시작 색상 (t=0.0)
+    ///   - color2: 끝 색상 (t=1.0)
+    ///   - t: 보간 비율 (0.0 ~ 1.0)
+    /// - Returns: 보간된 색상
+    static func lerp(_ color1: Color, _ color2: Color, t: Double) -> Color {
+        let t = min(max(t, 0.0), 1.0)
+
+        guard let rgb1 = color1.rgbComponents(),
+              let rgb2 = color2.rgbComponents() else {
+            return color1
+        }
+
+        let r = rgb1.r + (rgb2.r - rgb1.r) * t
+        let g = rgb1.g + (rgb2.g - rgb1.g) * t
+        let b = rgb1.b + (rgb2.b - rgb1.b) * t
+        let a = rgb1.a + (rgb2.a - rgb1.a) * t
+
+        return Color(red: r, green: g, blue: b, opacity: a)
+    }
 }
 
 extension Double {

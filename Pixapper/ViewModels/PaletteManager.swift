@@ -181,6 +181,37 @@ class PaletteManager: ObservableObject {
         return "\(r),\(g),\(b),\(a)"
     }
 
+    /// 정확히 일치하는 색상 찾기
+    /// - Parameter color: 찾을 색상
+    /// - Returns: 일치하는 색상의 인덱스 (없으면 nil)
+    func findExactColorIndex(_ color: Color) -> UInt8? {
+        // 캐시 확인
+        if let cacheKey = colorToCacheKey(color),
+           let cachedIndex = colorIndexCache[cacheKey] {
+            // 캐시된 색상이 정확히 일치하는지 재확인
+            if let paletteColor = currentPalette.getColor(at: cachedIndex),
+               paletteColor.isEqual(to: color, tolerance: 0.001) {
+                return cachedIndex
+            }
+        }
+
+        // 팔레트에서 정확히 일치하는 색상 찾기
+        let count = min(256, currentPalette.colorArray.count)
+        for i in 0..<count {
+            let index = UInt8(i)
+            if let paletteColor = currentPalette.getColor(at: index),
+               paletteColor.isEqual(to: color, tolerance: 0.001) {
+                // 캐시에 저장
+                if let cacheKey = colorToCacheKey(color) {
+                    colorIndexCache[cacheKey] = index
+                }
+                return index
+            }
+        }
+
+        return nil
+    }
+
     /// 가장 가까운 색상 찾기 (캐싱 포함)
     /// - Parameter color: 찾을 색상
     /// - Returns: 가장 가까운 색상의 인덱스
