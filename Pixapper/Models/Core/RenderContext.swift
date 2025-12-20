@@ -90,28 +90,81 @@ struct DefaultRenderContext: RenderContext {
 
     /// 선형 그라디언트 위치 계산
     private func calculateLinearPosition(_ gradient: GradientDefinition, at point: PixelPoint) -> Double {
-        // TODO: Phase 4에서 구현
-        // 각도를 고려한 선형 위치 계산
-        let angle = gradient.angle ?? 0
-        let _ = angle * .pi / 180.0  // Will be used in Phase 4
+        // NOTE: 캔버스 크기를 모르므로 256x256 가정 (표준 픽셀 아트 크기)
+        // TODO: RenderContext에 bounds 추가 시 정확한 계산으로 교체
+        let canvasSize = 256.0
 
-        // 간단한 구현 (수평 그라디언트)
-        // 실제로는 각도 회전 변환 필요
-        return 0.5
+        let angle = gradient.angle ?? 0
+        let angleRad = angle * .pi / 180.0
+
+        // 정규화된 좌표 (0.0 ~ 1.0)
+        let normalizedX = Double(point.x) / canvasSize
+        let normalizedY = Double(point.y) / canvasSize
+
+        // 중심점 기준 좌표 (-0.5 ~ 0.5)
+        let cx = normalizedX - 0.5
+        let cy = normalizedY - 0.5
+
+        // 각도 방향으로 투영 (벡터 내적)
+        // angle=0은 오른쪽, angle=90은 아래
+        let directionX = cos(angleRad)
+        let directionY = sin(angleRad)
+        let projection = cx * directionX + cy * directionY
+
+        // -0.5 ~ 0.5 범위를 0.0 ~ 1.0으로 변환
+        return min(max(projection + 0.5, 0.0), 1.0)
     }
 
     /// 방사형 그라디언트 위치 계산
     private func calculateRadialPosition(_ gradient: GradientDefinition, at point: PixelPoint) -> Double {
-        // TODO: Phase 4에서 구현
+        // NOTE: 캔버스 크기를 모르므로 256x256 가정
+        // TODO: RenderContext에 bounds 추가 시 정확한 계산으로 교체
+        let canvasSize = 256.0
+
+        let centerX = gradient.centerX ?? 0.5
+        let centerY = gradient.centerY ?? 0.5
+        let radius = gradient.radius ?? 0.5
+
+        // 정규화된 좌표 (0.0 ~ 1.0)
+        let normalizedX = Double(point.x) / canvasSize
+        let normalizedY = Double(point.y) / canvasSize
+
         // 중심점으로부터의 거리 계산
-        return 0.5
+        let dx = normalizedX - centerX
+        let dy = normalizedY - centerY
+        let distance = sqrt(dx * dx + dy * dy)
+
+        // radius로 정규화 (0.0 ~ 1.0)
+        let normalizedDistance = distance / radius
+
+        return min(max(normalizedDistance, 0.0), 1.0)
     }
 
     /// 각도 그라디언트 위치 계산
     private func calculateAngularPosition(_ gradient: GradientDefinition, at point: PixelPoint) -> Double {
-        // TODO: Phase 4에서 구현
-        // 중심점 기준 각도 계산
-        return 0.5
+        // NOTE: 캔버스 크기를 모르므로 256x256 가정
+        // TODO: RenderContext에 bounds 추가 시 정확한 계산으로 교체
+        let canvasSize = 256.0
+
+        let centerX = gradient.centerX ?? 0.5
+        let centerY = gradient.centerY ?? 0.5
+
+        // 정규화된 좌표 (0.0 ~ 1.0)
+        let normalizedX = Double(point.x) / canvasSize
+        let normalizedY = Double(point.y) / canvasSize
+
+        // 중심점으로부터의 벡터
+        let dx = normalizedX - centerX
+        let dy = normalizedY - centerY
+
+        // 각도 계산 (atan2는 -π ~ π 반환)
+        let angle = atan2(dy, dx)
+
+        // 0 ~ 2π로 변환
+        let normalizedAngle = angle < 0 ? angle + 2 * .pi : angle
+
+        // 0.0 ~ 1.0으로 정규화
+        return normalizedAngle / (2 * .pi)
     }
 
     /// 색상 보간 (정지점 사이)

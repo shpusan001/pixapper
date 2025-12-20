@@ -15,6 +15,10 @@ class PaletteManager: ObservableObject {
     @Published private(set) var palettes: [UUID: ColorPalette] = [:]
     @Published var currentPaletteId: UUID
 
+    /// 색상 -> 인덱스 캐시 (성능 최적화)
+    /// Key: "r,g,b,a" 형식의 문자열
+    private var colorIndexCache: [String: UInt8] = [:]
+
     /// 현재 선택된 팔레트
     var currentPalette: ColorPalette {
         get {
@@ -22,6 +26,8 @@ class PaletteManager: ObservableObject {
         }
         set {
             palettes[currentPaletteId] = newValue
+            // 팔레트 변경 시 캐시 무효화
+            invalidateCache()
         }
     }
 
@@ -99,6 +105,8 @@ class PaletteManager: ObservableObject {
     func switchPalette(to paletteId: UUID) {
         guard palettes[paletteId] != nil else { return }
         currentPaletteId = paletteId
+        // 팔레트 전환 시 캐시 무효화
+        invalidateCache()
     }
 
     /// 팔레트 이름 변경
@@ -123,6 +131,9 @@ class PaletteManager: ObservableObject {
         palette.update(at: index, to: newColor)
         palettes[currentPaletteId] = palette
 
+        // 캐시 무효화
+        invalidateCache()
+
         // 명시적으로 변경 알림 (즉시 UI 업데이트)
         objectWillChange.send()
     }
@@ -134,6 +145,9 @@ class PaletteManager: ObservableObject {
         var palette = currentPalette
         let index = palette.add(color)
         palettes[currentPaletteId] = palette
+
+        // 캐시 무효화
+        invalidateCache()
 
         // 명시적으로 변경 알림
         objectWillChange.send()
@@ -147,8 +161,52 @@ class PaletteManager: ObservableObject {
         palette.remove(at: index)
         palettes[currentPaletteId] = palette
 
+        // 캐시 무효화
+        invalidateCache()
+
         // 명시적으로 변경 알림
         objectWillChange.send()
+    }
+
+    // MARK: - Color Lookup with Caching
+
+    /// 색상을 캐시 키로 변환
+    private func colorToCacheKey(_ color: Color) -> String? {
+        guard let rgb = color.rgbComponents() else { return nil }
+        // 정밀도를 0.001로 반올림하여 비슷한 색상은 같은 키 사용
+        let r = round(rgb.r * 1000) / 1000
+        let g = round(rgb.g * 1000) / 1000
+        let b = round(rgb.b * 1000) / 1000
+        let a = round(rgb.a * 1000) / 1000
+        return "\(r),\(g),\(b),\(a)"
+    }
+
+    /// 가장 가까운 색상 찾기 (캐싱 포함)
+    /// - Parameter color: 찾을 색상
+    /// - Returns: 가장 가까운 색상의 인덱스
+    func findClosestColorIndex(_ color: Color) -> UInt8? {
+        // 캐시 확인
+        if let cacheKey = colorToCacheKey(color),
+           let cachedIndex = colorIndexCache[cacheKey] {
+            return cachedIndex
+        }
+
+        // 캐시 미스: ColorPalette의 findClosest 호출
+        guard let index = currentPalette.findClosest(color) else {
+            return nil
+        }
+
+        // 캐시에 저장
+        if let cacheKey = colorToCacheKey(color) {
+            colorIndexCache[cacheKey] = index
+        }
+
+        return index
+    }
+
+    /// 캐시 무효화
+    private func invalidateCache() {
+        colorIndexCache.removeAll()
     }
 
     // MARK: - Preset Management
