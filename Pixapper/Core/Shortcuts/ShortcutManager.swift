@@ -65,24 +65,27 @@ struct ShortcutManager {
 
     // MARK: - Key Mapping
 
-    /// KeyPress를 Shortcut으로 매핑
+    /// KeyPress를 Shortcut으로 매핑 (한글 키보드 지원)
     private static func mapKeyPressToShortcut(_ keyPress: KeyPress) -> Shortcut? {
         let hasCommand = keyPress.modifiers.contains(.command)
         let hasShift = keyPress.modifiers.contains(.shift)
-        let char = keyPress.characters.lowercased()
+        let key = keyPress.key
+
+        // characters를 영어 키로 정규화 (한글 키보드 지원)
+        let char = normalizeKeyCharacter(keyPress.characters).lowercased()
 
         // Special keys
-        if keyPress.key == .escape {
+        if key == .escape {
             return .deselect
         }
         // Delete/Backspace: \u{7F} (백스페이스) 또는 deleteForward key
-        if keyPress.characters == "\u{7F}" || keyPress.key == .delete || keyPress.key == .deleteForward {
+        if keyPress.characters == "\u{7F}" || key == .delete || key == .deleteForward {
             return .delete
         }
-        if keyPress.key == .return {
+        if key == .return {
             return .commitSelection
         }
-        if keyPress.key == .space && !hasCommand {
+        if key == .space && !hasCommand {
             return .playPause
         }
 
@@ -132,6 +135,48 @@ struct ShortcutManager {
         }
 
         return nil
+    }
+
+    /// 한글 입력을 영어 키로 변환 (QWERTY 한글 자판 기준)
+    private static func normalizeKeyCharacter(_ input: String) -> String {
+        // 한글 → 영어 매핑 테이블 (쿼티 자판 기준)
+        let koreanToEnglishMap: [String: String] = [
+            // 자음
+            "ㅂ": "q", "ㅃ": "Q",
+            "ㅈ": "w", "ㅉ": "W",
+            "ㄷ": "e", "ㄸ": "E",
+            "ㄱ": "r", "ㄲ": "R",
+            "ㅅ": "t", "ㅆ": "T",
+            "ㅛ": "y", "ㅕ": "u",
+            "ㅑ": "i", "ㅐ": "o",
+            "ㅔ": "p",
+
+            "ㅁ": "a",
+            "ㄴ": "s",
+            "ㅇ": "d",
+            "ㄹ": "f",
+            "ㅎ": "g",
+            "ㅗ": "h",
+            "ㅓ": "j",
+            "ㅏ": "k",
+            "ㅣ": "l",
+
+            "ㅋ": "z",
+            "ㅌ": "x",
+            "ㅊ": "c",
+            "ㅍ": "v",
+            "ㅠ": "b",
+            "ㅜ": "n",
+            "ㅡ": "m"
+        ]
+
+        // 입력이 한글이면 영어로 변환
+        if let mapped = koreanToEnglishMap[input] {
+            return mapped
+        }
+
+        // 그 외에는 그대로 반환
+        return input
     }
 
     // MARK: - Execution

@@ -469,9 +469,9 @@ struct PropertyRow<Content: View>: View {
     var body: some View {
         HStack(spacing: 4) {
             Text(label)
-                .font(.system(size: 8, weight: .medium))
+                .font(.system(size: 11, weight: .medium))
                 .foregroundColor(Constants.Theme.textSecondary)
-                .frame(minWidth: 32)
+                .frame(minWidth: 40)
 
             content
         }
@@ -515,8 +515,8 @@ struct CompactTransformButton: View {
     var body: some View {
         Button(action: action) {
             Image(systemName: icon)
-                .font(.system(size: 8))
-                .frame(width: 20, height: 20)
+                .font(.system(size: 10))
+                .frame(width: 24, height: 24)
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -550,11 +550,11 @@ struct LabeledSlider: View {
             .tint(Constants.Theme.accentBlue)
 
             Text("\(value.wrappedValue)")
-                .font(.system(size: 8, design: .monospaced))
+                .font(.system(size: 11, design: .monospaced))
                 .foregroundColor(Constants.Theme.textPrimary)
-                .frame(width: 18, alignment: .trailing)
-                .padding(.horizontal, 3)
-                .padding(.vertical, 1)
+                .frame(width: 24, alignment: .trailing)
+                .padding(.horizontal, 4)
+                .padding(.vertical, 2)
                 .background(Constants.Theme.sectionBackground)
                 .cornerRadius(2)
         }
