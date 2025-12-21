@@ -15,11 +15,13 @@ enum GradientType: String, Codable {
 }
 
 /// 그라디언트 정지점
-struct GradientStop: Codable, Hashable {
-    let position: Double  // 0.0 ~ 1.0
-    let colorIndex: UInt8 // 팔레트 참조
+struct GradientStop: Codable, Hashable, Identifiable, Equatable {
+    let id: UUID
+    var position: Double  // 0.0 ~ 1.0
+    var colorIndex: UInt8 // 팔레트 참조
 
-    init(position: Double, colorIndex: UInt8) {
+    init(id: UUID = UUID(), position: Double, colorIndex: UInt8) {
+        self.id = id
         self.position = min(max(position, 0.0), 1.0)
         self.colorIndex = colorIndex
     }

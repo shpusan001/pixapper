@@ -115,72 +115,29 @@ class FillTool: BaseTool, CanvasTool {
         return .indexed(0)
     }
 
-    /// 좌표에 따른 그래디언트 색상을 PixelValue로 변환 (paletteGradient 방식)
+    /// 좌표에 따른 그래디언트 색상을 PixelValue로 변환 (multi-stop gradient 지원)
     private func createGradientFillValue(at x: Int, y: Int) -> PixelValue {
         let settings = toolSettingsManager.fillSettings
-        let primaryColor = toolSettingsManager.colorManager.primaryColor
-        let secondaryColor = toolSettingsManager.colorManager.secondaryColor
 
-        guard let paletteManager = timelineViewModel?.pixelStateManager.paletteManager else {
-            return .transparent
-        }
-
-        // Primary 색상 인덱스 가져오기 (없으면 추가)
-        var primaryIndex = paletteManager.findExactColorIndex(primaryColor)
-        if primaryIndex == nil {
-            primaryIndex = paletteManager.addColor(primaryColor)
-            #if DEBUG
-            if let idx = primaryIndex {
-                print("➕ Added Primary color to palette[\(idx)]")
-            } else {
-                print("⚠️ Failed to add Primary color to palette (palette full)")
-            }
-            #endif
-        }
-
-        // Secondary 색상 인덱스 가져오기 (없으면 추가)
-        var secondaryIndex = paletteManager.findExactColorIndex(secondaryColor)
-        if secondaryIndex == nil {
-            secondaryIndex = paletteManager.addColor(secondaryColor)
-            #if DEBUG
-            if let idx = secondaryIndex {
-                print("➕ Added Secondary color to palette[\(idx)]")
-            } else {
-                print("⚠️ Failed to add Secondary color to palette (palette full)")
-            }
-            #endif
-        }
-
-        guard let startIdx = primaryIndex, let endIdx = secondaryIndex else {
-            #if DEBUG
-            print("❌ Failed to add gradient colors to palette (palette full)")
-            #endif
-            // Fallback: 가장 가까운 색상 사용
-            let fallbackStart = paletteManager.findClosestColorIndex(primaryColor) ?? 0
-            let fallbackEnd = paletteManager.findClosestColorIndex(secondaryColor) ?? 1
-            return .paletteGradient(PaletteGradientPixel(
-                startIndex: fallbackStart,
-                endIndex: fallbackEnd,
-                position: 0.5
-            ))
-        }
-
-        // position 계산 (0.0 = primary, 1.0 = secondary)
-        let position: Double
+        // position 계산 (0.0 ~ 1.0)
+        let globalPosition: Double
         switch settings.fillType {
         case .linear:
-            position = calculateLinearPosition(x: x, y: y)
+            globalPosition = calculateLinearPosition(x: x, y: y)
         case .radial:
-            position = calculateRadialPosition(x: x, y: y)
+            globalPosition = calculateRadialPosition(x: x, y: y)
         default:
-            position = 0.0
+            globalPosition = 0.0
         }
 
-        // paletteGradient 픽셀 생성 (중간색은 팔레트에 추가 안함!)
+        // gradientStops에서 현재 position을 감싸는 두 stop 찾기
+        let (lowerStop, upperStop, t) = settings.findSurroundingStops(at: globalPosition)
+
+        // 두 stop 사이를 보간한 PaletteGradientPixel 생성
         return .paletteGradient(PaletteGradientPixel(
-            startIndex: startIdx,
-            endIndex: endIdx,
-            position: position
+            startIndex: lowerStop.colorIndex,
+            endIndex: upperStop.colorIndex,
+            position: t  // 두 stop 사이의 보간 비율
         ))
     }
 

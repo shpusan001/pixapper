@@ -325,6 +325,15 @@ struct FillPropertiesView: View {
                 .help("Color similarity threshold: 0% = exact match only, 100% = fill all colors")
             }
 
+            // Gradient editor (linear/radial일 때만 표시)
+            if settings.fillType != .solid {
+                Rectangle()
+                    .fill(Constants.Theme.divider)
+                    .frame(width: 1, height: 20)
+
+                GradientStopEditor(stops: $settings.gradientStops, paletteManager: paletteManager)
+            }
+
             // Gradient hint
             if settings.fillType != .solid {
                 Text(settings.fillType == .linear ? "Drag to set gradient direction" : "Drag from center to set radius")
@@ -672,41 +681,45 @@ struct TextPropertiesView: View {
     }
 }
 
-// MARK: - Gradient Stop Editor (Adobe Style)
+// MARK: - Gradient Stop Editor (Compact Horizontal)
 struct GradientStopEditor: View {
     @Binding var stops: [GradientStop]
     @ObservedObject var paletteManager: PaletteManager
     @State private var selectedStopIndex: Int? = nil
     @State private var draggingIndex: Int? = nil
     @State private var showingPalettePicker = false
+    @State private var showingPresets = false
+    @State private var dragStartLocation: CGPoint? = nil
 
-    private let barHeight: CGFloat = 24
-    private let barWidth: CGFloat = 200
-    private let markerSize: CGFloat = 12
+    private let barHeight: CGFloat = 16
+    private let barWidth: CGFloat = 140
+    private let markerSize: CGFloat = 10
 
     var body: some View {
-        VStack(spacing: 8) {
-            // 그래디언트 바 + 마커
+        HStack(spacing: 6) {
+            // 그래디언트 바 + 마커 (컴팩트)
             ZStack(alignment: .topLeading) {
                 // 그래디언트 미리보기 바
                 GradientPreviewBar(stops: stops, paletteManager: paletteManager)
                     .frame(width: barWidth, height: barHeight)
-                    .cornerRadius(4)
+                    .cornerRadius(3)
                     .overlay(
-                        RoundedRectangle(cornerRadius: 4)
+                        RoundedRectangle(cornerRadius: 3)
                             .stroke(Constants.Theme.divider, lineWidth: 1)
                     )
                     .onTapGesture { location in
                         addStopAt(location: location)
                     }
+                    .help("Click to add gradient stop")
 
                 // 마커들 (바 위에 배치)
                 ForEach(stops.indices, id: \.self) { index in
-                    GradientStopMarker(
+                    CompactGradientStopMarker(
                         stop: $stops[index],
                         isSelected: selectedStopIndex == index,
                         color: paletteManager.currentPalette.getColor(at: stops[index].colorIndex) ?? .clear
                     )
+                    .contentShape(Rectangle().size(width: 20, height: 20))  // 클릭 영역 확대
                     .position(
                         x: CGFloat(stops[index].position) * barWidth,
                         y: -markerSize / 2
@@ -714,25 +727,54 @@ struct GradientStopEditor: View {
                     .gesture(
                         DragGesture(minimumDistance: 0)
                             .onChanged { value in
+                                if dragStartLocation == nil {
+                                    dragStartLocation = value.startLocation
+                                }
                                 handleDrag(index: index, value: value)
                             }
                             .onEnded { value in
                                 handleDragEnd(index: index, value: value)
                             }
                     )
-                    .onTapGesture {
-                        selectedStopIndex = index
-                        showingPalettePicker = true
-                    }
                 }
             }
             .frame(width: barWidth, height: barHeight + markerSize)
-            .padding(.top, markerSize)
+            .padding(.top, markerSize / 2)
 
-            // 힌트 텍스트
-            Text("Click marker: change color | Drag: move | Drag down: delete")
-                .font(.system(size: 9))
-                .foregroundColor(Constants.Theme.textSecondary)
+            // 컨트롤 버튼들 (가로 배치)
+            HStack(spacing: 3) {
+                // 삭제 버튼 (stop 선택 시만 표시)
+                if let index = selectedStopIndex, stops.count > 2 {
+                    CompactGradientButton(icon: "trash", tooltip: "Delete Stop") {
+                        deleteStop(at: index)
+                    }
+                }
+
+                // Distribute 버튼
+                CompactGradientButton(icon: "arrow.left.and.right", tooltip: "Distribute Evenly") {
+                    distributeEvenly()
+                }
+
+                // Reverse 버튼
+                CompactGradientButton(icon: "arrow.triangle.2.circlepath", tooltip: "Reverse") {
+                    reverseGradient()
+                }
+
+                // Preset 버튼
+                Button(action: { showingPresets.toggle() }) {
+                    Image(systemName: "star.fill")
+                        .font(.system(size: 10))
+                        .foregroundColor(Constants.Theme.textPrimary)
+                        .frame(width: 24, height: 24)
+                        .background(Constants.Theme.sectionBackground)
+                        .cornerRadius(4)
+                }
+                .buttonStyle(.plain)
+                .help("Gradient Presets")
+                .popover(isPresented: $showingPresets) {
+                    GradientPresetPicker(stops: $stops)
+                }
+            }
         }
         .popover(isPresented: $showingPalettePicker) {
             if let index = selectedStopIndex {
@@ -740,7 +782,11 @@ struct GradientStopEditor: View {
                     selectedIndex: Binding(
                         get: { stops[index].colorIndex },
                         set: { newIndex in
-                            stops[index] = GradientStop(position: stops[index].position, colorIndex: newIndex)
+                            stops[index] = GradientStop(
+                                id: stops[index].id,
+                                position: stops[index].position,
+                                colorIndex: newIndex
+                            )
                         }
                     ),
                     paletteManager: paletteManager
@@ -767,11 +813,32 @@ struct GradientStopEditor: View {
         let newX = value.location.x
         let newPosition = min(max(newX / barWidth, 0.0), 1.0)
 
-        stops[index] = GradientStop(position: newPosition, colorIndex: stops[index].colorIndex)
+        stops[index] = GradientStop(
+            id: stops[index].id,
+            position: newPosition,
+            colorIndex: stops[index].colorIndex
+        )
     }
 
     private func handleDragEnd(index: Int, value: DragGesture.Value) {
-        draggingIndex = nil
+        defer {
+            draggingIndex = nil
+            dragStartLocation = nil
+        }
+
+        // 드래그 거리 계산
+        if let startLocation = dragStartLocation {
+            let dx = value.location.x - startLocation.x
+            let dy = value.location.y - startLocation.y
+            let distance = sqrt(dx * dx + dy * dy)
+
+            // 거리가 짧으면 탭으로 간주 (3픽셀 이하)
+            if distance < 3 {
+                selectedStopIndex = index
+                showingPalettePicker = true
+                return
+            }
+        }
 
         // 아래로 드래그하면 삭제 (최소 2개 유지)
         if value.location.y > barHeight + markerSize * 2 && stops.count > 2 {
@@ -780,6 +847,149 @@ struct GradientStopEditor: View {
         } else {
             // 정렬
             stops.sort { $0.position < $1.position }
+        }
+    }
+
+    private func distributeEvenly() {
+        guard stops.count > 2 else { return }
+
+        var sortedStops = stops.sorted { $0.position < $1.position }
+        let step = 1.0 / Double(sortedStops.count - 1)
+
+        for i in 0..<sortedStops.count {
+            sortedStops[i] = GradientStop(
+                id: sortedStops[i].id,
+                position: Double(i) * step,
+                colorIndex: sortedStops[i].colorIndex
+            )
+        }
+
+        stops = sortedStops
+    }
+
+    private func reverseGradient() {
+        stops = stops.map { stop in
+            GradientStop(
+                id: stop.id,
+                position: 1.0 - stop.position,
+                colorIndex: stop.colorIndex
+            )
+        }
+    }
+
+    private func deleteStop(at index: Int) {
+        guard stops.count > 2 else { return }
+        stops.remove(at: index)
+        selectedStopIndex = nil
+    }
+}
+
+// MARK: - Compact Gradient Button (for horizontal layout)
+struct CompactGradientButton: View {
+    let icon: String
+    let tooltip: String
+    let action: () -> Void
+
+    @State private var isHovered = false
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: icon)
+                .font(.system(size: 10))
+                .foregroundColor(Constants.Theme.textPrimary)
+                .frame(width: 24, height: 24)
+                .background(isHovered ? Constants.Theme.hoverBackground : Constants.Theme.sectionBackground)
+                .cornerRadius(4)
+        }
+        .buttonStyle(.plain)
+        .help(tooltip)
+        .onHover { hovering in
+            isHovered = hovering
+        }
+    }
+}
+
+// MARK: - Gradient Action Button
+struct GradientActionButton: View {
+    let icon: String
+    let tooltip: String
+    let action: () -> Void
+
+    @State private var isHovered = false
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: icon)
+                .font(.system(size: 9))
+                .foregroundColor(Constants.Theme.textPrimary)
+                .frame(width: 20, height: 20)
+                .background(isHovered ? Constants.Theme.hoverBackground : Constants.Theme.sectionBackground)
+                .cornerRadius(3)
+        }
+        .buttonStyle(.plain)
+        .help(tooltip)
+        .onHover { hovering in
+            isHovered = hovering
+        }
+    }
+}
+
+// MARK: - Gradient Preset Picker
+struct GradientPresetPicker: View {
+    @Binding var stops: [GradientStop]
+    @Environment(\.dismiss) var dismiss
+
+    var body: some View {
+        VStack(spacing: 8) {
+            Text("Gradient Presets")
+                .font(.system(size: 11, weight: .semibold))
+
+            ForEach(GradientPreset.allCases) { preset in
+                Button(action: {
+                    stops = preset.stops
+                    dismiss()
+                }) {
+                    HStack {
+                        Text(preset.rawValue)
+                            .font(.system(size: 11))
+                            .foregroundColor(Constants.Theme.textPrimary)
+                        Spacer()
+                    }
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 6)
+                    .background(Constants.Theme.sectionBackground)
+                    .cornerRadius(4)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(8)
+        .frame(width: 160)
+    }
+}
+
+// MARK: - Compact Gradient Stop Marker (for horizontal layout)
+struct CompactGradientStopMarker: View {
+    @Binding var stop: GradientStop
+    let isSelected: Bool
+    let color: Color
+
+    var body: some View {
+        ZStack {
+            // 마커 모양 (삼각형)
+            MarkerTriangle()
+                .fill(isSelected ? Color.blue : Color.white)
+                .frame(width: 10, height: 10)
+                .overlay(
+                    MarkerTriangle()
+                        .stroke(Color.black, lineWidth: 0.8)
+                )
+
+            // 색상 프리뷰 (작은 원)
+            Circle()
+                .fill(color)
+                .frame(width: 6, height: 6)
+                .offset(y: -1.5)
         }
     }
 }
@@ -851,31 +1061,37 @@ struct ColorSwatchButton: View {
 struct PalettePickerPopover: View {
     @Binding var selectedIndex: UInt8
     @ObservedObject var paletteManager: PaletteManager
+    @Environment(\.dismiss) var dismiss
 
     var body: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: 10) {
             Text("Select Color")
-                .font(.system(size: 11, weight: .semibold))
+                .font(.system(size: 12, weight: .semibold))
 
-            LazyVGrid(columns: Array(repeating: GridItem(.fixed(24), spacing: 4), count: 8), spacing: 4) {
-                ForEach(0..<min(256, paletteManager.currentPalette.count), id: \.self) { index in
-                    Button(action: {
-                        selectedIndex = UInt8(index)
-                    }) {
-                        RoundedRectangle(cornerRadius: 3)
-                            .fill(paletteManager.currentPalette.getColor(at: UInt8(index)) ?? .clear)
-                            .frame(width: 24, height: 24)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 3)
-                                    .stroke(selectedIndex == index ? Color.blue : Constants.Theme.divider, lineWidth: selectedIndex == index ? 2 : 1)
-                            )
+            ScrollView {
+                LazyVGrid(columns: Array(repeating: GridItem(.fixed(28), spacing: 6), count: 8), spacing: 6) {
+                    ForEach(0..<min(256, paletteManager.currentPalette.count), id: \.self) { index in
+                        Button(action: {
+                            selectedIndex = UInt8(index)
+                            dismiss()
+                        }) {
+                            RoundedRectangle(cornerRadius: 4)
+                                .fill(paletteManager.currentPalette.getColor(at: UInt8(index)) ?? .clear)
+                                .frame(width: 28, height: 28)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 4)
+                                        .stroke(selectedIndex == index ? Color.blue : Constants.Theme.divider, lineWidth: selectedIndex == index ? 2 : 1)
+                                )
+                        }
+                        .buttonStyle(.plain)
                     }
-                    .buttonStyle(.plain)
                 }
+                .padding(2)
             }
+            .frame(maxHeight: 300)
         }
-        .padding(8)
-        .frame(width: 220)
+        .padding(12)
+        .frame(width: 280)
     }
 }
 
