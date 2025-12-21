@@ -288,11 +288,15 @@ struct FillPropertiesView: View {
     @ObservedObject var paletteManager: PaletteManager
 
     var body: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 12) {
             Text("FILL")
                 .font(.system(size: 11, weight: .semibold))
                 .foregroundColor(Constants.Theme.textSecondary)
                 .tracking(0.3)
+
+            Rectangle()
+                .fill(Constants.Theme.divider)
+                .frame(width: 1, height: 20)
 
             // Fill Type
             PropertyRow(label: "Type") {
@@ -305,6 +309,10 @@ struct FillPropertiesView: View {
                 .frame(width: 160)
                 .help("Solid: Single color\nLinear: Drag to set gradient direction\nRadial: Drag to set gradient radius")
             }
+
+            Rectangle()
+                .fill(Constants.Theme.divider)
+                .frame(width: 1, height: 20)
 
             // Tolerance
             PropertyRow(label: "Tolerance") {
@@ -332,14 +340,6 @@ struct FillPropertiesView: View {
                     .frame(width: 1, height: 20)
 
                 GradientStopEditor(stops: $settings.gradientStops, paletteManager: paletteManager)
-            }
-
-            // Gradient hint
-            if settings.fillType != .solid {
-                Text(settings.fillType == .linear ? "Drag to set gradient direction" : "Drag from center to set radius")
-                    .font(.system(size: 10))
-                    .foregroundColor(Constants.Theme.textSecondary)
-                    .padding(.leading, 4)
             }
         }
     }
