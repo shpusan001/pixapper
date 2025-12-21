@@ -36,10 +36,10 @@ extension Color {
             return false
         }
 
-        return abs(rgb1.r - rgb2.r) < tolerance &&
-               abs(rgb1.g - rgb2.g) < tolerance &&
-               abs(rgb1.b - rgb2.b) < tolerance &&
-               abs(rgb1.a - rgb2.a) < tolerance
+        return abs(rgb1.r - rgb2.r) <= tolerance &&
+               abs(rgb1.g - rgb2.g) <= tolerance &&
+               abs(rgb1.b - rgb2.b) <= tolerance &&
+               abs(rgb1.a - rgb2.a) <= tolerance
     }
 
     /// 두 Color 옵셔널의 비교 (nil 처리 포함)

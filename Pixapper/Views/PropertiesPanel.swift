@@ -691,9 +691,9 @@ struct GradientStopEditor: View {
     @State private var showingPresets = false
     @State private var dragStartLocation: CGPoint? = nil
 
-    private let barHeight: CGFloat = 16
+    private let barHeight: CGFloat = 12
     private let barWidth: CGFloat = 140
-    private let markerSize: CGFloat = 10
+    private let markerSize: CGFloat = 14
 
     var body: some View {
         HStack(spacing: 6) {
@@ -719,10 +719,10 @@ struct GradientStopEditor: View {
                         isSelected: selectedStopIndex == index,
                         color: paletteManager.currentPalette.getColor(at: stops[index].colorIndex) ?? .clear
                     )
-                    .contentShape(Rectangle().size(width: 20, height: 20))  // 클릭 영역 확대
+                    .contentShape(Rectangle().size(width: 40, height: 40))  // 클릭 영역 대폭 확대
                     .position(
                         x: CGFloat(stops[index].position) * barWidth,
-                        y: -markerSize / 2
+                        y: barHeight / 2  // 바 중앙에 걸치게
                     )
                     .gesture(
                         DragGesture(minimumDistance: 0)
@@ -763,11 +763,11 @@ struct GradientStopEditor: View {
                 // Preset 버튼
                 Button(action: { showingPresets.toggle() }) {
                     Image(systemName: "star.fill")
-                        .font(.system(size: 10))
+                        .font(.system(size: 9))
                         .foregroundColor(Constants.Theme.textPrimary)
-                        .frame(width: 24, height: 24)
+                        .frame(width: 20, height: 20)
                         .background(Constants.Theme.sectionBackground)
-                        .cornerRadius(4)
+                        .cornerRadius(3)
                 }
                 .buttonStyle(.plain)
                 .help("Gradient Presets")
@@ -895,11 +895,11 @@ struct CompactGradientButton: View {
     var body: some View {
         Button(action: action) {
             Image(systemName: icon)
-                .font(.system(size: 10))
+                .font(.system(size: 9))
                 .foregroundColor(Constants.Theme.textPrimary)
-                .frame(width: 24, height: 24)
+                .frame(width: 20, height: 20)
                 .background(isHovered ? Constants.Theme.hoverBackground : Constants.Theme.sectionBackground)
-                .cornerRadius(4)
+                .cornerRadius(3)
         }
         .buttonStyle(.plain)
         .help(tooltip)
@@ -973,23 +973,34 @@ struct CompactGradientStopMarker: View {
     @Binding var stop: GradientStop
     let isSelected: Bool
     let color: Color
+    @State private var isHovered = false
 
     var body: some View {
         ZStack {
             // 마커 모양 (삼각형)
             MarkerTriangle()
-                .fill(isSelected ? Color.blue : Color.white)
-                .frame(width: 10, height: 10)
+                .fill(isSelected ? Color.blue : (isHovered ? Color.white.opacity(0.9) : Color.white))
+                .frame(width: 14, height: 14)
                 .overlay(
                     MarkerTriangle()
-                        .stroke(Color.black, lineWidth: 0.8)
+                        .stroke(isSelected ? Color.blue.opacity(0.8) : Color.black, lineWidth: isHovered ? 1.2 : 0.8)
                 )
+                .shadow(color: isHovered ? Color.black.opacity(0.3) : Color.clear, radius: 2, x: 0, y: 1)
 
             // 색상 프리뷰 (작은 원)
             Circle()
                 .fill(color)
-                .frame(width: 6, height: 6)
-                .offset(y: -1.5)
+                .frame(width: 8, height: 8)
+                .overlay(
+                    Circle()
+                        .stroke(Color.white.opacity(0.5), lineWidth: 0.5)
+                )
+                .offset(y: -2)
+        }
+        .scaleEffect(isHovered ? 1.15 : 1.0)
+        .animation(.easeInOut(duration: 0.15), value: isHovered)
+        .onHover { hovering in
+            isHovered = hovering
         }
     }
 }
@@ -1120,12 +1131,16 @@ struct GradientPreviewBar: View {
         // 정렬된 stops 가정
         let sortedStops = stops.sorted { $0.position < $1.position }
 
-        // 범위 밖
-        if position <= sortedStops.first!.position {
-            return paletteManager.currentPalette.getColor(at: sortedStops.first!.colorIndex) ?? .clear
+        guard let first = sortedStops.first, let last = sortedStops.last else {
+            return .clear
         }
-        if position >= sortedStops.last!.position {
-            return paletteManager.currentPalette.getColor(at: sortedStops.last!.colorIndex) ?? .clear
+
+        // 범위 밖
+        if position <= first.position {
+            return paletteManager.currentPalette.getColor(at: first.colorIndex) ?? .clear
+        }
+        if position >= last.position {
+            return paletteManager.currentPalette.getColor(at: last.colorIndex) ?? .clear
         }
 
         // 두 정지점 사이 찾기

@@ -33,9 +33,6 @@ struct SelectionState {
     // MARK: - Keyboard State
     var shiftPressed: Bool = false
 
-    // MARK: - Clipboard
-    var clipboard: SelectionClipboard?
-
     // MARK: - Initialization
     init() {}
 

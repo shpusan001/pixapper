@@ -889,7 +889,7 @@ class SelectionTool: BaseTool, CanvasTool {
         guard let pixels = selectionPixels,
               let rect = selectionRect else { return }
 
-        state.clipboard = SelectionClipboard(
+        ClipboardManager.shared.copySelection(
             pixels: pixels,
             width: Int(rect.width),
             height: Int(rect.height)
@@ -901,7 +901,7 @@ class SelectionTool: BaseTool, CanvasTool {
               let pixels = selectionPixels,
               currentLayerIndex < layerViewModel.layers.count else { return }
 
-        state.clipboard = SelectionClipboard(
+        ClipboardManager.shared.copySelection(
             pixels: pixels,
             width: Int(rect.width),
             height: Int(rect.height)
@@ -912,7 +912,7 @@ class SelectionTool: BaseTool, CanvasTool {
 
     func pasteSelection() {
         guard let canvas = canvasViewModel,
-              let clipboardData = state.clipboard,
+              let clipboardData = ClipboardManager.shared.getSelectionClipboard(),
               currentLayerIndex < layerViewModel.layers.count else { return }
 
         let prevRect = selectionRect
@@ -1005,7 +1005,7 @@ class SelectionTool: BaseTool, CanvasTool {
     }
 
     var hasClipboard: Bool {
-        return state.clipboard != nil
+        return ClipboardManager.shared.hasSelectionClipboard
     }
 
     // MARK: - Helper Methods

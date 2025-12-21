@@ -232,12 +232,16 @@ class DefaultRenderContext: RenderContext {
     ///   - position: 보간 위치 (0.0 ~ 1.0)
     /// - Returns: 보간된 색상
     private func interpolateColor(in stops: [GradientStop], at position: Double) -> Color? {
-        // 범위 밖이면 끝 색상 반환
-        if position <= stops.first!.position {
-            return palette[stops.first!.colorIndex]
+        guard let first = stops.first, let last = stops.last else {
+            return nil
         }
-        if position >= stops.last!.position {
-            return palette[stops.last!.colorIndex]
+
+        // 범위 밖이면 끝 색상 반환
+        if position <= first.position {
+            return palette[first.colorIndex]
+        }
+        if position >= last.position {
+            return palette[last.colorIndex]
         }
 
         // 두 정지점 사이 찾기

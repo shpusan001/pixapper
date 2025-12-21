@@ -32,14 +32,14 @@ class PasteFramesCommand: Command {
     func execute() {
         guard let timelineViewModel = timelineViewModel,
               let layerIndex = timelineViewModel.getLayerIndex(for: layerId),
-              !timelineViewModel.frameClipboard.isEmpty else {
+              let frameClipboard = ClipboardManager.shared.getFrameClipboard() else {
             return
         }
 
         // 이전 상태 저장
         previousTotalFrames = timelineViewModel.totalFrames
         previousCurrentFrameIndex = timelineViewModel.currentFrameIndex
-        pastedFrameCount = timelineViewModel.frameClipboard.frameCount
+        pastedFrameCount = frameClipboard.frameCount
 
         // shift 전에 이동될 키프레임들 백업
         shiftedKeyframes = timelineViewModel.layerViewModel.layers[layerIndex].timeline.backupKeyframesAfter(startIndex - 1)
@@ -48,7 +48,7 @@ class PasteFramesCommand: Command {
         timelineViewModel.layerViewModel.layers[layerIndex].timeline.shiftKeyframes(after: startIndex - 1, by: pastedFrameCount)
 
         // 클립보드의 키프레임들을 붙여넣기
-        for (relativeIndex, pixels) in timelineViewModel.frameClipboard.keyframes {
+        for (relativeIndex, pixels) in frameClipboard.keyframes {
             let targetIndex = startIndex + relativeIndex
             pastedKeyframes[targetIndex] = pixels
             timelineViewModel.layerViewModel.layers[layerIndex].timeline.setKeyframe(at: targetIndex, pixels: pixels)

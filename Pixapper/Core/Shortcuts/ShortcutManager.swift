@@ -229,7 +229,7 @@ struct ShortcutManager {
             // Context: Canvas clipboard이 있으면 Paste Selection, Frame clipboard이 있으면 Paste Frames
             if let canvas = canvasViewModel, canvas.hasClipboard {
                 canvas.pasteSelection()
-            } else if let timeline = timelineViewModel, !timeline.frameClipboard.isEmpty {
+            } else if let timeline = timelineViewModel, timeline.hasFrameClipboard {
                 executePasteFrames(timelineViewModel: timeline, commandManager: commandManager)
             }
 

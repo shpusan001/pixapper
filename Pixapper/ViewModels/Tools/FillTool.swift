@@ -220,23 +220,28 @@ class FillTool: BaseTool, CanvasTool {
         print("✓ targetValue: \(targetValue)")
         print("✓ fillValue: \(fillValue)")
 
-        // PixelValue가 같으면 스킵 (tolerance=0일 때 간단한 체크)
-        if tolerance == 0 && targetValue == fillValue {
+        // PixelValue가 같으면 스킵
+        if targetValue == fillValue {
             print("⚠️ Same pixel value, skipping")
             return
         }
 
-        // 색상 비교는 tolerance > 0일 때만
+        // targetColor 계산 (tolerance > 0일 때 필요)
         let targetColor = pixelValueToColor(targetValue, at: x, y: y)
-        let fillColor = pixelValueToColor(fillValue, at: x, y: y)
-        print("✓ targetColor: \(targetColor)")
-        print("✓ fillColor: \(fillColor)")
 
-        if Color.areEqual(targetColor, fillColor, tolerance: tolerance) {
-            print("⚠️ Same color, skipping")
-            return
+        // tolerance 100%일 때는 색상 비교 스킵 (투명만 아니면 모두 채움)
+        if tolerance < 1.0 {
+            // 색상 비교는 tolerance < 100%일 때만
+            let fillColor = pixelValueToColor(fillValue, at: x, y: y)
+            print("✓ targetColor: \(targetColor)")
+            print("✓ fillColor: \(fillColor)")
+
+            if Color.areEqual(targetColor, fillColor, tolerance: tolerance) {
+                print("⚠️ Same color, skipping")
+                return
+            }
         }
-        print("✓ Colors different, starting fill...")
+        print("✓ Starting fill... (tolerance: \(Int(tolerance * 100))%)")
 
         var changedPixels: [PixelChange] = []
         var oldPixels: [PixelChange] = []
@@ -269,15 +274,22 @@ class FillTool: BaseTool, CanvasTool {
 
             let currentValue = pixels[py][px]
 
-            // PixelValue 직접 비교 (tolerance=0일 때)
+            // 매칭 여부 판단
             let isMatch: Bool
-            if tolerance == 0 {
+            if tolerance == 1.0 {
+                // tolerance 100%: transparent만 아니면 모두 채움
+                isMatch = (currentValue != .transparent)
+                if loopCount <= 5 {
+                    print("    ↳ Tolerance 100% check: \(currentValue) != transparent ? \(isMatch)")
+                }
+            } else if tolerance == 0 {
+                // tolerance 0%: 정확히 같은 색만
                 isMatch = (currentValue == targetValue)
                 if loopCount <= 5 {
                     print("    ↳ PixelValue check: \(currentValue) == \(targetValue) ? \(isMatch)")
                 }
             } else {
-                // tolerance > 0일 때만 Color 비교
+                // tolerance 1~99%: 색상 유사도 비교
                 let currentColor = pixelValueToColor(currentValue, at: px, y: py)
                 isMatch = Color.areEqual(currentColor, targetColor, tolerance: tolerance)
                 if loopCount <= 5 {
@@ -345,7 +357,7 @@ class FillTool: BaseTool, CanvasTool {
         }
 
         let layerId = layerViewModel.layers[currentLayerIndex].id
-        guard var pixels = timelineVM.getCurrentFramePixels(layerId: layerId) else {
+        guard let pixels = timelineVM.getCurrentFramePixels(layerId: layerId) else {
             print("❌ No pixels")
             return
         }
@@ -355,8 +367,9 @@ class FillTool: BaseTool, CanvasTool {
             return
         }
         let targetValue = pixels[y][x]
+        let targetColor = pixelValueToColor(targetValue, at: x, y: y)
 
-        // Phase 1: Fill 영역 찾기
+        // Phase 1: Fill 영역 찾기 (tolerance 고려)
         var fillArea: [(x: Int, y: Int)] = []
         var tempStack = [(x: Int, y: Int)]()
         var tempVisited = Set<String>()
@@ -369,7 +382,24 @@ class FillTool: BaseTool, CanvasTool {
 
             guard px >= 0 && px < canvas.canvas.width && py >= 0 && py < canvas.canvas.height else { continue }
             guard py < pixels.count, px < pixels[py].count else { continue }
-            if pixels[py][px] != targetValue { continue }
+
+            let currentValue = pixels[py][px]
+
+            // tolerance에 따른 매칭 판단
+            let isMatch: Bool
+            if tolerance == 1.0 {
+                // tolerance 100%: transparent만 아니면 모두 채움
+                isMatch = (currentValue != .transparent)
+            } else if tolerance == 0 {
+                // tolerance 0%: 정확히 같은 색만
+                isMatch = (currentValue == targetValue)
+            } else {
+                // tolerance 1~99%: 색상 유사도 비교
+                let currentColor = pixelValueToColor(currentValue, at: px, y: py)
+                isMatch = Color.areEqual(currentColor, targetColor, tolerance: tolerance)
+            }
+
+            if !isMatch { continue }
 
             fillArea.append((px, py))
 
@@ -393,7 +423,8 @@ class FillTool: BaseTool, CanvasTool {
 
         for (px, py) in fillArea {
             let fillValue = createGradientFillValue(at: px, y: py)
-            oldPixels.append(PixelChange(x: px, y: py, value: targetValue))
+            let oldValue = pixels[py][px]  // 각 픽셀의 실제 값 저장 (tolerance 100%일 때 다양한 색이 있을 수 있음)
+            oldPixels.append(PixelChange(x: px, y: py, value: oldValue))
             changedPixels.append(PixelChange(x: px, y: py, value: fillValue))
         }
 

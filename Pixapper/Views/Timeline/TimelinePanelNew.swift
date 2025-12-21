@@ -514,7 +514,7 @@ struct TimelinePanelNew: View {
             commandManager.performCommand(command)
         }
         .keyboardShortcut("v", modifiers: .command)
-        .disabled(viewModel.frameClipboard.isEmpty)
+        .disabled(!viewModel.hasFrameClipboard)
 
         Button("Cut") {
             let command = CutFramesCommand(

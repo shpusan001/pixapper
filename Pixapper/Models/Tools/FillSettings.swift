@@ -68,36 +68,14 @@ struct FillSettings: ToolSettings {
     /// - Parameter position: 0.0 ~ 1.0 범위의 위치
     /// - Returns: (하위 stop, 상위 stop, 보간 비율 t)
     func findSurroundingStops(at position: Double) -> (lower: GradientStop, upper: GradientStop, t: Double) {
-        // gradientStops는 position 기준 정렬되어 있어야 함
-        let sortedStops = gradientStops.sorted { $0.position < $1.position }
-
-        // position이 범위 밖이면 양 끝 stop 사용
-        if position <= sortedStops.first!.position {
-            let first = sortedStops.first!
-            return (first, first, 0.0)
-        }
-        if position >= sortedStops.last!.position {
-            let last = sortedStops.last!
-            return (last, last, 1.0)
+        // 통합된 보간 로직 사용
+        if let result = gradientStops.findSurroundingStops(at: position) {
+            return result
         }
 
-        // position을 감싸는 두 stop 찾기
-        for i in 0..<(sortedStops.count - 1) {
-            let lower = sortedStops[i]
-            let upper = sortedStops[i + 1]
-
-            if position >= lower.position && position <= upper.position {
-                // 보간 비율 계산 (0.0 = lower, 1.0 = upper)
-                let range = upper.position - lower.position
-                let t = range > 0 ? (position - lower.position) / range : 0.0
-                return (lower, upper, t)
-            }
-        }
-
-        // 여기 도달하면 안되지만, fallback
-        let first = sortedStops.first!
-        let last = sortedStops.last!
-        return (first, last, 0.5)
+        // fallback - 빈 배열일 경우
+        let defaultStop = GradientStop(position: 0.0, colorIndex: 0)
+        return (defaultStop, defaultStop, 0.0)
     }
 
     /// Stop들을 균등 간격으로 재배치

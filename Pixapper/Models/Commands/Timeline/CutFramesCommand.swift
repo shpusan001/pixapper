@@ -43,7 +43,7 @@ class CutFramesCommand: Command {
         // 이전 상태 저장
         previousTotalFrames = timelineViewModel.totalFrames
         previousCurrentFrameIndex = timelineViewModel.currentFrameIndex
-        previousClipboard = timelineViewModel.frameClipboard
+        previousClipboard = ClipboardManager.shared.getFrameClipboard() ?? .empty
 
         // 삭제할 키프레임들 백업 (원본 인덱스로)
         let sortedIndices = frameIndices.sorted()
@@ -98,7 +98,7 @@ class CutFramesCommand: Command {
         }
 
         // 3. 클립보드 복원
-        timelineViewModel.frameClipboard = previousClipboard
+        ClipboardManager.shared.copy(.frames(previousClipboard))
 
         // 4. 상태 복원
         timelineViewModel.updateTotalFrames()

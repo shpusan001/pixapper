@@ -147,6 +147,45 @@ struct GradientLibrary: Codable {
     }
 }
 
+// MARK: - Gradient Stop Interpolation
+
+extension Array where Element == GradientStop {
+    /// 주어진 position을 감싸는 두 stop을 찾아 반환 (통합된 보간 로직)
+    /// - Parameter position: 0.0 ~ 1.0 범위의 위치
+    /// - Returns: (하위 stop, 상위 stop, 보간 비율 t)
+    func findSurroundingStops(at position: Double) -> (lower: GradientStop, upper: GradientStop, t: Double)? {
+        let sortedStops = self.sorted { $0.position < $1.position }
+
+        guard let first = sortedStops.first, let last = sortedStops.last else {
+            return nil
+        }
+
+        // position이 범위 밖이면 양 끝 stop 사용
+        if position <= first.position {
+            return (first, first, 0.0)
+        }
+        if position >= last.position {
+            return (last, last, 1.0)
+        }
+
+        // position을 감싸는 두 stop 찾기
+        for i in 0..<(sortedStops.count - 1) {
+            let lower = sortedStops[i]
+            let upper = sortedStops[i + 1]
+
+            if position >= lower.position && position <= upper.position {
+                // 보간 비율 계산 (0.0 = lower, 1.0 = upper)
+                let range = upper.position - lower.position
+                let t = range > 0 ? (position - lower.position) / range : 0.0
+                return (lower, upper, t)
+            }
+        }
+
+        // fallback
+        return (first, last, 0.5)
+    }
+}
+
 // MARK: - Gradient Presets
 
 extension GradientLibrary {

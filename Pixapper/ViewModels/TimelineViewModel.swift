@@ -49,9 +49,6 @@ class TimelineViewModel: ObservableObject, PlaybackControllerDelegate {
     @Published var selectedFrameIndices: Set<Int> = []  // 선택된 프레임들
     @Published var selectionAnchor: Int?  // 드래그/범위 선택 시작점
 
-    // 프레임 클립보드 (복사/붙여넣기)
-    @Published var frameClipboard: FrameClipboard = .empty
-
     // 플레이백 컨트롤러 (책임 분리)
     let playbackController = PlaybackController()
 
@@ -718,7 +715,9 @@ class TimelineViewModel: ObservableObject, PlaybackControllerDelegate {
 
         // 프레임 인덱스를 정렬
         let sortedIndices = frameIndices.sorted()
-        let firstIndex = sortedIndices.first!
+        guard let firstIndex = sortedIndices.first else {
+            return
+        }
         let frameCount = sortedIndices.count
 
         // 키프레임 데이터를 상대 인덱스로 저장
@@ -733,7 +732,7 @@ class TimelineViewModel: ObservableObject, PlaybackControllerDelegate {
         }
 
         // 클립보드에 저장
-        frameClipboard = FrameClipboard(
+        ClipboardManager.shared.copyFrames(
             frameCount: frameCount,
             keyframes: keyframes,
             sourceLayerId: layerId
@@ -764,7 +763,9 @@ class TimelineViewModel: ObservableObject, PlaybackControllerDelegate {
 
         // 프레임 삭제 후 키프레임 재정렬
         // 삭제된 프레임 개수만큼 뒤의 키프레임들을 앞으로 이동
-        let firstDeletedIndex = sortedIndices.last!
+        guard let firstDeletedIndex = sortedIndices.last else {
+            return
+        }
         let deletedCount = sortedIndices.count
 
         // firstDeletedIndex 이후의 키프레임들을 -deletedCount만큼 이동
@@ -780,7 +781,7 @@ class TimelineViewModel: ObservableObject, PlaybackControllerDelegate {
     /// 클립보드의 프레임들을 현재 선택된 레이어에 붙여넣기
     /// - Parameter startIndex: 붙여넣을 시작 인덱스
     func pasteFrames(at startIndex: Int, layerId: UUID) {
-        guard !frameClipboard.isEmpty,
+        guard let frameClipboard = ClipboardManager.shared.getFrameClipboard(),
               let layerIndex = layerViewModel.layers.firstIndex(where: { $0.id == layerId }) else {
             return
         }
@@ -805,7 +806,7 @@ class TimelineViewModel: ObservableObject, PlaybackControllerDelegate {
 
     /// 클립보드가 비어있지 않은지 확인
     var hasFrameClipboard: Bool {
-        return !frameClipboard.isEmpty
+        return ClipboardManager.shared.hasFrameClipboard
     }
 
     // deinit 제거 - PlaybackController가 자체적으로 정리함

@@ -59,10 +59,9 @@ class FreeformSelector {
         canvasWidth: Int,
         canvasHeight: Int
     ) {
-        guard path.count >= 2 else { return }
-
-        let first = path.first!
-        let last = path.last!
+        guard path.count >= 2,
+              let first = path.first,
+              let last = path.last else { return }
 
         let distance = abs(first.x - last.x) + abs(first.y - last.y)
         if distance <= 2 { return }
